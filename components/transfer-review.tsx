@@ -14,7 +14,7 @@ import {
   Flag,
   Pencil,
   ChevronUp,
-  Maximize2,
+  
   X,
   Search,
   Keyboard,
@@ -24,6 +24,7 @@ import {
 } from "lucide-react"
 import { AdminTestingSuite } from "./admin-testing-suite"
 import { VesLinkForm, CRITICAL_FIELDS_NOON_SEA } from "./veslink-form"
+import { NavtorScreenshot } from "./navtor-screenshot"
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from "lucide-react"
 
 // Field status types
@@ -48,80 +49,6 @@ interface FormSection {
   fields: FormField[]
   reviewedCount: number
   needsManualEntry?: number
-}
-
-// Mock source data for the NAVTOR screenshot sections
-const mockSourceData: Record<string, { sectionTitle: string; fields: { label: string; value: string; unit?: string; isHighlighted?: boolean }[] }> = {
-  "Operational": {
-    sectionTitle: "OPERATING CONDITIONS",
-    fields: [
-      { label: "Draught Forward", value: "16.6", unit: "m", isHighlighted: false },
-      { label: "Draught Aft", value: "16.6", unit: "m" },
-      { label: "Trim", value: "0.00", unit: "" },
-      { label: "Ballast Water", value: "1896", unit: "MT" },
-      { label: "Displacement", value: "172000", unit: "t" },
-      { label: "Observed Distance", value: "142.3", unit: "nm" },
-    ],
-  },
-  "Pos & Weather": {
-    sectionTitle: "POSITION & WEATHER",
-    fields: [
-      { label: "Latitude", value: "17°51'54\" N", unit: "" },
-      { label: "Longitude", value: "102°11'6\" W", unit: "" },
-      { label: "Beaufort Scale", value: "4", unit: "" },
-      { label: "Wind Direction", value: "NE", unit: "" },
-      { label: "Sea State", value: "Moderate", unit: "" },
-      { label: "Sea Height", value: "2.5", unit: "m" },
-    ],
-  },
-  "Power": {
-    sectionTitle: "POWER & MACHINERY",
-    fields: [
-      { label: "ME RPM", value: "36.6", unit: "" },
-      { label: "ME Hours", value: "0.5", unit: "hrs" },
-      { label: "Gen 1 Hours", value: "24.0", unit: "hrs" },
-      { label: "Gen 2 Hours", value: "0.0", unit: "hrs" },
-      { label: "Boiler Hours", value: "12.5", unit: "hrs" },
-    ],
-  },
-  "Bunker": {
-    sectionTitle: "BUNKER ROB",
-    fields: [
-      { label: "IFO Total", value: "1245.6", unit: "MT" },
-      { label: "MGO Total", value: "342.8", unit: "MT" },
-      { label: "LSF Total", value: "89.4", unit: "MT" },
-      { label: "LSMGO Total", value: "156.2", unit: "MT" },
-    ],
-  },
-  "Stock": {
-    sectionTitle: "STOCK & WATER",
-    fields: [
-      { label: "Fresh Water ROB", value: "156.0", unit: "MT" },
-      { label: "Distilled Water ROB", value: "45.2", unit: "MT" },
-      { label: "Slops ROB", value: "12.5", unit: "MT" },
-      { label: "Tank Cleaning Chemical", value: "25.0", unit: "LTRS" },
-    ],
-  },
-  "General": {
-    sectionTitle: "GENERAL INFORMATION",
-    fields: [
-      { label: "Report Number", value: "4528", unit: "" },
-      { label: "Voyage Number", value: "408054", unit: "" },
-      { label: "Report Type", value: "Noon Report (Sea)", unit: "" },
-      { label: "Report From", value: "12/04/2026 12:00", unit: "" },
-      { label: "Report To", value: "13/04/2026 12:00", unit: "" },
-      { label: "Time Zone", value: "UTC+02:00", unit: "" },
-    ],
-  },
-  "Consumptions": {
-    sectionTitle: "FUEL CONSUMPTION",
-    fields: [
-      { label: "IFO Main", value: "24.5", unit: "MT" },
-      { label: "IFO Aux", value: "3.2", unit: "MT" },
-      { label: "MGO Main", value: "0.0", unit: "MT" },
-      { label: "MGO Aux", value: "1.8", unit: "MT" },
-    ],
-  },
 }
 
 // Mock data for the VesLink form sections
@@ -823,124 +750,7 @@ function FieldDefinitionPanel({
   )
 }
 
-// Source Screenshot Preview Component
-function SourceScreenshotPreview({
-  field,
-  selectedReportId,
-  onReportChange,
-}: {
-  field: FormField
-  selectedReportId: string
-  onReportChange: (id: string) => void
-}) {
-  const sourceTab = field.sourceTab || "Operational"
-  const sourceData = mockSourceData[sourceTab]
-  const tabs = ["Operational", "Pos & Weather", "Power", "Consumptions", "Bunker", "Stock"]
-  const reports = [
-    { id: "4528", label: "#4528", isPrimary: true },
-    { id: "4527", label: "#4527", isPrimary: false },
-    { id: "4526", label: "#4526", isPrimary: false },
-    { id: "4525", label: "#4525", isPrimary: false },
-  ]
 
-  return (
-    <div className="h-full flex flex-col bg-[#f8fafc]">
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-[#e2e8f0] flex items-center justify-between bg-white">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-[#0f172a]">NAVTOR</span>
-          <span className="text-sm text-[#64748b]">— {sourceTab} TAB</span>
-        </div>
-        <button className="p-1.5 hover:bg-[#f8fafc] rounded transition-colors">
-          <Maximize2 className="w-4 h-4 text-[#64748b]" />
-        </button>
-      </div>
-
-      {/* Tab Indicator Row */}
-      <div className="px-4 py-2 border-b border-[#e2e8f0] bg-white overflow-x-auto">
-        <div className="flex items-center gap-1 text-xs">
-          {tabs.map((tab) => (
-            <span
-              key={tab}
-              className={`px-2 py-1 rounded whitespace-nowrap ${
-                tab === sourceTab
-                  ? "bg-[#0b1120] text-white font-medium"
-                  : "text-[#64748b]"
-              }`}
-            >
-              {tab}
-              {tab !== sourceTab && " ✓"}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Screenshot Area - Dark Navy NAVTOR Style */}
-      <div className="flex-1 p-4 overflow-hidden">
-        <div className="h-full bg-[#0b1120] rounded-lg p-4 overflow-hidden">
-          {/* Section Title */}
-          <div className="flex items-center gap-2 mb-4">
-            <ChevronDown className="w-4 h-4 text-[#64748b]" />
-            <span className="text-sm font-medium text-[#94a3b8] tracking-wide">
-              {sourceData?.sectionTitle || "OPERATING CONDITIONS"}
-            </span>
-          </div>
-
-          {/* Fields */}
-          <div className="space-y-2">
-            {sourceData?.fields.map((sourceField) => {
-              const isHighlighted = sourceField.label === field.sourceField
-              return (
-                <div
-                  key={sourceField.label}
-                  className={`flex items-center justify-between py-2 px-3 rounded ${
-                    isHighlighted
-                      ? "ring-2 ring-[#f59e0b] bg-[#f59e0b]/10 shadow-[0_0_10px_rgba(245,158,11,0.3)]"
-                      : ""
-                  }`}
-                >
-                  <span className="text-sm text-[#94a3b8]">{sourceField.label}</span>
-                  <div className="flex items-center gap-2">
-                    <div className="bg-[#0f2a3d] border border-[#1e4a5f] rounded px-3 py-1.5 min-w-[100px]">
-                      <span className="text-sm text-white font-medium">
-                        {sourceField.value}
-                      </span>
-                    </div>
-                    {sourceField.unit && (
-                      <span className="text-sm text-[#64748b] w-8">{sourceField.unit}</span>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Report Tabs */}
-      <div className="px-4 py-3 border-t border-[#e2e8f0] bg-white">
-        <div className="flex items-center gap-2">
-          {reports.map((report) => (
-            <button
-              key={report.id}
-              onClick={() => onReportChange(report.id)}
-              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                selectedReportId === report.id
-                  ? "bg-[#7c3aed] text-white"
-                  : "bg-[#f8fafc] text-[#64748b] hover:bg-[#f1f5f9]"
-              }`}
-            >
-              {report.label}
-              {report.isPrimary && selectedReportId === report.id && (
-                <span className="ml-1 text-white/70">primary</span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 // Critical Field Navigation Bar Component
 function CriticalFieldNavBar({
@@ -1484,13 +1294,64 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
                 />
               </div>
 
-              {/* Bottom Section - Source Screenshot (~55%) */}
-              <div className="h-[55%] overflow-hidden">
-                <SourceScreenshotPreview
-                  field={selectedField}
-                  selectedReportId={selectedReportId}
-                  onReportChange={setSelectedReportId}
-                />
+              {/* Bottom Section - NAVTOR Source Screenshot (~55%) */}
+              <div className="h-[55%] overflow-hidden flex flex-col bg-[#f8fafc]">
+                {/* Header */}
+                <div className="px-4 py-2.5 border-b border-[#e2e8f0] flex items-center justify-between bg-white flex-shrink-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-[#0f172a]">NAVTOR</span>
+                    <span className="text-xs text-[#64748b]">— {selectedField.sourceTab || "Operational"} TAB</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {["Operational", "Pos & Weather", "Power", "Bunker", "Stock"].map((tab) => (
+                      <span
+                        key={tab}
+                        className={`px-1.5 py-0.5 text-[10px] rounded ${
+                          tab === (selectedField.sourceTab || "Operational")
+                            ? "bg-[#0b1120] text-white font-medium"
+                            : "text-[#94a3b8]"
+                        }`}
+                      >
+                        {tab}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Screenshot */}
+                <div className="flex-1 p-4 overflow-auto">
+                  <NavtorScreenshot 
+                    fieldId={selectedField.id}
+                    className="h-full"
+                  />
+                </div>
+                
+                {/* Report Tabs */}
+                <div className="px-4 py-2 border-t border-[#e2e8f0] bg-white flex-shrink-0">
+                  <div className="flex items-center gap-2">
+                    {[
+                      { id: "4528", label: "#4528", isPrimary: true },
+                      { id: "4527", label: "#4527", isPrimary: false },
+                      { id: "4526", label: "#4526", isPrimary: false },
+                      { id: "4525", label: "#4525", isPrimary: false },
+                    ].map((report) => (
+                      <button
+                        key={report.id}
+                        onClick={() => setSelectedReportId(report.id)}
+                        className={`px-2.5 py-1 text-[11px] font-medium rounded transition-colors ${
+                          selectedReportId === report.id
+                            ? "bg-[#7c3aed] text-white"
+                            : "bg-[#f8fafc] text-[#64748b] hover:bg-[#f1f5f9]"
+                        }`}
+                      >
+                        {report.label}
+                        {report.isPrimary && selectedReportId === report.id && (
+                          <span className="ml-1 text-white/70">primary</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </>
           ) : (
@@ -1507,34 +1368,30 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
                 </div>
               </div>
 
-              {/* Bottom Section - Source Preview Placeholder */}
-              <div className="flex-1 flex items-center justify-center p-6 bg-[#f8fafc]">
-                <div className="text-center">
-                  <div className="w-12 h-12 rounded-lg bg-white border border-[#e2e8f0] flex items-center justify-center mx-auto mb-3">
-                    <Layers className="w-6 h-6 text-[#94a3b8]" />
-                  </div>
-                  <p className="text-[#64748b] text-sm max-w-[240px] mb-4">
-                    Select a field to see its NAVTOR source data
-                  </p>
-                  <div className="flex items-center justify-center gap-2 flex-wrap">
-                    {["Operational", "Pos & Weather", "Power", "Consumptions", "Bunker", "Stock"].map(
-                      (tab) => (
-                        <span
-                          key={tab}
-                          className="text-xs px-2 py-1 bg-white border border-[#e2e8f0] rounded text-[#94a3b8]"
-                        >
-                          {tab}
-                        </span>
-                      )
-                    )}
-                  </div>
+              {/* Bottom Section - NAVTOR Source Preview Placeholder */}
+              <div className="flex-1 flex flex-col bg-[#f8fafc]">
+                {/* Header */}
+                <div className="px-4 py-2.5 border-b border-[#e2e8f0] flex items-center gap-2 bg-white flex-shrink-0">
+                  <span className="text-sm font-semibold text-[#0f172a]">NAVTOR</span>
+                  <span className="text-xs text-[#64748b]">Source Preview</span>
+                </div>
+                
+                {/* Default screenshot */}
+                <div className="flex-1 p-4">
+                  <NavtorScreenshot 
+                    fieldId={null}
+                    className="h-full"
+                  />
                 </div>
               </div>
             </>
           )}
         </div>
+      </div>
+    )
+  }
 
-        {/* Right Panel - VesLink Form (authentic replica) */}
+  {/* Right Panel - VesLink Form (authentic replica) */}
         <div className="w-[60%] flex flex-col overflow-hidden bg-white">
           <div className="flex-1 overflow-y-auto">
             <VesLinkForm
