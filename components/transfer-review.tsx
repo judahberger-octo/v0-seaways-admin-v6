@@ -1233,70 +1233,71 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
       )}
 
       {/* Header Bar */}
-      <div className="h-16 border-b border-[#e2e8f0] bg-white flex items-center justify-between px-6 flex-shrink-0">
+      <div className="h-14 border-b border-[#e2e8f0] bg-[#f8fafc] flex items-center px-4 flex-shrink-0">
         {/* Left - Back + Report Info */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={onBack}
-            className="p-2 hover:bg-[#f8fafc] rounded-lg transition-colors"
+            className="p-1.5 hover:bg-[#e2e8f0] rounded transition-colors flex-shrink-0"
           >
-            <ArrowLeft className="w-5 h-5 text-[#64748b]" />
+            <ArrowLeft className="w-4 h-4 text-[#64748b]" />
           </button>
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-[#0f172a]">SEAWAYS SKOPELOS</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-[#dbeafe] text-[#2563eb] font-medium">
-              Noon Report (Sea)
-            </span>
-            <span className="text-sm text-[#64748b]">
-              12/04/2026 12:00 - 13/04/2026 12:00
-            </span>
-            <span className="text-sm text-[#94a3b8]">Report #{reportId}</span>
-          </div>
+          <span className="font-semibold text-[#0f172a] text-sm">SEAWAYS SKOPELOS</span>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-[#f97316] text-white font-medium flex-shrink-0">
+            Noon Report (Sea)
+          </span>
+          <span className="text-xs text-[#64748b] flex-shrink-0">
+            12/04/2026 12:00 - 13/04/2026 12:00
+          </span>
+          <span className="text-xs text-[#94a3b8] flex-shrink-0">Report #{reportId}</span>
         </div>
 
         {/* Center - Progress */}
-        <div className="flex flex-col items-center">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-medium text-[#0f172a]">
+        <div className="flex items-center gap-4 mx-auto">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-[#0f172a]">
               {verifiedCount + flaggedCount} / {totalFields} fields reviewed
             </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-48 h-2 bg-[#e2e8f0] rounded-full overflow-hidden flex">
+            <div className="w-32 h-1.5 bg-[#e2e8f0] rounded-full overflow-hidden flex">
               <div
                 className="h-full bg-[#16a34a]"
                 style={{ width: `${(verifiedCount / totalFields) * 100}%` }}
               />
               <div
-                className="h-full bg-[#d97706]"
+                className="h-full bg-[#f59e0b]"
                 style={{ width: `${(flaggedCount / totalFields) * 100}%` }}
               />
             </div>
-            <div className="flex items-center gap-2 text-xs">
+          </div>
+          <div className="flex items-center gap-3 text-xs">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-[#16a34a]" />
               <span className="text-[#16a34a]">{verifiedCount} verified</span>
-              <span className="text-[#94a3b8]">•</span>
-              <span className="text-[#d97706]">{flaggedCount} flagged</span>
-              <span className="text-[#94a3b8]">•</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-[#f59e0b]" />
+              <span className="text-[#f59e0b]">{flaggedCount} flagged</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-[#94a3b8]" />
               <span className="text-[#64748b]">{pendingCount} pending</span>
-            </div>
+            </span>
           </div>
         </div>
 
         {/* Right - Status + Actions */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs px-2 py-1 rounded-full bg-[#f1f5f9] text-[#64748b] font-medium">
-              Draft
-            </span>
-            <span className="text-xs text-[#94a3b8]">
-              Last edited by Chief Officer at 14:32
-            </span>
-          </div>
-          <div className="h-6 w-px bg-[#e2e8f0]" />
-          <button className="p-2 hover:bg-[#f8fafc] rounded-lg transition-colors">
-            <Settings className="w-4 h-4 text-[#64748b]" />
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-xs px-2 py-0.5 rounded bg-[#e2e8f0] text-[#64748b] font-medium">
+            Draft
+          </span>
+          <span className="text-xs text-[#94a3b8]">
+            Last edited by Chief Officer at 14:32
+          </span>
+          <button className="p-1.5 hover:bg-[#e2e8f0] rounded transition-colors text-[#94a3b8] hover:text-[#ef4444]">
+            <X className="w-4 h-4" />
           </button>
-          <button className="px-4 py-2 text-sm font-medium border border-[#e2e8f0] rounded-lg hover:bg-[#f8fafc] transition-colors">
+          <button className="px-3 py-1.5 text-xs font-medium border border-[#e2e8f0] rounded bg-white hover:bg-[#f8fafc] transition-colors flex items-center gap-1.5">
+            <FileText className="w-3.5 h-3.5" />
             Save Draft
           </button>
           <button
@@ -1306,14 +1307,14 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
                 ? `Verify all ${criticalTotal} critical fields to submit (${criticalTotal - criticalVerified} remaining)`
                 : undefined
             }
-            className={`px-4 py-2 text-sm font-medium rounded-lg flex items-center gap-2 transition-colors ${
+            className={`px-3 py-1.5 text-xs font-medium rounded flex items-center gap-1.5 transition-colors ${
               canSubmit
                 ? "bg-[#7c3aed] hover:bg-[#6d28d9] text-white"
-                : "bg-[#e2e8f0] text-[#94a3b8] cursor-not-allowed"
+                : "bg-[#cbd5e1] text-[#94a3b8] cursor-not-allowed"
             }`}
           >
-            <Send className="w-4 h-4" />
-            Submit to VesLink
+            <Send className="w-3.5 h-3.5" />
+            SUBMIT TO VESLINK
           </button>
         </div>
       </div>
