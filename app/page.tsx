@@ -14,9 +14,18 @@ export default function Home() {
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
   const [isAdminMode, setIsAdminMode] = useState(false)
 
+  // Mock review data - in real app this would come from the TransferReview state
+  const reviewData = currentView === "review" ? {
+    reportId: selectedReportId || "4528",
+    reportType: "Noon (Sea)",
+    vesselName: "SEAWAYS SKOPELOS",
+    verified: 22,
+    flagged: 0,
+    pending: 14,
+    total: 36
+  } : undefined
+
   const handleGenerate = (reportIds: string[]) => {
-    // For now, we only handle single report transfer
-    // In future, batch processing would queue multiple reports
     setSelectedReportId(reportIds[0] || "4528")
     setCurrentView("review")
   }
@@ -27,27 +36,8 @@ export default function Home() {
   }
 
   const handleViewHistoryReport = (reportId: string) => {
-    // For now, just switch to the report view
     setSelectedReportId(reportId)
     setCurrentView("review")
-  }
-
-  // If we're in review mode, show the review page without the app shell tabs
-  if (currentView === "review" && selectedReportId) {
-    return (
-      <AppShell 
-        activeTab={activeTab} 
-        onTabChange={setActiveTab}
-        isAdminMode={isAdminMode}
-        onAdminModeChange={setIsAdminMode}
-      >
-        <TransferReview 
-          reportId={selectedReportId} 
-          onBack={handleBackToSelection}
-          isAdminMode={isAdminMode}
-        />
-      </AppShell>
-    )
   }
 
   return (
@@ -56,20 +46,33 @@ export default function Home() {
       onTabChange={setActiveTab}
       isAdminMode={isAdminMode}
       onAdminModeChange={setIsAdminMode}
+      isReviewMode={currentView === "review"}
+      reviewData={reviewData}
+      onBackFromReview={handleBackToSelection}
     >
-      {activeTab === "new-transfer" && (
-        <ReportSelection onGenerate={handleGenerate} />
-      )}
-      {activeTab === "in-progress" && (
-        <div className="flex items-center justify-center h-full text-[#64748b]">
-          <div className="text-center">
-            <p className="text-lg font-medium">In Progress</p>
-            <p className="text-sm">2 transfers pending review</p>
-          </div>
-        </div>
-      )}
-      {activeTab === "history" && (
-        <HistoryPage onViewReport={handleViewHistoryReport} />
+      {currentView === "review" && selectedReportId ? (
+        <TransferReview 
+          reportId={selectedReportId} 
+          onBack={handleBackToSelection}
+          isAdminMode={isAdminMode}
+        />
+      ) : (
+        <>
+          {activeTab === "new-transfer" && (
+            <ReportSelection onGenerate={handleGenerate} />
+          )}
+          {activeTab === "in-progress" && (
+            <div className="flex items-center justify-center h-full text-[#64748b]">
+              <div className="text-center">
+                <p className="text-lg font-medium">In Progress</p>
+                <p className="text-sm">2 transfers pending review</p>
+              </div>
+            </div>
+          )}
+          {activeTab === "history" && (
+            <HistoryPage onViewReport={handleViewHistoryReport} />
+          )}
+        </>
       )}
     </AppShell>
   )
