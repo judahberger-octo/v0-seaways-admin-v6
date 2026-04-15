@@ -5,10 +5,12 @@ import { Ship, ChevronDown, User } from "lucide-react"
 interface AppShellProps {
   activeTab: "new-transfer" | "in-progress" | "history"
   onTabChange: (tab: "new-transfer" | "in-progress" | "history") => void
+  isAdminMode?: boolean
+  onAdminModeChange?: (enabled: boolean) => void
   children: React.ReactNode
 }
 
-export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
+export function AppShell({ activeTab, onTabChange, isAdminMode = false, onAdminModeChange, children }: AppShellProps) {
   return (
     <div className="min-h-screen flex flex-col bg-white">
       {/* Top Navigation */}
@@ -60,8 +62,27 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
           </button>
         </nav>
 
-        {/* Right - Vessel & User */}
+        {/* Right - Admin Toggle, Vessel & User */}
         <div className="flex items-center gap-4">
+          {/* Admin Toggle */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[#94a3b8]">Admin</span>
+            <button
+              onClick={() => onAdminModeChange?.(!isAdminMode)}
+              className={`relative w-9 h-5 rounded-full transition-colors ${
+                isAdminMode ? "bg-[#7c3aed]" : "bg-[#e2e8f0]"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
+                  isAdminMode ? "translate-x-4" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+
+          <div className="h-6 w-px bg-[#e2e8f0]" />
+
           <button className="flex items-center gap-2 text-sm text-[#0f172a] hover:bg-[#f8fafc] px-3 py-1.5 rounded-lg transition-colors">
             <Ship className="w-4 h-4 text-[#64748b]" />
             <span className="font-medium">Seaways Skopelos</span>
@@ -71,7 +92,14 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
             <div className="w-8 h-8 rounded-full bg-[#ede9fe] flex items-center justify-center">
               <User className="w-4 h-4 text-[#7c3aed]" />
             </div>
-            <span className="text-sm text-[#64748b]">Chief Officer</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm text-[#64748b]">Chief Officer</span>
+              {isAdminMode && (
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#7c3aed] text-white">
+                  Admin
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </header>

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { AppShell } from "@/components/app-shell"
 import { ReportSelection } from "@/components/report-selection"
 import { TransferReview } from "@/components/transfer-review"
+import { HistoryPage } from "@/components/history-page"
 
 type AppView = "selection" | "review"
 
@@ -11,6 +12,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<"new-transfer" | "in-progress" | "history">("new-transfer")
   const [currentView, setCurrentView] = useState<AppView>("selection")
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
+  const [isAdminMode, setIsAdminMode] = useState(false)
 
   const handleGenerate = (reportIds: string[]) => {
     // For now, we only handle single report transfer
@@ -24,17 +26,37 @@ export default function Home() {
     setSelectedReportId(null)
   }
 
+  const handleViewHistoryReport = (reportId: string) => {
+    // For now, just switch to the report view
+    setSelectedReportId(reportId)
+    setCurrentView("review")
+  }
+
   // If we're in review mode, show the review page without the app shell tabs
   if (currentView === "review" && selectedReportId) {
     return (
-      <AppShell activeTab={activeTab} onTabChange={setActiveTab}>
-        <TransferReview reportId={selectedReportId} onBack={handleBackToSelection} />
+      <AppShell 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab}
+        isAdminMode={isAdminMode}
+        onAdminModeChange={setIsAdminMode}
+      >
+        <TransferReview 
+          reportId={selectedReportId} 
+          onBack={handleBackToSelection}
+          isAdminMode={isAdminMode}
+        />
       </AppShell>
     )
   }
 
   return (
-    <AppShell activeTab={activeTab} onTabChange={setActiveTab}>
+    <AppShell 
+      activeTab={activeTab} 
+      onTabChange={setActiveTab}
+      isAdminMode={isAdminMode}
+      onAdminModeChange={setIsAdminMode}
+    >
       {activeTab === "new-transfer" && (
         <ReportSelection onGenerate={handleGenerate} />
       )}
@@ -47,12 +69,7 @@ export default function Home() {
         </div>
       )}
       {activeTab === "history" && (
-        <div className="flex items-center justify-center h-full text-[#64748b]">
-          <div className="text-center">
-            <p className="text-lg font-medium">History</p>
-            <p className="text-sm">View completed transfers</p>
-          </div>
-        </div>
+        <HistoryPage onViewReport={handleViewHistoryReport} />
       )}
     </AppShell>
   )

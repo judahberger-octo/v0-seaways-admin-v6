@@ -19,8 +19,10 @@ import {
   Search,
   Keyboard,
   AlertCircle,
-  ExternalLink
+  ExternalLink,
+  Cog
 } from "lucide-react"
+import { AdminTestingSuite } from "./admin-testing-suite"
 
 // Field status types
 type FieldStatus = "verified" | "flagged" | "pending" | "not-populated" | "manually-edited"
@@ -205,6 +207,7 @@ const createMockFormSections = (): FormSection[] => [
 interface TransferReviewProps {
   reportId: string
   onBack: () => void
+  isAdminMode?: boolean
 }
 
 // Toast notification component
@@ -559,11 +562,15 @@ function FieldDefinitionPanel({
   sectionName,
   onVerify,
   onFlag,
+  isAdminMode,
+  onOpenAdminSuite,
 }: {
   field: FormField
   sectionName: string
   onVerify: () => void
   onFlag: (reason: string, comment: string) => void
+  isAdminMode?: boolean
+  onOpenAdminSuite?: () => void
 }) {
   const [isCalculationExpanded, setIsCalculationExpanded] = useState(false)
   const [isValidationExpanded, setIsValidationExpanded] = useState(true)
@@ -767,32 +774,44 @@ function FieldDefinitionPanel({
 
       {/* Action Buttons */}
       {!isFlagging && (
-        <div className="p-4 border-t border-[#e2e8f0] flex items-center gap-2">
-          <button
-            onClick={onVerify}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 rounded-lg font-medium transition-colors ${
-              field.isCritical && field.status !== "verified"
-                ? "py-3 bg-[#16a34a] text-white hover:bg-[#15803d] text-base"
-                : "py-2.5 bg-[#16a34a] text-white hover:bg-[#15803d]"
-            }`}
-          >
-            <Check className="w-4 h-4" />
-            Verify
-          </button>
-          <button
-            onClick={() => {}}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-[#e2e8f0] rounded-lg font-medium hover:bg-[#f8fafc] transition-colors"
-          >
-            <Pencil className="w-4 h-4" />
-            Edit
-          </button>
-          <button
-            onClick={() => setIsFlagging(true)}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-[#e2e8f0] rounded-lg font-medium hover:bg-[#f8fafc] transition-colors"
-          >
-            <Flag className="w-4 h-4" />
-            Flag
-          </button>
+        <div className="p-4 border-t border-[#e2e8f0]">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onVerify}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 rounded-lg font-medium transition-colors ${
+                field.isCritical && field.status !== "verified"
+                  ? "py-3 bg-[#16a34a] text-white hover:bg-[#15803d] text-base"
+                  : "py-2.5 bg-[#16a34a] text-white hover:bg-[#15803d]"
+              }`}
+            >
+              <Check className="w-4 h-4" />
+              Verify
+            </button>
+            <button
+              onClick={() => {}}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-[#e2e8f0] rounded-lg font-medium hover:bg-[#f8fafc] transition-colors"
+            >
+              <Pencil className="w-4 h-4" />
+              Edit
+            </button>
+            <button
+              onClick={() => setIsFlagging(true)}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-[#e2e8f0] rounded-lg font-medium hover:bg-[#f8fafc] transition-colors"
+            >
+              <Flag className="w-4 h-4" />
+              Flag
+            </button>
+          </div>
+          {/* Admin: Edit Extraction Logic */}
+          {isAdminMode && (
+            <button
+              onClick={onOpenAdminSuite}
+              className="w-full mt-3 flex items-center justify-center gap-2 text-sm text-[#64748b] hover:text-[#7c3aed] transition-colors"
+            >
+              <Cog className="w-4 h-4" />
+              Edit Extraction Logic
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -985,7 +1004,7 @@ function BottomActionBar({
   )
 }
 
-export function TransferReview({ reportId, onBack }: TransferReviewProps) {
+export function TransferReview({ reportId, onBack, isAdminMode = false }: TransferReviewProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [sections, setSections] = useState(createMockFormSections)
   const [selectedField, setSelectedField] = useState<FormField | null>(null)
@@ -994,6 +1013,7 @@ export function TransferReview({ reportId, onBack }: TransferReviewProps) {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" | "warning" } | null>(null)
   const [pulsingFieldId, setPulsingFieldId] = useState<string | null>(null)
+  const [showAdminSuite, setShowAdminSuite] = useState(false)
 
   // Get the section name for the selected field
   const getFieldSectionName = (fieldId: string) => {
@@ -1311,6 +1331,8 @@ export function TransferReview({ reportId, onBack }: TransferReviewProps) {
                   sectionName={getFieldSectionName(selectedField.id)}
                   onVerify={handleVerify}
                   onFlag={handleFlag}
+                  isAdminMode={isAdminMode}
+                  onOpenAdminSuite={() => setShowAdminSuite(true)}
                 />
               </div>
 
@@ -1437,6 +1459,22 @@ export function TransferReview({ reportId, onBack }: TransferReviewProps) {
           />
         </div>
       </div>
+
+      {/* Admin Testing Suite Modal */}
+      {showAdminSuite && selectedField && (
+        <AdminTestingSuite
+          fieldName={selectedField.label}
+          fieldValue={selectedField.value}
+          fieldUnit={selectedField.unit}
+          sourceTab={selectedField.sourceTab || "Operational"}
+          sourceField={selectedField.sourceField || ""}
+          onClose={() => setShowAdminSuite(false)}
+          onSave={() => {
+            setShowAdminSuite(false)
+            setToast({ message: "Extraction logic updated", type: "success" })
+          }}
+        />
+      )}
     </div>
   )
 }
