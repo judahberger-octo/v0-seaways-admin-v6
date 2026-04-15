@@ -778,12 +778,15 @@ function FieldDefinitionPanel({
       {!isFlagging && (
         <div className="p-4 border-t border-[#e2e8f0]">
           <div className="flex items-center gap-2">
+            {/* Verify button - prominent green for critical, outlined for non-critical */}
             <button
               onClick={onVerify}
               className={`flex-1 flex items-center justify-center gap-2 px-4 rounded-lg font-medium transition-colors ${
                 field.isCritical && field.status !== "verified"
                   ? "py-3 bg-[#16a34a] text-white hover:bg-[#15803d] text-base"
-                  : "py-2.5 bg-[#16a34a] text-white hover:bg-[#15803d]"
+                  : field.isCritical
+                  ? "py-2.5 bg-[#16a34a] text-white hover:bg-[#15803d]"
+                  : "py-2.5 border-2 border-[#16a34a] text-[#16a34a] hover:bg-[#f0fdf4]"
               }`}
             >
               <Check className="w-4 h-4" />
@@ -1078,14 +1081,76 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
   const [editedFields, setEditedFields] = useState<Set<string>>(new Set())
   const [verifiedVesLinkFields, setVerifiedVesLinkFields] = useState<Set<string>>(new Set())
 
-  // Get the section name for the selected field
+  // Get the section name for the selected field - supports VesLink field IDs
   const getFieldSectionName = (fieldId: string) => {
+    // First check internal sections
     for (const section of sections) {
       if (section.fields.some((f) => f.id === fieldId)) {
         return section.name
       }
     }
-    return ""
+    
+    // Map VesLink field IDs to section names
+    const vesLinkSectionMap: Record<string, string> = {
+      // Header section
+      "date-time": "Header",
+      "voyage-number": "Header",
+      "vessel-condition": "Header",
+      "vessel-name": "Header",
+      "latitude": "Header",
+      "longitude": "Header",
+      "location": "Header",
+      "remarks": "Header",
+      "next-port": "Header",
+      "eta": "Header",
+      "eta-date": "Header",
+      "eta-time": "Header",
+      // Distance and Vessel section
+      "distance-to-go": "Distance & Vessel",
+      "cp-ordered-speed": "Distance & Vessel",
+      "reported-speed": "Distance & Vessel",
+      "observed-distance": "Distance & Vessel",
+      "time-since-last": "Distance & Vessel",
+      "ballast": "Distance & Vessel",
+      "displacement": "Distance & Vessel",
+      "slip": "Distance & Vessel",
+      "fwd-draft": "Distance & Vessel",
+      "mid-draft": "Distance & Vessel",
+      "aft-draft": "Distance & Vessel",
+      // Machinery section
+      "main-engine-rpm": "Machinery",
+      "gen1-kwhrs": "Machinery",
+      "gen1-hrs": "Machinery",
+      "gen2-kwhrs": "Machinery",
+      "gen2-hrs": "Machinery",
+      "gen3-kwhrs": "Machinery",
+      "gen3-hrs": "Machinery",
+      "boiler-hrs": "Machinery",
+      // Weather section
+      "beaufort": "Weather",
+      "wind-direction": "Weather",
+      "sea-state": "Weather",
+      "sea-height": "Weather",
+      "sea-temp": "Weather",
+      // Bunkers section
+      "bunkers-section": "Bunkers",
+      "measurement-method": "Bunkers",
+      "ifo-rob": "Bunkers",
+      "mgo-rob": "Bunkers",
+      "lsf-rob": "Bunkers",
+      "lsmgo-rob": "Bunkers",
+      // Water section
+      "fresh-water-rob": "Water",
+      "distilled-water-rob": "Water",
+      "slops-rob": "Water",
+      "tank-clean-chem": "Water",
+      "distilled-consumed": "Water",
+      "fresh-consumed": "Water",
+      "distilled-produced": "Water",
+      "fresh-produced": "Water",
+    }
+    
+    return vesLinkSectionMap[fieldId] || "VesLink Form"
   }
 
   // Calculate stats
@@ -1114,6 +1179,34 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
 
   const handleFieldSelect = (field: FormField) => {
     setSelectedField(field)
+  }
+
+  // Critical field metadata for proper labels and source mappings
+  const getCriticalFieldMetadata = (fieldId: string) => {
+    const metadata: Record<string, { label: string; sourceTab: string; sourceField: string; value: string }> = {
+      "date-time": { label: "Date/Time", sourceTab: "Operational", sourceField: "Report Date/Time", value: "14/04/2026 12:00" },
+      "voyage-number": { label: "Voyage Number", sourceTab: "Operational", sourceField: "Voyage Number", value: "124" },
+      "vessel-condition": { label: "Vessel Condition", sourceTab: "Operational", sourceField: "Vessel Condition", value: "Laden" },
+      "next-port": { label: "Next Port", sourceTab: "Operational", sourceField: "Next Port", value: "Fujairah" },
+      "eta": { label: "ETA", sourceTab: "Operational", sourceField: "ETA", value: "22/04/2026 14:00" },
+      "distance-to-go": { label: "Distance to Go", sourceTab: "Operational", sourceField: "Distance to Go", value: "2847" },
+      "cp-ordered-speed": { label: "CP / Ordered Speed", sourceTab: "Operational", sourceField: "Ordered Speed", value: "12.5" },
+      "reported-speed": { label: "Reported Speed", sourceTab: "Operational", sourceField: "Reported Speed", value: "12.3" },
+      "observed-distance": { label: "Observed Distance", sourceTab: "Operational", sourceField: "Observed Distance", value: "142.3" },
+      "time-since-last": { label: "Time Since Last Report", sourceTab: "Operational", sourceField: "Time Since Last Report", value: "24.0" },
+      "main-engine-rpm": { label: "Main Engine RPM", sourceTab: "Power", sourceField: "ME RPM", value: "85.2" },
+      "beaufort": { label: "Beaufort", sourceTab: "Pos & Weather", sourceField: "Beaufort Scale", value: "4" },
+      "bunkers-section": { label: "ROB, Consumption & Used For", sourceTab: "Bunker", sourceField: "Bunker ROB Table", value: "Complete" },
+      "fresh-water-rob": { label: "Fresh Water ROB", sourceTab: "Stock", sourceField: "Fresh Water ROB", value: "125.4" },
+      "distilled-water-rob": { label: "Distilled Water ROB", sourceTab: "Stock", sourceField: "Distilled Water ROB", value: "48.2" },
+      "slops-rob": { label: "Slops ROB", sourceTab: "Stock", sourceField: "Slops ROB", value: "12.8" },
+    }
+    return metadata[fieldId] || { 
+      label: fieldId.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
+      sourceTab: "Operational",
+      sourceField: fieldId,
+      value: ""
+    }
   }
 
   // Helper to scroll to VesLink field
@@ -1171,23 +1264,24 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
     }
     
     if (nextField) {
-      // Create a mock field object for the left panel
+      // Create a mock field object for the left panel with proper metadata
+      const metadata = getCriticalFieldMetadata(nextField)
       const mockField: FormField = {
         id: nextField,
-        label: nextField.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
-        value: "",
+        label: metadata.label,
+        value: metadata.value,
         confidence: 95 + Math.floor(Math.random() * 5),
         status: "pending",
         isCritical: true,
-        sourceTab: "Operational",
-        sourceField: nextField,
+        sourceTab: metadata.sourceTab,
+        sourceField: metadata.sourceField,
       }
       setSelectedField(mockField)
       
       // Scroll to field on VesLink form
       scrollToVesLinkField(nextField)
     }
-  }, [verifiedVesLinkFields, selectedField, scrollToVesLinkField])
+  }, [verifiedVesLinkFields, selectedField, scrollToVesLinkField, getCriticalFieldMetadata])
 
   // Navigate to previous unverified VesLink critical field
   const navigateToPrevCritical = useCallback(() => {
@@ -1211,21 +1305,22 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
     }
     
     if (prevField) {
+      const metadata = getCriticalFieldMetadata(prevField)
       const mockField: FormField = {
         id: prevField,
-        label: prevField.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
-        value: "",
+        label: metadata.label,
+        value: metadata.value,
         confidence: 95 + Math.floor(Math.random() * 5),
         status: "pending",
         isCritical: true,
-        sourceTab: "Operational",
-        sourceField: prevField,
+        sourceTab: metadata.sourceTab,
+        sourceField: metadata.sourceField,
       }
       setSelectedField(mockField)
       
       scrollToVesLinkField(prevField)
     }
-  }, [verifiedVesLinkFields, selectedField, scrollToVesLinkField])
+  }, [verifiedVesLinkFields, selectedField, scrollToVesLinkField, getCriticalFieldMetadata])
 
   const handleVerify = useCallback(() => {
     if (!selectedField) return
@@ -1447,15 +1542,16 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
               onFieldSelect={(fieldId) => {
                 // Map VesLink field IDs to our internal field data for the left panel
                 const isCritical = CRITICAL_FIELDS_NOON_SEA.includes(fieldId)
+                const metadata = getCriticalFieldMetadata(fieldId)
                 const mockField: FormField = {
                   id: fieldId,
-                  label: fieldId.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
-                  value: "",
+                  label: metadata.label,
+                  value: metadata.value,
                   confidence: 95 + Math.floor(Math.random() * 5),
                   status: verifiedVesLinkFields.has(fieldId) ? "verified" : "pending",
                   isCritical,
-                  sourceTab: "Operational",
-                  sourceField: fieldId,
+                  sourceTab: metadata.sourceTab,
+                  sourceField: metadata.sourceField,
                 }
                 setSelectedField(mockField)
               }}
