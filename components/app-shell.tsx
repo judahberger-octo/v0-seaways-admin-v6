@@ -233,6 +233,30 @@ export function AppShell({
 
               {/* Right - Actions */}
               <div className="flex items-center gap-2">
+                {/* Admin Toggle */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-[#94a3b8]">Admin</span>
+                  <button
+                    onClick={() => onAdminModeChange?.(!isAdminMode)}
+                    className={`relative w-8 h-4 rounded-full transition-colors ${
+                      isAdminMode ? "bg-[#7c3aed]" : "bg-[#e2e8f0]"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${
+                        isAdminMode ? "translate-x-4" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                  {isAdminMode && (
+                    <span className="text-[10px] font-medium text-[#7c3aed] bg-[#ede9fe] px-1.5 py-0.5 rounded">
+                      ON
+                    </span>
+                  )}
+                </div>
+                
+                <div className="h-4 w-px bg-[#e2e8f0]" />
+
                 <span className="text-xs px-2 py-0.5 rounded bg-[#e2e8f0] text-[#64748b] font-medium">
                   Draft
                 </span>
