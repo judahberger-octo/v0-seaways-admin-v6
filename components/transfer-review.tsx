@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { 
   ArrowLeft, 
   Settings, 
@@ -15,7 +15,11 @@ import {
   Pencil,
   ChevronUp,
   Maximize2,
-  X
+  X,
+  Search,
+  Keyboard,
+  AlertCircle,
+  ExternalLink
 } from "lucide-react"
 
 // Field status types
@@ -117,7 +121,7 @@ const mockSourceData: Record<string, { sectionTitle: string; fields: { label: st
 }
 
 // Mock data for the VesLink form sections
-const mockFormSections: FormSection[] = [
+const createMockFormSections = (): FormSection[] => [
   {
     id: "general",
     name: "General Information",
@@ -165,7 +169,7 @@ const mockFormSections: FormSection[] = [
       { id: "aft-draft", label: "Aft Draft", value: "16.6", unit: "m", confidence: 98, status: "pending", isCritical: true, sourceTab: "Operational", sourceField: "Draught Aft" },
       { id: "trim", label: "Trim", value: "0.00", unit: "m", confidence: 99, status: "verified", sourceTab: "Operational", sourceField: "Trim" },
       { id: "cargo-weight", label: "Cargo Weight", value: "147948.45", unit: "MT", confidence: 97, status: "verified", sourceTab: "Operational", sourceField: "Cargo Weight" },
-      { id: "ballast", label: "Ballast", value: "1896", unit: "MT", confidence: 96, status: "verified", isCritical: true, sourceTab: "Operational", sourceField: "Ballast Water" },
+      { id: "ballast", label: "Ballast", value: "1896", unit: "MT", confidence: 96, status: "pending", isCritical: true, sourceTab: "Operational", sourceField: "Ballast Water" },
       { id: "displacement", label: "Displacement", value: "172000", unit: "t", confidence: 94, status: "verified", sourceTab: "Operational", sourceField: "Displacement" },
     ],
   },
@@ -201,6 +205,139 @@ const mockFormSections: FormSection[] = [
 interface TransferReviewProps {
   reportId: string
   onBack: () => void
+}
+
+// Toast notification component
+function Toast({ message, type, onClose }: { message: string; type: "error" | "success" | "warning"; onClose: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 4000)
+    return () => clearTimeout(timer)
+  }, [onClose])
+
+  const colors = {
+    error: "bg-[#fef2f2] border-[#fecaca] text-[#991b1b]",
+    success: "bg-[#f0fdf4] border-[#bbf7d0] text-[#166534]",
+    warning: "bg-[#fffbeb] border-[#fcd34d] text-[#92400e]",
+  }
+
+  const icons = {
+    error: <X className="w-4 h-4" />,
+    success: <Check className="w-4 h-4" />,
+    warning: <AlertCircle className="w-4 h-4" />,
+  }
+
+  return (
+    <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-3 rounded-lg border shadow-lg flex items-center gap-3 z-50 animate-in slide-in-from-bottom-4 ${colors[type]}`}>
+      {icons[type]}
+      <span className="text-sm font-medium">{message}</span>
+      <button onClick={onClose} className="ml-2 hover:opacity-70">
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  )
+}
+
+// Submit Confirmation Dialog
+function SubmitConfirmDialog({
+  reportId,
+  stats,
+  onCancel,
+  onConfirm,
+}: {
+  reportId: string
+  stats: { autoPopulated: number; criticalVerified: number; manuallyEdited: number; flagged: number }
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
+        <div className="p-6">
+          <h2 className="text-xl font-semibold text-[#0f172a] mb-2">Submit to VesLink?</h2>
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-medium text-[#0f172a]">Report #{reportId}</span>
+              <span className="text-[#64748b]">—</span>
+              <span className="text-[#64748b]">Noon Report (Sea)</span>
+            </div>
+            <span className="text-sm text-[#64748b]">Seaways Skopelos</span>
+          </div>
+
+          <div className="space-y-2 mb-6">
+            <div className="flex items-center justify-between py-2 px-3 bg-[#f8fafc] rounded-lg">
+              <span className="text-sm text-[#64748b]">Fields auto-populated</span>
+              <span className="text-sm font-medium text-[#0f172a]">{stats.autoPopulated}</span>
+            </div>
+            <div className="flex items-center justify-between py-2 px-3 bg-[#f8fafc] rounded-lg">
+              <span className="text-sm text-[#64748b]">Critical fields verified</span>
+              <span className="text-sm font-medium text-[#16a34a]">{stats.criticalVerified}</span>
+            </div>
+            <div className="flex items-center justify-between py-2 px-3 bg-[#f8fafc] rounded-lg">
+              <span className="text-sm text-[#64748b]">Fields manually edited</span>
+              <span className="text-sm font-medium text-[#2563eb]">{stats.manuallyEdited}</span>
+            </div>
+            <div className="flex items-center justify-between py-2 px-3 bg-[#f8fafc] rounded-lg">
+              <span className="text-sm text-[#64748b]">Fields flagged for review</span>
+              <span className="text-sm font-medium text-[#d97706]">{stats.flagged}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 px-6 py-4 bg-[#f8fafc] border-t border-[#e2e8f0]">
+          <button
+            onClick={onCancel}
+            className="flex-1 px-4 py-2.5 text-sm font-medium border border-[#e2e8f0] rounded-lg hover:bg-white transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 px-4 py-2.5 text-sm font-medium bg-[#7c3aed] text-white rounded-lg hover:bg-[#6d28d9] transition-colors flex items-center justify-center gap-2"
+          >
+            <Send className="w-4 h-4" />
+            Submit
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Success State Component
+function SuccessState({ reportId, onViewHistory, onNewTransfer }: { reportId: string; onViewHistory: () => void; onNewTransfer: () => void }) {
+  return (
+    <div className="flex items-center justify-center min-h-[calc(100vh-7rem)]">
+      <div className="bg-white border border-[#e2e8f0] rounded-xl shadow-sm p-8 max-w-md w-full text-center">
+        <div className="w-16 h-16 rounded-full bg-[#f0fdf4] flex items-center justify-center mx-auto mb-4">
+          <Check className="w-8 h-8 text-[#16a34a]" />
+        </div>
+        <h2 className="text-xl font-semibold text-[#0f172a] mb-2">
+          Report submitted to VesLink
+        </h2>
+        <p className="text-[#64748b] mb-1">
+          Report #{reportId} • Noon Report (Sea) • Seaways Skopelos
+        </p>
+        <p className="text-sm text-[#94a3b8] mb-6">
+          Submitted by Chief Officer at {new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+        </p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onViewHistory}
+            className="flex-1 px-4 py-2.5 text-sm font-medium border border-[#e2e8f0] rounded-lg hover:bg-[#f8fafc] transition-colors flex items-center justify-center gap-2"
+          >
+            <ExternalLink className="w-4 h-4" />
+            View in History
+          </button>
+          <button
+            onClick={onNewTransfer}
+            className="flex-1 px-4 py-2.5 text-sm font-medium bg-[#7c3aed] text-white rounded-lg hover:bg-[#6d28d9] transition-colors"
+          >
+            Start New Transfer
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // Loading State Component
@@ -286,10 +423,12 @@ function LoadingState({ onComplete }: { onComplete: () => void }) {
 function FieldRow({
   field,
   isSelected,
+  isPulsing,
   onClick,
 }: {
   field: FormField
   isSelected: boolean
+  isPulsing?: boolean
   onClick: () => void
 }) {
   const getConfidenceColor = (confidence: number) => {
@@ -313,6 +452,7 @@ function FieldRow({
 
   return (
     <button
+      id={`field-${field.id}`}
       onClick={onClick}
       className={`w-full flex items-center justify-between py-2.5 px-3 border-l-[3px] transition-all text-left ${getStatusBorder(
         field.status,
@@ -327,7 +467,10 @@ function FieldRow({
     >
       <div className="flex items-center gap-2 min-w-0">
         {field.isCritical && (
-          <Star className="w-3.5 h-3.5 text-[#f59e0b] flex-shrink-0" fill="#f59e0b" />
+          <Star 
+            className={`w-3.5 h-3.5 text-[#f59e0b] flex-shrink-0 ${isPulsing ? "animate-pulse" : ""}`} 
+            fill="#f59e0b" 
+          />
         )}
         <span className="text-sm text-[#64748b] truncate">{field.label}:</span>
       </div>
@@ -342,6 +485,9 @@ function FieldRow({
         {field.status === "verified" && (
           <Check className="w-4 h-4 text-[#16a34a]" />
         )}
+        {field.status === "flagged" && (
+          <Flag className="w-4 h-4 text-[#dc2626]" />
+        )}
       </div>
     </button>
   )
@@ -351,15 +497,18 @@ function FieldRow({
 function FormSectionComponent({
   section,
   selectedFieldId,
+  pulsingFieldId,
   onFieldSelect,
   onToggle,
 }: {
   section: FormSection
   selectedFieldId: string | null
+  pulsingFieldId: string | null
   onFieldSelect: (field: FormField) => void
   onToggle: () => void
 }) {
   const totalFields = section.fields.length
+  const verifiedInSection = section.fields.filter(f => f.status === "verified" || f.status === "flagged").length
 
   return (
     <div className="border border-[#e2e8f0] rounded-lg overflow-hidden">
@@ -377,7 +526,7 @@ function FormSectionComponent({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-[#64748b]">
-            {section.reviewedCount}/{totalFields} reviewed
+            {verifiedInSection}/{totalFields} reviewed
           </span>
           {section.needsManualEntry && (
             <span className="text-xs text-[#d97706]">
@@ -394,6 +543,7 @@ function FormSectionComponent({
               key={field.id}
               field={field}
               isSelected={selectedFieldId === field.id}
+              isPulsing={pulsingFieldId === field.id}
               onClick={() => onFieldSelect(field)}
             />
           ))}
@@ -425,12 +575,6 @@ function FieldDefinitionPanel({
     if (confidence >= 90) return "#16a34a"
     if (confidence >= 70) return "#d97706"
     return "#dc2626"
-  }
-
-  const getConfidenceLabel = (confidence: number) => {
-    if (confidence >= 90) return "HIGH CONFIDENCE"
-    if (confidence >= 70) return "MEDIUM CONFIDENCE"
-    return "LOW CONFIDENCE"
   }
 
   const confidenceColor = getConfidenceColor(field.confidence)
@@ -516,7 +660,7 @@ function FieldDefinitionPanel({
         </div>
 
         {/* Critical Field Badge */}
-        {field.isCritical && (
+        {field.isCritical && field.status !== "verified" && (
           <div className="mb-4 flex items-center gap-2 px-3 py-2 bg-[#fffbeb] border border-[#fcd34d] rounded-lg">
             <Star className="w-4 h-4 text-[#f59e0b]" fill="#f59e0b" />
             <span className="text-sm font-medium text-[#92400e]">
@@ -626,7 +770,11 @@ function FieldDefinitionPanel({
         <div className="p-4 border-t border-[#e2e8f0] flex items-center gap-2">
           <button
             onClick={onVerify}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[#16a34a] text-white rounded-lg font-medium hover:bg-[#15803d] transition-colors"
+            className={`flex-1 flex items-center justify-center gap-2 px-4 rounded-lg font-medium transition-colors ${
+              field.isCritical && field.status !== "verified"
+                ? "py-3 bg-[#16a34a] text-white hover:bg-[#15803d] text-base"
+                : "py-2.5 bg-[#16a34a] text-white hover:bg-[#15803d]"
+            }`}
           >
             <Check className="w-4 h-4" />
             Verify
@@ -770,11 +918,82 @@ function SourceScreenshotPreview({
   )
 }
 
+// Bottom Action Bar Component
+function BottomActionBar({
+  selectedField,
+  onVerify,
+  onEdit,
+  onFlag,
+  onClose,
+}: {
+  selectedField: FormField | null
+  onVerify: () => void
+  onEdit: () => void
+  onFlag: () => void
+  onClose: () => void
+}) {
+  return (
+    <div className="h-12 border-t border-[#e2e8f0] bg-[#f8fafc] flex items-center justify-center gap-6 px-4 flex-shrink-0">
+      <button 
+        className="flex items-center gap-2 text-sm text-[#64748b] hover:text-[#0f172a] transition-colors"
+        disabled={!selectedField}
+      >
+        <Search className="w-4 h-4" />
+        <span>Navigate</span>
+        <kbd className="ml-1 px-1.5 py-0.5 text-xs bg-white border border-[#e2e8f0] rounded">N</kbd>
+      </button>
+      <div className="h-4 w-px bg-[#e2e8f0]" />
+      <button 
+        onClick={onVerify}
+        className="flex items-center gap-2 text-sm text-[#64748b] hover:text-[#16a34a] transition-colors disabled:opacity-50"
+        disabled={!selectedField}
+      >
+        <Check className="w-4 h-4" />
+        <span>Verify</span>
+        <kbd className="ml-1 px-1.5 py-0.5 text-xs bg-white border border-[#e2e8f0] rounded">V</kbd>
+      </button>
+      <div className="h-4 w-px bg-[#e2e8f0]" />
+      <button 
+        onClick={onEdit}
+        className="flex items-center gap-2 text-sm text-[#64748b] hover:text-[#0f172a] transition-colors disabled:opacity-50"
+        disabled={!selectedField}
+      >
+        <Pencil className="w-4 h-4" />
+        <span>Edit</span>
+        <kbd className="ml-1 px-1.5 py-0.5 text-xs bg-white border border-[#e2e8f0] rounded">E</kbd>
+      </button>
+      <div className="h-4 w-px bg-[#e2e8f0]" />
+      <button 
+        onClick={onFlag}
+        className="flex items-center gap-2 text-sm text-[#64748b] hover:text-[#dc2626] transition-colors disabled:opacity-50"
+        disabled={!selectedField}
+      >
+        <Flag className="w-4 h-4" />
+        <span>Flag</span>
+        <kbd className="ml-1 px-1.5 py-0.5 text-xs bg-white border border-[#e2e8f0] rounded">F</kbd>
+      </button>
+      <div className="h-4 w-px bg-[#e2e8f0]" />
+      <button 
+        onClick={onClose}
+        className="flex items-center gap-2 text-sm text-[#64748b] hover:text-[#0f172a] transition-colors"
+      >
+        <Keyboard className="w-4 h-4" />
+        <span>Close</span>
+        <kbd className="ml-1 px-1.5 py-0.5 text-xs bg-white border border-[#e2e8f0] rounded">Esc</kbd>
+      </button>
+    </div>
+  )
+}
+
 export function TransferReview({ reportId, onBack }: TransferReviewProps) {
   const [isLoading, setIsLoading] = useState(true)
-  const [sections, setSections] = useState(mockFormSections)
+  const [sections, setSections] = useState(createMockFormSections)
   const [selectedField, setSelectedField] = useState<FormField | null>(null)
   const [selectedReportId, setSelectedReportId] = useState("4528")
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false)
+  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: "error" | "success" | "warning" } | null>(null)
+  const [pulsingFieldId, setPulsingFieldId] = useState<string | null>(null)
 
   // Get the section name for the selected field
   const getFieldSectionName = (fieldId: string) => {
@@ -792,6 +1011,7 @@ export function TransferReview({ reportId, onBack }: TransferReviewProps) {
   const verifiedCount = allFields.filter((f) => f.status === "verified").length
   const flaggedCount = allFields.filter((f) => f.status === "flagged").length
   const pendingCount = allFields.filter((f) => f.status === "pending").length
+  const manuallyEditedCount = allFields.filter((f) => f.status === "manually-edited").length
   const criticalFields = allFields.filter((f) => f.isCritical)
   const criticalVerified = criticalFields.filter((f) => f.status === "verified").length
   const criticalTotal = criticalFields.length
@@ -809,7 +1029,27 @@ export function TransferReview({ reportId, onBack }: TransferReviewProps) {
     setSelectedField(field)
   }
 
-  const handleVerify = () => {
+  // Find the next unverified critical field
+  const findNextUnverifiedCritical = useCallback((currentFieldId?: string) => {
+    const allFieldsFlat = sections.flatMap((s) => s.fields)
+    const currentIndex = currentFieldId 
+      ? allFieldsFlat.findIndex((f) => f.id === currentFieldId) 
+      : -1
+    
+    // First look after current position
+    let nextField = allFieldsFlat
+      .slice(currentIndex + 1)
+      .find((f) => f.isCritical && f.status !== "verified")
+    
+    // If not found, look from the beginning
+    if (!nextField) {
+      nextField = allFieldsFlat.find((f) => f.isCritical && f.status !== "verified")
+    }
+    
+    return nextField
+  }, [sections])
+
+  const handleVerify = useCallback(() => {
     if (!selectedField) return
     
     setSections((prev) =>
@@ -818,23 +1058,45 @@ export function TransferReview({ reportId, onBack }: TransferReviewProps) {
         fields: section.fields.map((f) =>
           f.id === selectedField.id ? { ...f, status: "verified" as FieldStatus } : f
         ),
-        reviewedCount: section.fields.filter(
-          (f) => f.id === selectedField.id || f.status === "verified" || f.status === "flagged"
-        ).length,
       }))
     )
     
     // Update selected field to reflect new status
     setSelectedField({ ...selectedField, status: "verified" })
     
-    // Auto-advance to next unverified field
+    // Auto-advance to next unverified critical field (priority) or next pending field
     const allFieldsFlat = sections.flatMap((s) => s.fields)
     const currentIndex = allFieldsFlat.findIndex((f) => f.id === selectedField.id)
-    const nextUnverified = allFieldsFlat.slice(currentIndex + 1).find((f) => f.status === "pending")
-    if (nextUnverified) {
-      setTimeout(() => setSelectedField(nextUnverified), 300)
+    
+    // First try to find next unverified critical field
+    const nextCritical = allFieldsFlat
+      .slice(currentIndex + 1)
+      .find((f) => f.isCritical && f.status === "pending")
+    
+    if (nextCritical) {
+      // Expand the section containing this field
+      const sectionWithField = sections.find(s => s.fields.some(f => f.id === nextCritical.id))
+      if (sectionWithField && !sectionWithField.isExpanded) {
+        setSections(prev => prev.map(s => 
+          s.id === sectionWithField.id ? { ...s, isExpanded: true } : s
+        ))
+      }
+      setTimeout(() => {
+        setSelectedField(nextCritical)
+        // Scroll to the field
+        const element = document.getElementById(`field-${nextCritical.id}`)
+        element?.scrollIntoView({ behavior: "smooth", block: "center" })
+      }, 300)
+    } else {
+      // Fall back to next pending field
+      const nextPending = allFieldsFlat
+        .slice(currentIndex + 1)
+        .find((f) => f.status === "pending")
+      if (nextPending) {
+        setTimeout(() => setSelectedField(nextPending), 300)
+      }
     }
-  }
+  }, [selectedField, sections])
 
   const handleFlag = (reason: string, comment: string) => {
     if (!selectedField) return
@@ -851,12 +1113,105 @@ export function TransferReview({ reportId, onBack }: TransferReviewProps) {
     setSelectedField({ ...selectedField, status: "flagged" })
   }
 
+  const handleSubmitClick = () => {
+    if (!canSubmit) {
+      // Find first unverified critical field
+      const unverifiedCritical = findNextUnverifiedCritical()
+      if (unverifiedCritical) {
+        // Expand the section containing this field
+        const sectionWithField = sections.find(s => s.fields.some(f => f.id === unverifiedCritical.id))
+        if (sectionWithField && !sectionWithField.isExpanded) {
+          setSections(prev => prev.map(s => 
+            s.id === sectionWithField.id ? { ...s, isExpanded: true } : s
+          ))
+        }
+        
+        // Select and scroll to the field
+        setTimeout(() => {
+          setSelectedField(unverifiedCritical)
+          setPulsingFieldId(unverifiedCritical.id)
+          const element = document.getElementById(`field-${unverifiedCritical.id}`)
+          element?.scrollIntoView({ behavior: "smooth", block: "center" })
+          
+          // Stop pulsing after 2 seconds
+          setTimeout(() => setPulsingFieldId(null), 2000)
+        }, 100)
+        
+        // Show toast
+        setToast({
+          message: `${criticalTotal - criticalVerified} critical fields still need verification`,
+          type: "warning"
+        })
+      }
+      return
+    }
+    
+    setShowSubmitDialog(true)
+  }
+
+  const handleConfirmSubmit = () => {
+    setShowSubmitDialog(false)
+    setIsSubmitted(true)
+  }
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return
+      }
+      
+      if (e.key === "v" || e.key === "V") {
+        if (selectedField) handleVerify()
+      } else if (e.key === "Escape") {
+        setSelectedField(null)
+      }
+    }
+    
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [selectedField, handleVerify])
+
   if (isLoading) {
     return <LoadingState onComplete={() => setIsLoading(false)} />
   }
 
+  if (isSubmitted) {
+    return (
+      <SuccessState 
+        reportId={reportId} 
+        onViewHistory={onBack}
+        onNewTransfer={onBack}
+      />
+    )
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-7rem)]">
+      {/* Toast */}
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
+      )}
+      
+      {/* Submit Confirmation Dialog */}
+      {showSubmitDialog && (
+        <SubmitConfirmDialog
+          reportId={reportId}
+          stats={{
+            autoPopulated: totalFields - manuallyEditedCount,
+            criticalVerified: criticalVerified,
+            manuallyEdited: manuallyEditedCount,
+            flagged: flaggedCount,
+          }}
+          onCancel={() => setShowSubmitDialog(false)}
+          onConfirm={handleConfirmSubmit}
+        />
+      )}
+
       {/* Header Bar */}
       <div className="h-16 border-b border-[#e2e8f0] bg-white flex items-center justify-between px-6 flex-shrink-0">
         {/* Left - Back + Report Info */}
@@ -925,7 +1280,7 @@ export function TransferReview({ reportId, onBack }: TransferReviewProps) {
             Save Draft
           </button>
           <button
-            disabled={!canSubmit}
+            onClick={handleSubmitClick}
             title={
               !canSubmit
                 ? `Verify all ${criticalTotal} critical fields to submit (${criticalTotal - criticalVerified} remaining)`
@@ -1025,6 +1380,39 @@ export function TransferReview({ reportId, onBack }: TransferReviewProps) {
             </div>
           </div>
 
+          {/* Critical Fields Counter */}
+          <div className="px-4 py-2 bg-[#fffbeb] border-b border-[#fcd34d] flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <Star className="w-4 h-4 text-[#f59e0b]" fill="#f59e0b" />
+              <span className="text-sm font-medium text-[#92400e]">
+                {criticalVerified} of {criticalTotal} critical fields verified
+              </span>
+            </div>
+            {criticalVerified < criticalTotal && (
+              <button 
+                onClick={() => {
+                  const nextCritical = findNextUnverifiedCritical()
+                  if (nextCritical) {
+                    const sectionWithField = sections.find(s => s.fields.some(f => f.id === nextCritical.id))
+                    if (sectionWithField && !sectionWithField.isExpanded) {
+                      setSections(prev => prev.map(s => 
+                        s.id === sectionWithField.id ? { ...s, isExpanded: true } : s
+                      ))
+                    }
+                    setTimeout(() => {
+                      setSelectedField(nextCritical)
+                      const element = document.getElementById(`field-${nextCritical.id}`)
+                      element?.scrollIntoView({ behavior: "smooth", block: "center" })
+                    }, 100)
+                  }
+                }}
+                className="text-sm font-medium text-[#7c3aed] hover:text-[#6d28d9]"
+              >
+                Jump to next →
+              </button>
+            )}
+          </div>
+
           {/* Form Sections */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {sections.map((section) => (
@@ -1032,11 +1420,21 @@ export function TransferReview({ reportId, onBack }: TransferReviewProps) {
                 key={section.id}
                 section={section}
                 selectedFieldId={selectedField?.id ?? null}
+                pulsingFieldId={pulsingFieldId}
                 onFieldSelect={handleFieldSelect}
                 onToggle={() => toggleSection(section.id)}
               />
             ))}
           </div>
+
+          {/* Bottom Action Bar */}
+          <BottomActionBar
+            selectedField={selectedField}
+            onVerify={handleVerify}
+            onEdit={() => {}}
+            onFlag={() => {}}
+            onClose={() => setSelectedField(null)}
+          />
         </div>
       </div>
     </div>
