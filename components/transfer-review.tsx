@@ -1387,11 +1387,8 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
             </>
           )}
         </div>
-      </div>
-    )
-  }
 
-  {/* Right Panel - VesLink Form (authentic replica) */}
+        {/* Right Panel - VesLink Form (authentic replica) */}
         <div className="w-[60%] flex flex-col overflow-hidden bg-white">
           <div className="flex-1 overflow-y-auto">
             <VesLinkForm
