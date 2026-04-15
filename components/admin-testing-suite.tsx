@@ -76,15 +76,22 @@ export function AdminTestingSuite({
   const [isCritical, setIsCritical] = useState(true)
   const [checksumGroup, setChecksumGroup] = useState("none")
 
+  // Expected value state for testing
+  const [expectedValue, setExpectedValue] = useState(fieldValue)
+
   const runTest = () => {
     setIsRunning(true)
     setTestResults([])
     
-    // Simulate test running
+    // Simulate test running - capture results array to avoid closure issues
+    const results = [...mockTestResults]
     let count = 0
     const interval = setInterval(() => {
-      if (count < mockTestResults.length) {
-        setTestResults(prev => [...prev, mockTestResults[count]])
+      if (count < results.length) {
+        const result = results[count]
+        if (result) {
+          setTestResults(prev => [...prev, result])
+        }
         count++
       } else {
         clearInterval(interval)
@@ -93,10 +100,11 @@ export function AdminTestingSuite({
     }, 200)
   }
 
-  const successCount = testResults.filter(r => r.match).length
-  const successRate = testResults.length > 0 ? (successCount / testResults.length) * 100 : 0
-  const avgConfidence = testResults.length > 0 
-    ? Math.round(testResults.reduce((sum, r) => sum + r.confidence, 0) / testResults.length)
+  const validResults = testResults.filter(r => r != null)
+  const successCount = validResults.filter(r => r.match).length
+  const successRate = validResults.length > 0 ? (successCount / validResults.length) * 100 : 0
+  const avgConfidence = validResults.length > 0 
+    ? Math.round(validResults.reduce((sum, r) => sum + (r.confidence || 0), 0) / validResults.length)
     : 0
 
   return (
@@ -342,6 +350,23 @@ export function AdminTestingSuite({
 
           {activeTab === "test" && (
             <div className="space-y-5">
+              {/* Expected Value Input */}
+              <div className="flex items-center gap-3 p-3 bg-[#f8fafc] rounded-lg border border-[#e2e8f0]">
+                <label className="text-sm font-medium text-[#0f172a] whitespace-nowrap">
+                  Expected Value:
+                </label>
+                <input
+                  type="text"
+                  value={expectedValue}
+                  onChange={(e) => setExpectedValue(e.target.value)}
+                  placeholder="Enter expected extraction result"
+                  className="flex-1 px-3 py-1.5 text-sm border border-[#e2e8f0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/20 focus:border-[#7c3aed] bg-white"
+                />
+                {fieldUnit && (
+                  <span className="text-sm text-[#64748b]">{fieldUnit}</span>
+                )}
+              </div>
+
               {/* Run Test Button */}
               <button
                 onClick={runTest}
@@ -357,11 +382,11 @@ export function AdminTestingSuite({
               </button>
 
               {/* Results Summary */}
-              {testResults.length > 0 && (
+              {validResults.length > 0 && (
                 <div className="grid grid-cols-4 gap-3">
                   <div className="bg-[#f8fafc] rounded-lg p-3 text-center">
                     <div className="text-2xl font-semibold text-[#0f172a]">
-                      {successCount}/{testResults.length}
+                      {successCount}/{validResults.length}
                     </div>
                     <div className="text-xs text-[#64748b] mt-0.5">Success Rate</div>
                     <div className={`text-sm font-medium mt-1 ${
@@ -375,9 +400,9 @@ export function AdminTestingSuite({
                     <div className="text-xs text-[#64748b] mt-0.5">Avg Confidence</div>
                   </div>
                   <div className="bg-[#f8fafc] rounded-lg p-3 text-center">
-                    <div className="text-lg font-semibold text-[#0f172a]">16.6</div>
-                    <div className="text-xs text-[#64748b] mt-0.5">Most Common</div>
-                    <div className="text-xs text-[#94a3b8] mt-1">({successCount}x)</div>
+                    <div className="text-lg font-semibold text-[#0f172a]">{expectedValue || "—"}</div>
+                    <div className="text-xs text-[#64748b] mt-0.5">Expected</div>
+                    <div className="text-xs text-[#94a3b8] mt-1">({successCount}x match)</div>
                   </div>
                   <div className="bg-[#f8fafc] rounded-lg p-3 text-center">
                     <div className="text-2xl font-semibold text-[#0f172a]">0.8s</div>
@@ -387,7 +412,7 @@ export function AdminTestingSuite({
               )}
 
               {/* Results Table */}
-              {testResults.length > 0 && (
+              {validResults.length > 0 && (
                 <div className="border border-[#e2e8f0] rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
                     <thead>
@@ -400,7 +425,7 @@ export function AdminTestingSuite({
                       </tr>
                     </thead>
                     <tbody>
-                      {testResults.map((result) => (
+                      {validResults.map((result) => (
                         <tr key={result.run} className="border-b border-[#e2e8f0] last:border-0">
                           <td className="px-4 py-2.5 text-[#0f172a]">{result.run}</td>
                           <td className="px-4 py-2.5 text-[#0f172a] font-medium">{result.extracted}</td>
@@ -426,7 +451,7 @@ export function AdminTestingSuite({
                 </div>
               )}
 
-              {testResults.length === 0 && !isRunning && (
+              {validResults.length === 0 && !isRunning && (
                 <div className="text-center py-12 text-[#94a3b8]">
                   <Play className="w-10 h-10 mx-auto mb-3 opacity-40" />
                   <p>Click &quot;Run 10 iterations&quot; to test the extraction logic</p>
