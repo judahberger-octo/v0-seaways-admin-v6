@@ -3,15 +3,34 @@
 import { useState } from "react"
 import { AppShell } from "@/components/app-shell"
 import { ReportSelection } from "@/components/report-selection"
+import { TransferReview } from "@/components/transfer-review"
+
+type AppView = "selection" | "review"
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"new-transfer" | "in-progress" | "history">("new-transfer")
-  const [, setSelectedReportIds] = useState<string[]>([])
+  const [currentView, setCurrentView] = useState<AppView>("selection")
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
 
   const handleGenerate = (reportIds: string[]) => {
-    setSelectedReportIds(reportIds)
-    // In future prompts, this will navigate to the review page
-    console.log("[v0] Generating transfer for reports:", reportIds)
+    // For now, we only handle single report transfer
+    // In future, batch processing would queue multiple reports
+    setSelectedReportId(reportIds[0] || "4528")
+    setCurrentView("review")
+  }
+
+  const handleBackToSelection = () => {
+    setCurrentView("selection")
+    setSelectedReportId(null)
+  }
+
+  // If we're in review mode, show the review page without the app shell tabs
+  if (currentView === "review" && selectedReportId) {
+    return (
+      <AppShell activeTab={activeTab} onTabChange={setActiveTab}>
+        <TransferReview reportId={selectedReportId} onBack={handleBackToSelection} />
+      </AppShell>
+    )
   }
 
   return (
