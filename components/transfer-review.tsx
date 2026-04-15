@@ -583,15 +583,7 @@ function FieldDefinitionPanel({
                 />
               ))}
             </div>
-            <span 
-              className="text-xs px-2 py-0.5 rounded font-medium"
-              style={{ 
-                backgroundColor: `${confidenceColor}15`,
-                color: confidenceColor 
-              }}
-            >
-              Auto-matched
-            </span>
+            
           </div>
         </div>
 

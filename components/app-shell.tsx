@@ -196,41 +196,6 @@ export function AppShell({
                 <span className="text-xs text-[#94a3b8]">Report #{reviewData.reportId}</span>
               </div>
 
-              {/* Center - Progress */}
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-[#0f172a]">
-                    {reviewData.verified + reviewData.flagged} / {reviewData.total} reviewed
-                  </span>
-                  <div className="w-28 h-1.5 bg-[#e2e8f0] rounded-full overflow-hidden flex">
-                    <div
-                      className="h-full bg-[#16a34a]"
-                      style={{ width: `${(reviewData.verified / reviewData.total) * 100}%` }}
-                    />
-                    <div
-                      className="h-full bg-[#f59e0b]"
-                      style={{ width: `${(reviewData.flagged / reviewData.total) * 100}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 text-[11px]">
-                  <span className="flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a]" />
-                    <span className="text-[#16a34a]">{reviewData.verified} verified</span>
-                  </span>
-                  <span className="text-[#94a3b8]">·</span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
-                    <span className="text-[#f59e0b]">{reviewData.flagged} flagged</span>
-                  </span>
-                  <span className="text-[#94a3b8]">·</span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#94a3b8]" />
-                    <span className="text-[#64748b]">{reviewData.pending} pending</span>
-                  </span>
-                </div>
-              </div>
-
               {/* Right - Actions */}
               <div className="flex items-center gap-2">
                 {/* Admin Toggle */}
