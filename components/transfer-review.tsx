@@ -23,6 +23,7 @@ import {
   Cog
 } from "lucide-react"
 import { AdminTestingSuite } from "./admin-testing-suite"
+import { VesLinkForm } from "./veslink-form"
 
 // Field status types
 type FieldStatus = "verified" | "flagged" | "pending" | "not-populated" | "manually-edited"
@@ -1014,6 +1015,7 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" | "warning" } | null>(null)
   const [pulsingFieldId, setPulsingFieldId] = useState<string | null>(null)
   const [showAdminSuite, setShowAdminSuite] = useState(false)
+  const [editedFields, setEditedFields] = useState<Set<string>>(new Set())
 
   // Get the section name for the selected field
   const getFieldSectionName = (fieldId: string) => {
@@ -1387,77 +1389,30 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
           )}
         </div>
 
-        {/* Right Panel - Target Form */}
-        <div className="w-[60%] flex flex-col overflow-hidden">
-          {/* VesLink Header */}
-          <div className="bg-[#d97706] px-4 py-3 flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="text-white font-semibold">VesLink</span>
-              <span className="text-white/90">Noon Report (Sea) v5.0</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-white/70 text-sm">Target Form</span>
-              <span className="text-xs px-2 py-0.5 rounded bg-[#16a34a] text-white font-medium">
-                Editable
-              </span>
-            </div>
+        {/* Right Panel - VesLink Form (authentic replica) */}
+        <div className="w-[60%] flex flex-col overflow-hidden bg-white">
+          <div className="flex-1 overflow-y-auto">
+            <VesLinkForm
+              selectedFieldId={selectedField?.id ?? null}
+              onFieldSelect={(fieldId) => {
+                // Map VesLink field IDs to our internal field data for the left panel
+                const mockField: FormField = {
+                  id: fieldId,
+                  label: fieldId.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
+                  value: "",
+                  confidence: 95 + Math.floor(Math.random() * 5),
+                  status: "pending",
+                  sourceTab: "Operational",
+                  sourceField: fieldId,
+                }
+                setSelectedField(mockField)
+              }}
+              editedFields={editedFields}
+              onFieldEdit={(fieldId, value) => {
+                setEditedFields(prev => new Set(prev).add(fieldId))
+              }}
+            />
           </div>
-
-          {/* Critical Fields Counter */}
-          <div className="px-4 py-2 bg-[#fffbeb] border-b border-[#fcd34d] flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <Star className="w-4 h-4 text-[#f59e0b]" fill="#f59e0b" />
-              <span className="text-sm font-medium text-[#92400e]">
-                {criticalVerified} of {criticalTotal} critical fields verified
-              </span>
-            </div>
-            {criticalVerified < criticalTotal && (
-              <button 
-                onClick={() => {
-                  const nextCritical = findNextUnverifiedCritical()
-                  if (nextCritical) {
-                    const sectionWithField = sections.find(s => s.fields.some(f => f.id === nextCritical.id))
-                    if (sectionWithField && !sectionWithField.isExpanded) {
-                      setSections(prev => prev.map(s => 
-                        s.id === sectionWithField.id ? { ...s, isExpanded: true } : s
-                      ))
-                    }
-                    setTimeout(() => {
-                      setSelectedField(nextCritical)
-                      const element = document.getElementById(`field-${nextCritical.id}`)
-                      element?.scrollIntoView({ behavior: "smooth", block: "center" })
-                    }, 100)
-                  }
-                }}
-                className="text-sm font-medium text-[#7c3aed] hover:text-[#6d28d9]"
-              >
-                Jump to next →
-              </button>
-            )}
-          </div>
-
-          {/* Form Sections */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {sections.map((section) => (
-              <FormSectionComponent
-                key={section.id}
-                section={section}
-                selectedFieldId={selectedField?.id ?? null}
-                pulsingFieldId={pulsingFieldId}
-                onFieldSelect={handleFieldSelect}
-                onToggle={() => toggleSection(section.id)}
-              />
-            ))}
-          </div>
-
-          {/* Bottom Action Bar */}
-          <BottomActionBar
-            selectedField={selectedField}
-            onVerify={handleVerify}
-            onEdit={() => {}}
-            onFlag={() => {}}
-            onClose={() => setSelectedField(null)}
-          />
         </div>
       </div>
 
