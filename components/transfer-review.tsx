@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { 
   ArrowLeft, 
   Settings, 
@@ -14,13 +14,15 @@ import {
   Flag,
   Pencil,
   ChevronUp,
-  
   X,
   Search,
   Keyboard,
   AlertCircle,
   ExternalLink,
-  Cog
+  Cog,
+  Info,
+  Filter,
+  Image as ImageIcon
 } from "lucide-react"
 import { AdminTestingSuite } from "./admin-testing-suite"
 import { VesLinkForm, CRITICAL_FIELDS_NOON_SEA } from "./veslink-form"
@@ -40,6 +42,21 @@ interface FormField {
   isCritical?: boolean
   sourceTab?: string
   sourceField?: string
+}
+
+// Field card data for the new scrollable list
+interface FieldCardData {
+  id: string
+  fieldName: string
+  fieldDefinition?: string
+  status: FieldStatus
+  isCritical: boolean
+  mappedSource: string
+  sourceTab: string
+  isPopulated: boolean
+  value?: string
+  unit?: string
+  confidence?: number
 }
 
 interface FormSection {
@@ -165,6 +182,355 @@ function Toast({ message, type, onClose }: { message: string; type: "error" | "s
       <button onClick={onClose} className="ml-2 hover:opacity-70">
         <X className="w-4 h-4" />
       </button>
+    </div>
+  )
+}
+
+// Section groups for field cards
+interface FieldSection {
+  id: string
+  name: string
+  fields: FieldCardData[]
+}
+
+// Mock field data organized by sections - matching the VesLink form structure
+const createFieldCardSections = (verifiedFields: Set<string>): FieldSection[] => {
+  const getStatus = (fieldId: string): FieldStatus => {
+    if (verifiedFields.has(fieldId)) return "verified"
+    return "pending"
+  }
+  
+  return [
+    {
+      id: "header",
+      name: "Header",
+      fields: [
+        { id: "date-time", fieldName: "Date/Time", status: getStatus("date-time"), isCritical: true, mappedSource: "Report Date/Time", sourceTab: "Operational", isPopulated: true, value: "14/04/2026 12:00", confidence: 98 },
+        { id: "voyage-number", fieldName: "Voyage Number", status: getStatus("voyage-number"), isCritical: true, mappedSource: "Voyage Number", sourceTab: "Operational", isPopulated: true, value: "124", confidence: 99 },
+        { id: "vessel-condition", fieldName: "Vessel Condition", status: getStatus("vessel-condition"), isCritical: true, mappedSource: "Vessel Condition", sourceTab: "Operational", isPopulated: true, value: "Laden", confidence: 97 },
+        { id: "vessel-name", fieldName: "Vessel Name", status: getStatus("vessel-name"), isCritical: false, mappedSource: "Vessel Name", sourceTab: "Operational", isPopulated: true, value: "SEAWAYS SKOPELOS", confidence: 99 },
+        { id: "latitude", fieldName: "Latitude", status: getStatus("latitude"), isCritical: false, mappedSource: "Latitude", sourceTab: "Position", isPopulated: true, value: "35 42' 00\" N", confidence: 99 },
+        { id: "longitude", fieldName: "Longitude", status: getStatus("longitude"), isCritical: false, mappedSource: "Longitude", sourceTab: "Position", isPopulated: true, value: "014 25' 00\" E", confidence: 99 },
+        { id: "next-port", fieldName: "Next Port", status: getStatus("next-port"), isCritical: true, mappedSource: "Next Port", sourceTab: "Operational", isPopulated: true, value: "Fujairah", confidence: 96 },
+        { id: "eta", fieldName: "ETA", status: getStatus("eta"), isCritical: true, mappedSource: "ETA", sourceTab: "Operational", isPopulated: true, value: "22/04/2026 14:00", confidence: 95 },
+      ],
+    },
+    {
+      id: "distance-vessel",
+      name: "Distance and Vessel",
+      fields: [
+        { id: "distance-to-go", fieldName: "Distance to Go", status: getStatus("distance-to-go"), isCritical: true, mappedSource: "Distance to Go", sourceTab: "Operational", isPopulated: true, value: "2847", unit: "nm", confidence: 97 },
+        { id: "cp-ordered-speed", fieldName: "CP / Ordered Speed", status: getStatus("cp-ordered-speed"), isCritical: true, mappedSource: "Ordered Speed", sourceTab: "Operational", isPopulated: true, value: "12.5", unit: "kts", confidence: 98 },
+        { id: "reported-speed", fieldName: "Reported Speed", status: getStatus("reported-speed"), isCritical: true, mappedSource: "Reported Speed", sourceTab: "Operational", isPopulated: true, value: "12.3", unit: "kts", confidence: 96 },
+        { id: "observed-distance", fieldName: "Observed Distance", status: getStatus("observed-distance"), isCritical: true, mappedSource: "Observed Distance", sourceTab: "Operational", isPopulated: true, value: "142.3", unit: "nm", confidence: 94 },
+        { id: "time-since-last", fieldName: "Time Since Last Report", status: getStatus("time-since-last"), isCritical: true, mappedSource: "Time Since Last Report", sourceTab: "Operational", isPopulated: true, value: "24.0", unit: "hrs", confidence: 99 },
+        { id: "ballast", fieldName: "Ballast", status: getStatus("ballast"), isCritical: false, mappedSource: "Ballast Water", sourceTab: "Operational", isPopulated: true, value: "1896", unit: "MT", confidence: 96 },
+        { id: "displacement", fieldName: "Displacement", status: getStatus("displacement"), isCritical: false, mappedSource: "Displacement", sourceTab: "Operational", isPopulated: true, value: "172000", unit: "t", confidence: 94 },
+        { id: "slip", fieldName: "Slip", status: getStatus("slip"), isCritical: false, mappedSource: "Slip %", sourceTab: "Operational", isPopulated: true, value: "0.35", unit: "%", confidence: 89 },
+        { id: "fwd-draft", fieldName: "Forward Draft", status: getStatus("fwd-draft"), isCritical: false, mappedSource: "Draught Forward", sourceTab: "Operational", isPopulated: true, value: "16.6", unit: "m", confidence: 98 },
+        { id: "aft-draft", fieldName: "Aft Draft", status: getStatus("aft-draft"), isCritical: false, mappedSource: "Draught Aft", sourceTab: "Operational", isPopulated: true, value: "16.6", unit: "m", confidence: 98 },
+      ],
+    },
+    {
+      id: "machinery",
+      name: "Machinery",
+      fields: [
+        { id: "main-engine-rpm", fieldName: "Main Engine RPM", status: getStatus("main-engine-rpm"), isCritical: true, mappedSource: "ME RPM", sourceTab: "Power", isPopulated: true, value: "85.2", confidence: 96 },
+        { id: "gen1-kwhrs", fieldName: "Generator 1 KWhrs", status: getStatus("gen1-kwhrs"), isCritical: false, mappedSource: "Gen 1 KWhrs", sourceTab: "Power", isPopulated: true, value: "1220", confidence: 97 },
+        { id: "gen1-hrs", fieldName: "Generator 1 Hours", status: getStatus("gen1-hrs"), isCritical: false, mappedSource: "Gen 1 Hours", sourceTab: "Power", isPopulated: true, value: "4.0", confidence: 97 },
+        { id: "boiler-hrs", fieldName: "Boiler Hours", status: getStatus("boiler-hrs"), isCritical: false, mappedSource: "Boiler Hours", sourceTab: "Power", isPopulated: true, value: "0.9", confidence: 95 },
+      ],
+    },
+    {
+      id: "weather",
+      name: "Weather",
+      fields: [
+        { id: "beaufort", fieldName: "Beaufort", status: getStatus("beaufort"), isCritical: true, mappedSource: "Beaufort Scale", sourceTab: "Pos & Weather", isPopulated: true, value: "4", confidence: 95 },
+        { id: "wind-direction", fieldName: "Wind Direction", status: getStatus("wind-direction"), isCritical: false, mappedSource: "Wind Direction", sourceTab: "Pos & Weather", isPopulated: true, value: "NW", confidence: 94 },
+        { id: "sea-state", fieldName: "Sea State", status: getStatus("sea-state"), isCritical: false, mappedSource: "Sea State", sourceTab: "Pos & Weather", isPopulated: true, value: "Moderate", confidence: 92 },
+        { id: "sea-height", fieldName: "Sea Height", status: getStatus("sea-height"), isCritical: false, mappedSource: "Sea Height", sourceTab: "Pos & Weather", isPopulated: true, value: "1.5", unit: "m", confidence: 91 },
+        { id: "sea-temp", fieldName: "Sea Temperature", status: getStatus("sea-temp"), isCritical: false, mappedSource: "Sea Temperature", sourceTab: "Pos & Weather", isPopulated: true, value: "18.2", unit: "C", confidence: 93 },
+      ],
+    },
+    {
+      id: "bunkers",
+      name: "Bunkers",
+      fields: [
+        { id: "bunkers-section", fieldName: "ROB, Consumption & Used For", fieldDefinition: "Complete bunker section including ROB, consumption breakdown, and usage allocation", status: getStatus("bunkers-section"), isCritical: true, mappedSource: "Bunker ROB Table", sourceTab: "Bunker", isPopulated: true, value: "Complete", confidence: 94 },
+        { id: "ifo-rob", fieldName: "IFO ROB", status: getStatus("ifo-rob"), isCritical: false, mappedSource: "IFO Total", sourceTab: "Bunker", isPopulated: true, value: "1245", unit: "MT", confidence: 94 },
+        { id: "mgo-rob", fieldName: "MGO ROB", status: getStatus("mgo-rob"), isCritical: false, mappedSource: "MGO Total", sourceTab: "Bunker", isPopulated: true, value: "342", unit: "MT", confidence: 93 },
+        { id: "lsmgo-rob", fieldName: "LSMGO ROB", status: getStatus("lsmgo-rob"), isCritical: false, mappedSource: "LSMGO Total", sourceTab: "Bunker", isPopulated: true, value: "587", unit: "MT", confidence: 92 },
+      ],
+    },
+    {
+      id: "water",
+      name: "Water",
+      fields: [
+        { id: "fresh-water-rob", fieldName: "Fresh Water ROB", status: getStatus("fresh-water-rob"), isCritical: true, mappedSource: "Fresh Water ROB", sourceTab: "Stock", isPopulated: true, value: "125.4", unit: "MT", confidence: 96 },
+        { id: "distilled-water-rob", fieldName: "Distilled Water ROB", status: getStatus("distilled-water-rob"), isCritical: true, mappedSource: "Distilled Water ROB", sourceTab: "Stock", isPopulated: true, value: "48.2", unit: "MT", confidence: 95 },
+        { id: "slops-rob", fieldName: "Slops ROB", status: getStatus("slops-rob"), isCritical: true, mappedSource: "Slops ROB", sourceTab: "Stock", isPopulated: true, value: "12.8", unit: "MT", confidence: 92 },
+        { id: "tank-clean-chem", fieldName: "Tank Cleaning Chemical", status: getStatus("tank-clean-chem"), isCritical: false, mappedSource: "Tank Clean Chemical", sourceTab: "Stock", isPopulated: true, value: "340", unit: "LTRS", confidence: 94 },
+      ],
+    },
+  ]
+}
+
+// Individual Field Card Component
+function FieldCard({
+  field,
+  isSelected,
+  onSelect,
+  onVerify,
+  onFlag,
+  isSourceExpanded,
+  onToggleSource,
+}: {
+  field: FieldCardData
+  isSelected: boolean
+  onSelect: () => void
+  onVerify: () => void
+  onFlag: () => void
+  isSourceExpanded: boolean
+  onToggleSource: () => void
+}) {
+  const getStatusChip = () => {
+    switch (field.status) {
+      case "verified":
+        return <span className="text-xs font-medium px-2 py-0.5 rounded-full text-green-600 bg-green-50">Verified</span>
+      case "flagged":
+        return <span className="text-xs font-medium px-2 py-0.5 rounded-full text-red-600 bg-red-50">Flagged</span>
+      default:
+        return <span className="text-xs font-medium px-2 py-0.5 rounded-full text-gray-500 bg-gray-100">Pending</span>
+    }
+  }
+
+  const getStatusDot = () => {
+    if (field.status === "flagged") return "bg-red-500"
+    if (!field.isPopulated) return "bg-gray-300"
+    return "bg-green-500"
+  }
+
+  return (
+    <div 
+      id={`field-card-${field.id}`}
+      onClick={onSelect}
+      className={`bg-white rounded-xl border p-4 mb-3 cursor-pointer transition-all ${
+        isSelected 
+          ? "border-l-[3px] border-l-purple-500 border-gray-100 bg-purple-50/30" 
+          : "border-gray-100 hover:border-gray-200 hover:shadow-sm"
+      }`}
+    >
+      {/* Row 1: Field Name, Status, Critical Badge */}
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-semibold text-gray-900">{field.fieldName}</span>
+          {field.fieldDefinition && (
+            <button 
+              className="text-gray-400 hover:text-gray-600"
+              title={field.fieldDefinition}
+            >
+              <Info className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {getStatusChip()}
+          {field.isCritical && (
+            <span className="text-xs text-amber-600 font-medium flex items-center gap-1">
+              <Star className="w-3 h-3" fill="#d97706" />
+              Critical
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Row 2: Mapped source info + status dot */}
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs text-gray-400">
+          Mapped from: {field.mappedSource}
+        </span>
+        <div className={`w-2.5 h-2.5 rounded-full ${getStatusDot()}`} />
+      </div>
+
+      {/* Source Preview Accordion */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          onToggleSource()
+        }}
+        className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 mb-3 w-full"
+      >
+        <ImageIcon className="w-3.5 h-3.5" />
+        <span>Source preview ({field.sourceTab})</span>
+        {isSourceExpanded ? (
+          <ChevronUp className="w-3.5 h-3.5 ml-auto" />
+        ) : (
+          <ChevronDown className="w-3.5 h-3.5 ml-auto" />
+        )}
+      </button>
+
+      {/* Expanded Source Preview */}
+      {isSourceExpanded && (
+        <div className="mb-3 max-h-40 overflow-hidden rounded-lg">
+          <NavtorScreenshot fieldId={field.id} className="w-full" />
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onVerify()
+          }}
+          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-green-50 hover:border-green-200 hover:text-green-700 transition-colors"
+        >
+          <Check className="w-3.5 h-3.5" />
+          Verify
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onFlag()
+          }}
+          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-red-50 hover:border-red-200 hover:text-red-700 transition-colors"
+        >
+          <Flag className="w-3.5 h-3.5" />
+          Flag
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Scrollable Field Card List Component
+function FieldCardList({
+  sections,
+  selectedFieldId,
+  onFieldSelect,
+  onVerify,
+  onFlag,
+  avgConfidence,
+}: {
+  sections: FieldSection[]
+  selectedFieldId: string | null
+  onFieldSelect: (field: FieldCardData) => void
+  onVerify: (fieldId: string) => void
+  onFlag: (fieldId: string) => void
+  avgConfidence: number
+}) {
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    new Set(sections.map(s => s.id))
+  )
+  const [expandedSource, setExpandedSource] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev)
+      if (next.has(sectionId)) {
+        next.delete(sectionId)
+      } else {
+        next.add(sectionId)
+      }
+      return next
+    })
+  }
+
+  // Auto-expand source preview for selected card
+  useEffect(() => {
+    if (selectedFieldId) {
+      setExpandedSource(selectedFieldId)
+    }
+  }, [selectedFieldId])
+
+  // Filter fields based on search
+  const filteredSections = sections.map(section => ({
+    ...section,
+    fields: section.fields.filter(field => 
+      searchQuery === "" || 
+      field.fieldName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      field.mappedSource.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  })).filter(section => section.fields.length > 0)
+
+  return (
+    <div className="h-full flex flex-col bg-gray-50">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
+        {/* Avg Confidence Bar */}
+        <div className="flex items-center gap-3 mb-3">
+          <span className="text-sm text-gray-600">Avg. Confidence</span>
+          <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full transition-all"
+              style={{ width: `${avgConfidence}%` }}
+            />
+          </div>
+          <span className="text-sm font-semibold text-green-600">{avgConfidence}%</span>
+          <button className="p-1 hover:bg-gray-100 rounded">
+            <Pencil className="w-3.5 h-3.5 text-gray-400" />
+          </button>
+        </div>
+
+        {/* Search + Filter */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+          </div>
+          <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <Filter className="w-4 h-4 text-gray-500" />
+          </button>
+        </div>
+      </div>
+
+      {/* Scrollable Field Cards */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        {filteredSections.map((section, sectionIndex) => (
+          <div key={section.id} className={sectionIndex > 0 ? "mt-5" : ""}>
+            {/* Section Header */}
+            <button
+              onClick={() => toggleSection(section.id)}
+              className="flex items-center gap-2 mb-3 w-full"
+            >
+              {expandedSections.has(section.id) ? (
+                <ChevronDown className="w-4 h-4 text-gray-500" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-gray-500" />
+              )}
+              <span className="text-sm font-medium text-gray-700">{section.name}</span>
+              <span className="text-xs text-gray-400 ml-auto">{section.fields.length} fields</span>
+            </button>
+
+            {/* Field Cards */}
+            {expandedSections.has(section.id) && (
+              <div className="space-y-3">
+                {section.fields.map(field => (
+                  <FieldCard
+                    key={field.id}
+                    field={field}
+                    isSelected={selectedFieldId === field.id}
+                    onSelect={() => onFieldSelect(field)}
+                    onVerify={() => onVerify(field.id)}
+                    onFlag={() => onFlag(field.id)}
+                    isSourceExpanded={expandedSource === field.id}
+                    onToggleSource={() => setExpandedSource(
+                      expandedSource === field.id ? null : field.id
+                    )}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -1270,114 +1636,52 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
 
       {/* Main Content - Two Column Layout */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel */}
-        <div className="w-[40%] border-r border-[#e2e8f0] flex flex-col">
-          {selectedField ? (
-            <>
-              {/* Top Section - Field Definition (~45%) */}
-              <div className="h-[45%] border-b border-[#e2e8f0] overflow-hidden bg-white">
-                <FieldDefinitionPanel
-                  field={selectedField}
-                  sectionName={getFieldSectionName(selectedField.id)}
-                  onVerify={handleVerify}
-                  onFlag={handleFlag}
-                  isAdminMode={isAdminMode}
-                  onOpenAdminSuite={() => setShowAdminSuite(true)}
-                />
-              </div>
-
-              {/* Bottom Section - NAVTOR Source Screenshot (~55%) */}
-              <div className="h-[55%] overflow-hidden flex flex-col bg-[#f8fafc]">
-                {/* Header */}
-                <div className="px-4 py-2.5 border-b border-[#e2e8f0] flex items-center justify-between bg-white flex-shrink-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-[#0f172a]">NAVTOR</span>
-                    <span className="text-xs text-[#64748b]">— {selectedField.sourceTab || "Operational"} TAB</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    {["Operational", "Pos & Weather", "Power", "Bunker", "Stock"].map((tab) => (
-                      <span
-                        key={tab}
-                        className={`px-1.5 py-0.5 text-[10px] rounded ${
-                          tab === (selectedField.sourceTab || "Operational")
-                            ? "bg-[#0b1120] text-white font-medium"
-                            : "text-[#94a3b8]"
-                        }`}
-                      >
-                        {tab}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Screenshot */}
-                <div className="flex-1 p-4 overflow-auto">
-                  <NavtorScreenshot 
-                    fieldId={selectedField.id}
-                    className="h-full"
-                  />
-                </div>
-                
-                {/* Report Tabs */}
-                <div className="px-4 py-2 border-t border-[#e2e8f0] bg-white flex-shrink-0">
-                  <div className="flex items-center gap-2">
-                    {[
-                      { id: "4528", label: "#4528", isPrimary: true },
-                      { id: "4527", label: "#4527", isPrimary: false },
-                      { id: "4526", label: "#4526", isPrimary: false },
-                      { id: "4525", label: "#4525", isPrimary: false },
-                    ].map((report) => (
-                      <button
-                        key={report.id}
-                        onClick={() => setSelectedReportId(report.id)}
-                        className={`px-2.5 py-1 text-[11px] font-medium rounded transition-colors ${
-                          selectedReportId === report.id
-                            ? "bg-[#7c3aed] text-white"
-                            : "bg-[#f8fafc] text-[#64748b] hover:bg-[#f1f5f9]"
-                        }`}
-                      >
-                        {report.label}
-                        {report.isPrimary && selectedReportId === report.id && (
-                          <span className="ml-1 text-white/70">primary</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Top Section - Placeholder */}
-              <div className="flex-1 flex items-center justify-center border-b border-[#e2e8f0] p-6">
-                <div className="text-center">
-                  <div className="w-12 h-12 rounded-lg bg-[#f8fafc] flex items-center justify-center mx-auto mb-3">
-                    <FileText className="w-6 h-6 text-[#94a3b8]" />
-                  </div>
-                  <p className="text-[#64748b] text-sm max-w-[240px]">
-                    Click any field on the target form to see its source mapping and validation.
-                  </p>
-                </div>
-              </div>
-
-              {/* Bottom Section - NAVTOR Source Preview Placeholder */}
-              <div className="flex-1 flex flex-col bg-[#f8fafc]">
-                {/* Header */}
-                <div className="px-4 py-2.5 border-b border-[#e2e8f0] flex items-center gap-2 bg-white flex-shrink-0">
-                  <span className="text-sm font-semibold text-[#0f172a]">NAVTOR</span>
-                  <span className="text-xs text-[#64748b]">Source Preview</span>
-                </div>
-                
-                {/* Default screenshot */}
-                <div className="flex-1 p-4">
-                  <NavtorScreenshot 
-                    fieldId={null}
-                    className="h-full"
-                  />
-                </div>
-              </div>
-            </>
-          )}
+        {/* Left Panel - Scrollable Field Card List */}
+        <div className="w-[40%] border-r border-[#e2e8f0] flex flex-col overflow-hidden">
+          <FieldCardList
+            sections={createFieldCardSections(verifiedVesLinkFields)}
+            selectedFieldId={selectedField?.id ?? null}
+            onFieldSelect={(field) => {
+              // Convert FieldCardData to FormField for the rest of the component
+              const formField: FormField = {
+                id: field.id,
+                label: field.fieldName,
+                value: field.value || "",
+                unit: field.unit,
+                confidence: field.confidence || 95,
+                status: field.status,
+                isCritical: field.isCritical,
+                sourceTab: field.sourceTab,
+                sourceField: field.mappedSource,
+              }
+              setSelectedField(formField)
+              // Scroll to corresponding field on VesLink form
+              scrollToVesLinkField(field.id)
+            }}
+            onVerify={(fieldId) => {
+              // Find the field and verify it
+              const metadata = getCriticalFieldMetadata(fieldId)
+              const mockField: FormField = {
+                id: fieldId,
+                label: metadata.label,
+                value: metadata.value,
+                confidence: 95,
+                status: "pending",
+                isCritical: CRITICAL_FIELDS_NOON_SEA.includes(fieldId),
+                sourceTab: metadata.sourceTab,
+                sourceField: metadata.sourceField,
+              }
+              setSelectedField(mockField)
+              // Use setTimeout to allow state update then verify
+              setTimeout(() => {
+                handleVerify()
+              }, 0)
+            }}
+            onFlag={(fieldId) => {
+              setToast({ message: `Field "${fieldId}" flagged for review`, type: "warning" })
+            }}
+            avgConfidence={96}
+          />
         </div>
 
         {/* Right Panel - VesLink Form (authentic replica) */}
@@ -1400,6 +1704,12 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
                   sourceField: metadata.sourceField,
                 }
                 setSelectedField(mockField)
+                
+                // Scroll to corresponding field card in left panel
+                const fieldCard = document.getElementById(`field-card-${fieldId}`)
+                if (fieldCard) {
+                  fieldCard.scrollIntoView({ behavior: "smooth", block: "center" })
+                }
               }}
               editedFields={editedFields}
               onFieldEdit={(fieldId, value) => {
