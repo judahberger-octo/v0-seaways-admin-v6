@@ -1111,60 +1111,55 @@ function FieldDefinitionPanel({
 
 
 // Critical Field Navigation Bar Component
-function CriticalFieldNavBar({
-  criticalVerified,
-  criticalTotal,
+// Highlights Navigation Bar Component (for right panel)
+function HighlightsNavBar({
+  vesselName,
+  currentIndex,
+  totalCount,
   onPrev,
   onNext,
+  onVesselClick,
 }: {
-  criticalVerified: number
-  criticalTotal: number
+  vesselName: string
+  currentIndex: number
+  totalCount: number
   onPrev: () => void
   onNext: () => void
+  onVesselClick: () => void
 }) {
-  const allVerified = criticalVerified === criticalTotal
-  
   return (
-    <div className="h-9 border-b border-[#e2e8f0] bg-[#f8fafc] flex items-center justify-center gap-4 px-4 flex-shrink-0">
-      {/* Label */}
-      <span className="text-xs text-[#64748b]">Critical Fields:</span>
-      
-      {/* Count */}
-      <span className={`text-xs font-semibold ${allVerified ? "text-[#16a34a]" : "text-[#0f172a]"}`}>
-        {criticalVerified} of {criticalTotal} verified
-        {allVerified && " \u2713"}
-      </span>
-      
-      {/* Progress Bar */}
-      <div className="w-24 h-1 bg-[#e2e8f0] rounded-full overflow-hidden">
-        <div 
-          className="h-full bg-[#16a34a] transition-all duration-300"
-          style={{ width: `${(criticalVerified / criticalTotal) * 100}%` }}
-        />
+    <div className="bg-white border-b border-gray-100 px-4 py-2 flex items-center justify-between sticky top-0 z-10">
+      {/* Left side - Highlights label + vessel name */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-500">Highlights:</span>
+        <button 
+          onClick={onVesselClick}
+          className="text-xs text-purple-600 font-medium hover:text-purple-700 hover:underline transition-colors"
+        >
+          {vesselName}
+        </button>
       </div>
       
-      {/* Navigation Buttons */}
-      <div className="flex items-center gap-2">
+      {/* Right side - Counter + navigation */}
+      <div className="flex items-center gap-1">
+        <span className="text-xs text-gray-600 font-medium mr-1">
+          {currentIndex} / {totalCount}
+        </span>
         <button
           onClick={onPrev}
-          disabled={allVerified}
-          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-[#7c3aed] hover:bg-[#ede9fe] rounded transition-colors disabled:text-[#94a3b8] disabled:hover:bg-transparent"
+          className="p-1 hover:bg-gray-100 rounded transition-colors"
+          title="Previous critical field (P)"
         >
-          <ChevronLeftIcon className="w-3.5 h-3.5" />
-          Prev
+          <ChevronUp className="w-4 h-4 text-gray-500" />
         </button>
         <button
           onClick={onNext}
-          disabled={allVerified}
-          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-[#7c3aed] hover:bg-[#ede9fe] rounded transition-colors disabled:text-[#94a3b8] disabled:hover:bg-transparent"
+          className="p-1 hover:bg-gray-100 rounded transition-colors"
+          title="Next critical field (N)"
         >
-          Next
-          <ChevronRightIcon className="w-3.5 h-3.5" />
+          <ChevronDown className="w-4 h-4 text-gray-500" />
         </button>
       </div>
-      
-      {/* Keyboard Hint */}
-      <span className="text-[11px] text-[#94a3b8]">(N/P to navigate)</span>
     </div>
   )
 }
@@ -1248,6 +1243,7 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
   const [showAdminSuite, setShowAdminSuite] = useState(false)
   const [editedFields, setEditedFields] = useState<Set<string>>(new Set())
   const [verifiedVesLinkFields, setVerifiedVesLinkFields] = useState<Set<string>>(new Set())
+  const [currentCriticalIndex, setCurrentCriticalIndex] = useState(0)
 
   // Get the section name for the selected field - supports VesLink field IDs
   const getFieldSectionName = (fieldId: string) => {
@@ -1410,85 +1406,70 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
     return nextField
   }, [sections])
 
-  // Navigate to next unverified VesLink critical field
+  // Navigate to next critical field (cycles through all critical fields)
   const navigateToNextCritical = useCallback(() => {
-    const unverifiedFields = CRITICAL_FIELDS_NOON_SEA.filter(f => !verifiedVesLinkFields.has(f))
-    if (unverifiedFields.length === 0) {
-      setToast({ message: "All critical fields verified — ready to submit", type: "success" })
-      return
-    }
+    const totalCritical = CRITICAL_FIELDS_NOON_SEA.length
+    const nextIndex = (currentCriticalIndex % totalCritical) + 1
+    const nextFieldId = CRITICAL_FIELDS_NOON_SEA[nextIndex - 1]
     
-    // Find current position in critical fields
-    const currentIndex = selectedField 
-      ? CRITICAL_FIELDS_NOON_SEA.indexOf(selectedField.id)
-      : -1
-    
-    // Find next unverified after current
-    let nextField = CRITICAL_FIELDS_NOON_SEA.slice(currentIndex + 1).find(f => !verifiedVesLinkFields.has(f))
-    
-    // Wrap around if needed
-    if (!nextField) {
-      nextField = CRITICAL_FIELDS_NOON_SEA.find(f => !verifiedVesLinkFields.has(f))
-    }
-    
-    if (nextField) {
+    if (nextFieldId) {
       // Create a mock field object for the left panel with proper metadata
-      const metadata = getCriticalFieldMetadata(nextField)
+      const metadata = getCriticalFieldMetadata(nextFieldId)
       const mockField: FormField = {
-        id: nextField,
+        id: nextFieldId,
         label: metadata.label,
         value: metadata.value,
         confidence: 95 + Math.floor(Math.random() * 5),
-        status: "pending",
+        status: verifiedVesLinkFields.has(nextFieldId) ? "verified" : "pending",
         isCritical: true,
         sourceTab: metadata.sourceTab,
         sourceField: metadata.sourceField,
       }
       setSelectedField(mockField)
+      setCurrentCriticalIndex(nextIndex)
       
       // Scroll to field on VesLink form
-      scrollToVesLinkField(nextField)
+      scrollToVesLinkField(nextFieldId)
+      
+      // Also scroll to field card in left panel
+      const fieldCard = document.getElementById(`field-card-${nextFieldId}`)
+      if (fieldCard) {
+        fieldCard.scrollIntoView({ behavior: "smooth", block: "center" })
+      }
     }
-  }, [verifiedVesLinkFields, selectedField, scrollToVesLinkField, getCriticalFieldMetadata])
+  }, [currentCriticalIndex, verifiedVesLinkFields, scrollToVesLinkField, getCriticalFieldMetadata])
 
-  // Navigate to previous unverified VesLink critical field
+  // Navigate to previous critical field (cycles through all critical fields)
   const navigateToPrevCritical = useCallback(() => {
-    const unverifiedFields = CRITICAL_FIELDS_NOON_SEA.filter(f => !verifiedVesLinkFields.has(f))
-    if (unverifiedFields.length === 0) {
-      setToast({ message: "All critical fields verified — ready to submit", type: "success" })
-      return
-    }
+    const totalCritical = CRITICAL_FIELDS_NOON_SEA.length
+    const prevIndex = currentCriticalIndex <= 1 ? totalCritical : currentCriticalIndex - 1
+    const prevFieldId = CRITICAL_FIELDS_NOON_SEA[prevIndex - 1]
     
-    // Find current position in critical fields
-    const currentIndex = selectedField 
-      ? CRITICAL_FIELDS_NOON_SEA.indexOf(selectedField.id)
-      : CRITICAL_FIELDS_NOON_SEA.length
-    
-    // Find previous unverified before current
-    let prevField = CRITICAL_FIELDS_NOON_SEA.slice(0, currentIndex).reverse().find(f => !verifiedVesLinkFields.has(f))
-    
-    // Wrap around if needed
-    if (!prevField) {
-      prevField = [...CRITICAL_FIELDS_NOON_SEA].reverse().find(f => !verifiedVesLinkFields.has(f))
-    }
-    
-    if (prevField) {
-      const metadata = getCriticalFieldMetadata(prevField)
+    if (prevFieldId) {
+      const metadata = getCriticalFieldMetadata(prevFieldId)
       const mockField: FormField = {
-        id: prevField,
+        id: prevFieldId,
         label: metadata.label,
         value: metadata.value,
         confidence: 95 + Math.floor(Math.random() * 5),
-        status: "pending",
+        status: verifiedVesLinkFields.has(prevFieldId) ? "verified" : "pending",
         isCritical: true,
         sourceTab: metadata.sourceTab,
         sourceField: metadata.sourceField,
       }
       setSelectedField(mockField)
+      setCurrentCriticalIndex(prevIndex)
       
-      scrollToVesLinkField(prevField)
+      // Scroll to field on VesLink form
+      scrollToVesLinkField(prevFieldId)
+      
+      // Also scroll to field card in left panel
+      const fieldCard = document.getElementById(`field-card-${prevFieldId}`)
+      if (fieldCard) {
+        fieldCard.scrollIntoView({ behavior: "smooth", block: "center" })
+      }
     }
-  }, [verifiedVesLinkFields, selectedField, scrollToVesLinkField, getCriticalFieldMetadata])
+  }, [currentCriticalIndex, verifiedVesLinkFields, scrollToVesLinkField, getCriticalFieldMetadata])
 
   const handleVerify = useCallback(() => {
     if (!selectedField) return
@@ -1626,14 +1607,6 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
         />
       )}
 
-      {/* Critical Field Navigation Bar */}
-      <CriticalFieldNavBar
-        criticalVerified={vesLinkCriticalVerified}
-        criticalTotal={vesLinkCriticalTotal}
-        onPrev={navigateToPrevCritical}
-        onNext={navigateToNextCritical}
-      />
-
       {/* Main Content - Two Column Layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel - Scrollable Field Card List */}
@@ -1655,6 +1628,15 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
                 sourceField: field.mappedSource,
               }
               setSelectedField(formField)
+              
+              // Update critical field index if this is a critical field
+              if (field.isCritical) {
+                const criticalIndex = CRITICAL_FIELDS_NOON_SEA.indexOf(field.id)
+                if (criticalIndex !== -1) {
+                  setCurrentCriticalIndex(criticalIndex + 1)
+                }
+              }
+              
               // Scroll to corresponding field on VesLink form
               scrollToVesLinkField(field.id)
             }}
@@ -1686,6 +1668,18 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
 
         {/* Right Panel - VesLink Form (authentic replica) */}
         <div className="w-[60%] flex flex-col overflow-hidden bg-white">
+          {/* Highlights Navigation Bar */}
+          <HighlightsNavBar
+            vesselName="SEAWAYS SKOPELOS"
+            currentIndex={currentCriticalIndex}
+            totalCount={vesLinkCriticalTotal}
+            onPrev={navigateToPrevCritical}
+            onNext={navigateToNextCritical}
+            onVesselClick={() => {
+              // Scroll to vessel name field
+              scrollToVesLinkField("vessel-name")
+            }}
+          />
           <div className="flex-1 overflow-y-auto">
             <VesLinkForm
               selectedFieldId={selectedField?.id ?? null}
@@ -1704,6 +1698,14 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
                   sourceField: metadata.sourceField,
                 }
                 setSelectedField(mockField)
+                
+                // Update critical field index if this is a critical field
+                if (isCritical) {
+                  const criticalIndex = CRITICAL_FIELDS_NOON_SEA.indexOf(fieldId)
+                  if (criticalIndex !== -1) {
+                    setCurrentCriticalIndex(criticalIndex + 1)
+                  }
+                }
                 
                 // Scroll to corresponding field card in left panel
                 const fieldCard = document.getElementById(`field-card-${fieldId}`)
