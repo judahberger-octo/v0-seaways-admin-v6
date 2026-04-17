@@ -1738,6 +1738,30 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
           }}
         />
       )}
+
+      {/* Sticky Bottom Action Bar */}
+      <div className="bg-white border-t border-gray-200 px-6 py-3 flex justify-end gap-3 flex-shrink-0">
+        <button
+          onClick={() => {
+            setToast({ message: "Draft saved successfully", type: "success" })
+          }}
+          className="border border-gray-300 rounded-lg px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          Save as draft
+        </button>
+        <button
+          onClick={handleSubmitClick}
+          disabled={!canSubmit}
+          className={`rounded-lg px-5 py-2.5 text-sm font-medium flex items-center gap-2 transition-colors ${
+            canSubmit
+              ? "bg-purple-600 text-white hover:bg-purple-700"
+              : "bg-gray-300 text-gray-500 opacity-50 cursor-not-allowed"
+          }`}
+        >
+          <Send className="w-4 h-4" />
+          Submit to veslink
+        </button>
+      </div>
     </div>
   )
 }

@@ -10,9 +10,7 @@ import {
   ClipboardList,
   ChevronLeft,
   ChevronRight,
-  ArrowLeft,
-  Send,
-  FileText
+  ArrowLeft
 } from "lucide-react"
 
 interface AppShellProps {
@@ -225,14 +223,6 @@ export function AppShell({
                 <span className="text-xs px-2 py-0.5 rounded bg-[#e2e8f0] text-[#64748b] font-medium">
                   Draft
                 </span>
-                <button className="px-3 py-1.5 text-xs font-medium border border-[#e2e8f0] rounded bg-white hover:bg-[#f8fafc] transition-colors flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5" />
-                  Save Draft
-                </button>
-                <button className="px-3 py-1.5 text-xs font-medium rounded bg-[#7c3aed] text-white hover:bg-[#6d28d9] transition-colors flex items-center gap-1.5">
-                  <Send className="w-3.5 h-3.5" />
-                  SUBMIT TO VESLINK
-                </button>
               </div>
             </>
           ) : (
