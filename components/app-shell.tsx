@@ -242,13 +242,22 @@ export function AppShell({
               </span>
             </div>
 
-            {/* Right - Close Button */}
-            <button
-              onClick={handleCloseClick}
-              className="p-1.5 hover:bg-[#f1f5f9] rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-[#64748b]" />
-            </button>
+            {/* Right - Vessel Name + Divider + Close Button */}
+            <div className="flex items-center gap-3">
+              {/* Vessel Name - read-only context */}
+              <span className="text-sm font-medium text-[#7c3aed]">
+                SEAWAYS SKOPELOS
+              </span>
+              {/* Vertical Divider */}
+              <div className="w-px h-5 bg-[#e2e8f0]" />
+              {/* Close Button */}
+              <button
+                onClick={handleCloseClick}
+                className="p-1.5 hover:bg-[#f1f5f9] rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-[#64748b]" />
+              </button>
+            </div>
           </header>
         ) : (
           // Standard Page Header with Tabs

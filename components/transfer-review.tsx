@@ -1508,86 +1508,7 @@ function FieldDefinitionPanel({
 
 
 
-// Highlights Navigation Bar Component (for right panel)
-function HighlightsNavBar({
-  vesselName,
-  currentIndex,
-  totalCount,
-  pendingCount,
-  verifiedCount,
-  onPrev,
-  onNext,
-  onVesselClick,
-}: {
-  vesselName: string
-  currentIndex: number
-  totalCount: number
-  pendingCount: number
-  verifiedCount: number
-  onPrev: () => void
-  onNext: () => void
-  onVesselClick: () => void
-}) {
-  return (
-    <div className="bg-white border-b border-gray-100 px-4 py-2 flex items-center justify-between sticky top-0 z-10">
-      {/* Left side - Highlights label + vessel name */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-gray-500">Highlights:</span>
-        <button 
-          onClick={onVesselClick}
-          className="text-xs text-purple-600 font-medium hover:text-purple-700 hover:underline transition-colors"
-        >
-          {vesselName}
-        </button>
-      </div>
-      
-      {/* Right side - Status counter (passive, non-interactive) + navigation */}
-      <div className="flex items-center gap-4">
-        {/* Passive Status Counter - Pending/Verified */}
-        <div 
-          role="status" 
-          aria-live="polite"
-          className="flex items-center bg-white border border-gray-200 rounded-full px-3 py-1.5"
-        >
-          <span className="sr-only">Review progress:</span>
-          {/* Pending count */}
-          <span className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-            Pending ({pendingCount})
-          </span>
-          {/* Divider */}
-          <span className="w-px h-3 bg-gray-300 mx-2.5" />
-          {/* Verified count */}
-          <span className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
-            <Check className="w-3 h-3 text-green-500" />
-            Verified ({verifiedCount})
-          </span>
-        </div>
 
-        {/* Counter + navigation */}
-        <div className="flex items-center gap-1">
-          <span className="text-xs text-gray-600 font-medium mr-1">
-            {currentIndex} / {totalCount}
-          </span>
-          <button
-            onClick={onPrev}
-            className="p-1 hover:bg-gray-100 rounded transition-colors"
-            title="Previous critical field (P)"
-          >
-            <ChevronUp className="w-4 h-4 text-gray-500" />
-          </button>
-          <button
-            onClick={onNext}
-            className="p-1 hover:bg-gray-100 rounded transition-colors"
-            title="Next critical field (N)"
-          >
-            <ChevronDown className="w-4 h-4 text-gray-500" />
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 // Bottom Action Bar Component
 function BottomActionBar({
@@ -2221,21 +2142,7 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
 
         {/* Right Panel - VesLink Form (authentic replica) */}
         <div className="flex-1 flex flex-col overflow-hidden bg-white">
-          {/* Highlights Navigation Bar */}
-          <HighlightsNavBar
-            vesselName="SEAWAYS SKOPELOS"
-            currentIndex={currentCriticalIndex}
-            totalCount={vesLinkCriticalTotal}
-            pendingCount={displayPendingCount}
-            verifiedCount={displayVerifiedCount}
-            onPrev={navigateToPrevCritical}
-            onNext={navigateToNextCritical}
-            onVesselClick={() => {
-              // Scroll to vessel name field
-              scrollToVesLinkField("vessel-name")
-            }}
-          />
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto relative">
             <VesLinkForm
               selectedFieldId={selectedField?.id ?? null}
               onFieldSelect={(fieldId) => {
