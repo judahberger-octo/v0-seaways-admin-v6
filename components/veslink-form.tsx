@@ -1059,7 +1059,7 @@ export function VesLinkForm({
             formData={formData}
             isSelected={isSelected}
             isEdited={isEdited}
-            isVerified={isVerified}
+            isVerified={isVerifiedField}
             onFieldSelect={onFieldSelect}
             handleFieldChange={handleFieldChange}
           />

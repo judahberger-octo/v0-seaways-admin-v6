@@ -1641,7 +1641,7 @@ function BottomActionBar({
 }
 
 export function TransferReview({ reportId, onBack, isAdminMode = false }: TransferReviewProps) {
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false) // Loading now handled at page level
   const [sections, setSections] = useState(createMockFormSections)
   const [selectedField, setSelectedField] = useState<FormField | null>(null)
   const [selectedReportId, setSelectedReportId] = useState("4528")

@@ -6,8 +6,9 @@ import { ReportSelection } from "@/components/report-selection"
 import { TransferReview } from "@/components/transfer-review"
 import { DraftsPage } from "@/components/drafts-page"
 import { HistoryPage } from "@/components/history-page"
+import { GenerationLoading } from "@/components/generation-loading"
 
-type AppView = "selection" | "review"
+type AppView = "selection" | "loading" | "review"
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"new-transfer" | "drafts" | "history">("new-transfer")
@@ -29,6 +30,10 @@ export default function Home() {
 
   const handleGenerate = (reportIds: string[]) => {
     setSelectedReportId(reportIds[0] || "4528")
+    setCurrentView("loading") // Show loading first
+  }
+
+  const handleLoadingComplete = () => {
     setCurrentView("review")
   }
 
@@ -40,6 +45,16 @@ export default function Home() {
   const handleViewHistoryReport = (reportId: string) => {
     setSelectedReportId(reportId)
     setCurrentView("review")
+  }
+
+  // Show loading screen outside AppShell (no sidebar during generation)
+  if (currentView === "loading" && selectedReportId) {
+    return (
+      <GenerationLoading 
+        reportId={selectedReportId} 
+        onComplete={handleLoadingComplete} 
+      />
+    )
   }
 
   return (
