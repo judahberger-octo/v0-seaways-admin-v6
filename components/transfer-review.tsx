@@ -38,6 +38,8 @@ import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from
 
 // Field status types
 type FieldStatus = "verified" | "flagged" | "pending" | "not-populated" | "manually-edited"
+type FieldType = "standard" | "critical" | "manualFill"
+type ManualFillStatus = "awaiting" | "entered" | "confirmed"
 
 interface FormField {
   id: string
@@ -47,8 +49,15 @@ interface FormField {
   confidence: number
   status: FieldStatus
   isCritical?: boolean
+  fieldType?: FieldType
+  sourceAvailable?: boolean
+  manualFillStatus?: ManualFillStatus
   sourceTab?: string
   sourceField?: string
+  whyNeeded?: string
+  whereToFind?: string
+  inputKind?: "text" | "select"
+  options?: string[]
 }
 
 // Field card data for the new scrollable list
@@ -58,12 +67,19 @@ interface FieldCardData {
   fieldDefinition?: string
   status: FieldStatus
   isCritical: boolean
+  fieldType?: FieldType
+  sourceAvailable?: boolean
+  manualFillStatus?: ManualFillStatus
   mappedSource: string
   sourceTab: string
   isPopulated: boolean
   value?: string
   unit?: string
   confidence?: number
+  whyNeeded?: string
+  whereToFind?: string
+  inputKind?: "text" | "select"
+  options?: string[]
 }
 
 interface FormSection {
@@ -239,7 +255,8 @@ const createFieldCardSections = (verifiedFields: Set<string>): FieldSection[] =>
         { id: "distance-to-go", fieldName: "Distance to Go", status: getStatus("distance-to-go"), isCritical: true, mappedSource: "Distance to Go", sourceTab: "Operational", isPopulated: true, value: "2847", unit: "nm", confidence: 97 },
         { id: "cp-ordered-speed", fieldName: "CP / Ordered Speed", status: getStatus("cp-ordered-speed"), isCritical: true, mappedSource: "Ordered Speed", sourceTab: "Operational", isPopulated: true, value: "12.5", unit: "kts", confidence: 98 },
         { id: "reported-speed", fieldName: "Reported Speed", status: getStatus("reported-speed"), isCritical: true, mappedSource: "Reported Speed", sourceTab: "Operational", isPopulated: true, value: "12.3", unit: "kts", confidence: 96 },
-        { id: "observed-distance", fieldName: "Observed Distance", status: getStatus("observed-distance"), isCritical: true, mappedSource: "Observed Distance", sourceTab: "Operational", isPopulated: true, value: "142.3", unit: "nm", confidence: 94 },
+        { id: "observed-distance", fieldName: "Observed Distance (nm)", status: "pending", isCritical: false, fieldType: "manualFill", sourceAvailable: false, manualFillStatus: "awaiting", mappedSource: "", sourceTab: "", isPopulated: false, value: "", unit: "nm", whyNeeded: "Observed distance is the actual distance the vessel has travelled through the water since the last noon report, as read directly from the ship's log. It anchors fuel-per-mile and slip calculations, and is a regulated input for charter-party performance reporting. NAVTOR does not have access to this value, so it must be entered manually from the ship's log.", whereToFind: "Read from the doppler speed log or deck log. Officer on watch at noon typically records the cumulative reading." },
+        { id: "engine-distance", fieldName: "Engine Distance (nm)", status: "pending", isCritical: false, fieldType: "manualFill", sourceAvailable: false, manualFillStatus: "awaiting", mappedSource: "", sourceTab: "", isPopulated: false, value: "", unit: "nm", whyNeeded: "Engine distance is the theoretical distance based on main-engine revolutions, derived from RPM × pitch × hours. Together with observed distance it's used to compute propeller slip — a core indicator of hull and propeller performance. NAVTOR does not capture this value; it comes from the engine room log.", whereToFind: "Engine room log; 2nd Engineer typically records engine distance at noon." },
         { id: "time-since-last", fieldName: "Time Since Last Report", status: getStatus("time-since-last"), isCritical: true, mappedSource: "Time Since Last Report", sourceTab: "Operational", isPopulated: true, value: "24.0", unit: "hrs", confidence: 99 },
         { id: "ballast", fieldName: "Ballast", status: getStatus("ballast"), isCritical: false, mappedSource: "Ballast Water", sourceTab: "Operational", isPopulated: true, value: "1896", unit: "MT", confidence: 96 },
         { id: "displacement", fieldName: "Displacement", status: getStatus("displacement"), isCritical: false, mappedSource: "Displacement", sourceTab: "Operational", isPopulated: true, value: "172000", unit: "t", confidence: 94 },
@@ -264,7 +281,7 @@ const createFieldCardSections = (verifiedFields: Set<string>): FieldSection[] =>
       fields: [
         { id: "beaufort", fieldName: "Beaufort", status: getStatus("beaufort"), isCritical: true, mappedSource: "Beaufort Scale", sourceTab: "Pos & Weather", isPopulated: true, value: "4", confidence: 95 },
         { id: "wind-direction", fieldName: "Wind Direction", status: getStatus("wind-direction"), isCritical: false, mappedSource: "Wind Direction", sourceTab: "Pos & Weather", isPopulated: true, value: "NW", confidence: 94 },
-        { id: "sea-state", fieldName: "Sea State", status: getStatus("sea-state"), isCritical: false, mappedSource: "Sea State", sourceTab: "Pos & Weather", isPopulated: true, value: "Moderate", confidence: 92 },
+        { id: "sea-state", fieldName: "Sea State", status: "pending", isCritical: false, fieldType: "manualFill", sourceAvailable: false, manualFillStatus: "awaiting", inputKind: "select", options: ["Select...", "00 CALM (GLASSY)", "01 CALM (RIPPLED)", "02 SMOOTH", "03 SLIGHT", "04 MODERATE", "05 ROUGH", "06 VERY ROUGH", "07 HIGH", "08 VERY HIGH", "09 PHENOMENAL", "10 NOT APPLICABLE"], mappedSource: "", sourceTab: "", isPopulated: false, value: "", whyNeeded: "Sea State describes the surface condition of the sea on the Douglas scale (0–9, plus Not Applicable). It's used to contextualise vessel performance metrics — fuel consumption, speed loss, and slip all vary materially with sea state. Charterers and regulators require this value on every noon report. NAVTOR does not provide an automated Douglas-scale classification, so the watch officer enters it based on visual observation.", whereToFind: "Officer on watch observes at the time of the report and selects from the Douglas scale." },
         { id: "sea-height", fieldName: "Sea Height", status: getStatus("sea-height"), isCritical: false, mappedSource: "Sea Height", sourceTab: "Pos & Weather", isPopulated: true, value: "1.5", unit: "m", confidence: 91 },
         { id: "sea-temp", fieldName: "Sea Temperature", status: getStatus("sea-temp"), isCritical: false, mappedSource: "Sea Temperature", sourceTab: "Pos & Weather", isPopulated: true, value: "18.2", unit: "C", confidence: 93 },
       ],
@@ -428,7 +445,10 @@ function SingleFieldFocusPane({
   onVerify,
   onFlag,
   onNavigate,
+  onConfirmEntry,
   sourceReports = ["#4528", "#4529", "#4530"],
+  manualFillValue,
+  onScrollToField,
 }: {
   field: FieldCardData | null
   currentIndex: number
@@ -436,12 +456,19 @@ function SingleFieldFocusPane({
   onVerify: () => void
   onFlag: () => void
   onNavigate: (direction: "prev" | "next") => void
+  onConfirmEntry?: () => void
   sourceReports?: string[]
+  manualFillValue?: string
+  onScrollToField?: () => void
 }) {
   const [validationExpanded, setValidationExpanded] = useState(false)
   const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
+  const [whyNeededExpanded, setWhyNeededExpanded] = useState(false)
   const [sourcePreviewIndex, setSourcePreviewIndex] = useState(0)
   const sourcePreviewCount = sourceReports.length
+  
+  // Check if this is a manual-fill field
+  const isManualFill = field?.fieldType === "manualFill"
 
   if (!field) {
     return (
@@ -462,29 +489,44 @@ function SingleFieldFocusPane({
     }
   }
 
-  const getCriticalPillColor = () => {
+  // Get manual fill status
+  const getManualFillStatus = (): ManualFillStatus => {
+    if (field.manualFillStatus === "confirmed" || field.status === "verified") return "confirmed"
+    if (manualFillValue && manualFillValue.trim() !== "" && manualFillValue !== "Select...") return "entered"
+    return "awaiting"
+  }
+
+  const manualFillStatus = isManualFill ? getManualFillStatus() : null
+
+  const getFieldTypePillColor = () => {
     // Use color family matching the border system
+    if (isManualFill) {
+      if (manualFillStatus === "confirmed") return "bg-green-50 text-green-700 border-green-200"
+      return "bg-orange-50 text-orange-700 border-orange-200" // Manual fill = orange
+    }
     if (isVerified) return "bg-green-50 text-green-700 border-green-200"
     if (field.isCritical) return "bg-red-50 text-red-700 border-red-200" // Critical pending = red
-    return "bg-amber-50 text-amber-700 border-amber-200" // Manual/standard = amber
+    return "bg-amber-50 text-amber-700 border-amber-200" // Standard = amber
   }
 
   const confidencePercent = field.confidence || 98
-  const isVerified = field.status === "verified"
+  const isVerified = field.status === "verified" || (isManualFill && manualFillStatus === "confirmed")
   const isFlagged = field.status === "flagged"
 
   // Get the left border color based on field status
   const getLeftBorderColor = () => {
     if (isVerified) return "border-l-green-500"
     if (isFlagged) return "border-l-red-500"
+    if (isManualFill) return "border-l-orange-500" // Manual fill = orange
     if (field.isCritical) return "border-l-red-500" // Critical pending = red
-    return "border-l-amber-500" // Manual/pending = amber
+    return "border-l-amber-500" // Standard/pending = amber
   }
 
   // Get background tint based on status
   const getBackgroundTint = () => {
     if (isVerified) return "bg-green-50/30"
     if (isFlagged) return "bg-red-50/30"
+    if (isManualFill) return "bg-orange-50/30"
     if (field.isCritical) return "bg-red-50/30"
     return "bg-amber-50/30"
   }
@@ -493,7 +535,7 @@ function SingleFieldFocusPane({
     <div className={`flex flex-col h-full border-l-4 ${getLeftBorderColor()} ${getBackgroundTint()} transition-colors duration-300`}>
       {/* Main scrollable content */}
       <div className="flex-1 overflow-y-auto p-5">
-        {/* Header Row: Field name with help icon, Status + Critical pills */}
+        {/* Header Row: Field name with help icon, Field type pill */}
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-1.5">
             <span className="text-sm text-gray-500">Field name</span>
@@ -502,55 +544,99 @@ function SingleFieldFocusPane({
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${getStatusPillColor()}`}>
-              {field.status === "verified" ? "Verified" : field.status === "flagged" ? "Flagged" : "Status"}
-            </span>
-            <span className={`text-xs font-medium px-2.5 py-1 rounded-full border flex items-center gap-1 ${getCriticalPillColor()}`}>
-              {field.isCritical && <Star className="w-3 h-3" fill="currentColor" />}
-              {field.isCritical ? "Critical field" : "Standard field"}
+            {/* Only show Status pill for critical fields, not manual-fill */}
+            {!isManualFill && (
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${getStatusPillColor()}`}>
+                {field.status === "verified" ? "Verified" : field.status === "flagged" ? "Flagged" : "Status"}
+              </span>
+            )}
+            {/* Field Type Pill */}
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full border flex items-center gap-1 ${getFieldTypePillColor()}`}>
+              <Star className="w-3 h-3" fill="currentColor" />
+              {isManualFill ? "Manual fill" : field.isCritical ? "Critical field" : "Standard field"}
             </span>
           </div>
         </div>
 
         {/* Large Value Display */}
         <h2 className="text-3xl font-semibold text-gray-900 mb-3">
-          {field.value || "—"}
+          {isManualFill ? (manualFillValue || "—") : (field.value || "—")}
           {field.unit && <span className="text-xl text-gray-500 ml-1">{field.unit}</span>}
         </h2>
 
-        {/* Source Report Chips */}
-        <div className="flex items-center gap-1.5 mb-5 text-sm text-gray-500">
-          <FileText className="w-4 h-4" />
-          <span>Report {sourceReports.join(", Report ")}</span>
-        </div>
+        {/* Source Report Chips OR Manual Fill Caption */}
+        {isManualFill ? (
+          <div className="flex items-center gap-2 mb-5 text-sm text-gray-500 italic">
+            <span>Not available in NAVTOR source — enter value in the VesLink form on the right</span>
+            {onScrollToField && (
+              <button 
+                onClick={onScrollToField}
+                className="text-purple-600 hover:text-purple-700 underline not-italic"
+              >
+                →
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 mb-5 text-sm text-gray-500">
+            <FileText className="w-4 h-4" />
+            <span>Report {sourceReports.join(", Report ")}</span>
+          </div>
+        )}
 
-        {/* Confidence Bar */}
-        <div className="mb-5">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">Confidence</span>
-            <div className="flex items-center gap-3">
-              <span className={`text-sm font-semibold ${confidencePercent >= 90 ? "text-green-600" : confidencePercent >= 70 ? "text-amber-600" : "text-red-600"}`}>
-                {confidencePercent}%
-              </span>
-              {isVerified ? (
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700 flex items-center gap-1">
-                  <Check className="w-3 h-3" />
-                  Verified
-                </span>
-              ) : (
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-                  Pending
-                </span>
+        {/* Status Row for Manual Fill (replaces Confidence Bar) */}
+        {isManualFill ? (
+          <div className="mb-5">
+            <div className="flex items-center gap-2">
+              {manualFillStatus === "awaiting" && (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-orange-500" />
+                  <span className="text-sm font-medium text-orange-600">Status: Awaiting input</span>
+                </>
+              )}
+              {manualFillStatus === "entered" && (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                  <span className="text-sm font-medium text-blue-600">Status: Entered — confirm below</span>
+                </>
+              )}
+              {manualFillStatus === "confirmed" && (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                  <span className="text-sm font-medium text-green-600">Status: Confirmed</span>
+                </>
               )}
             </div>
           </div>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-            <div 
-              className={`h-full rounded-full transition-all ${confidencePercent >= 90 ? "bg-green-500" : confidencePercent >= 70 ? "bg-amber-500" : "bg-red-500"}`}
-              style={{ width: `${confidencePercent}%` }}
-            />
+        ) : (
+          /* Confidence Bar (only for non-manual-fill fields) */
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-gray-600">Confidence</span>
+              <div className="flex items-center gap-3">
+                <span className={`text-sm font-semibold ${confidencePercent >= 90 ? "text-green-600" : confidencePercent >= 70 ? "text-amber-600" : "text-red-600"}`}>
+                  {confidencePercent}%
+                </span>
+                {isVerified ? (
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700 flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    Verified
+                  </span>
+                ) : (
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                    Pending
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div 
+                className={`h-full rounded-full transition-all ${confidencePercent >= 90 ? "bg-green-500" : confidencePercent >= 70 ? "bg-amber-500" : "bg-red-500"}`}
+                style={{ width: `${confidencePercent}%` }}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Validation Checks Accordion */}
         <div className="border border-gray-200 rounded-lg mb-4">
@@ -585,78 +671,135 @@ function SingleFieldFocusPane({
           )}
         </div>
 
-        {/* Source Preview Accordion */}
-        <div className="border border-gray-200 rounded-lg">
-          <button
-            onClick={() => setSourcePreviewExpanded(!sourcePreviewExpanded)}
-            className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            <span>Source preview ({sourcePreviewCount})</span>
-            {sourcePreviewExpanded ? (
-              <ChevronUp className="w-4 h-4 text-gray-500" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-gray-500" />
+        {/* Source Preview Accordion OR Why this field is needed (for manual-fill) */}
+        {isManualFill ? (
+          /* Why This Field is Needed Accordion - for manual-fill fields */
+          <div className="border border-orange-200 rounded-lg bg-orange-50/30">
+            <button
+              onClick={() => setWhyNeededExpanded(!whyNeededExpanded)}
+              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-orange-50"
+            >
+              <div className="flex items-center gap-2">
+                <Info className="w-4 h-4 text-orange-500" />
+                <span>Why this field is needed</span>
+              </div>
+              {whyNeededExpanded ? (
+                <ChevronUp className="w-4 h-4 text-gray-500" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-gray-500" />
+              )}
+            </button>
+            {whyNeededExpanded && (
+              <div className="px-4 pb-4 border-t border-orange-100">
+                <div className="pt-3 space-y-3">
+                  {/* Primary explanation */}
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    {field.whyNeeded || "This field is required by VesLink but is not available in the NAVTOR source data. Please enter the value manually based on vessel records."}
+                  </p>
+                  {/* Where to find it */}
+                  {field.whereToFind && (
+                    <>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Where to find it on the vessel</p>
+                      <p className="text-sm text-gray-600">
+                        {field.whereToFind}
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
             )}
-          </button>
-          {sourcePreviewExpanded && (
-            <div className="p-3 border-t border-gray-100">
-              {/* Dark NAVTOR Preview with navigation */}
-              <div className="relative">
-                {/* Left Arrow */}
-                <button
-                  onClick={() => setSourcePreviewIndex(Math.max(0, sourcePreviewIndex - 1))}
-                  disabled={sourcePreviewIndex === 0}
-                  className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 w-7 h-7 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeftIcon className="w-4 h-4 text-gray-600" />
-                </button>
+          </div>
+        ) : (
+          /* Source Preview Accordion - for critical/standard fields */
+          <div className="border border-gray-200 rounded-lg">
+            <button
+              onClick={() => setSourcePreviewExpanded(!sourcePreviewExpanded)}
+              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <span>Source preview ({sourcePreviewCount})</span>
+              {sourcePreviewExpanded ? (
+                <ChevronUp className="w-4 h-4 text-gray-500" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-gray-500" />
+              )}
+            </button>
+            {sourcePreviewExpanded && (
+              <div className="p-3 border-t border-gray-100">
+                {/* Dark NAVTOR Preview with navigation */}
+                <div className="relative">
+                  {/* Left Arrow */}
+                  <button
+                    onClick={() => setSourcePreviewIndex(Math.max(0, sourcePreviewIndex - 1))}
+                    disabled={sourcePreviewIndex === 0}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 w-7 h-7 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeftIcon className="w-4 h-4 text-gray-600" />
+                  </button>
 
-                {/* NAVTOR Screenshot */}
-                <div className="rounded-lg overflow-hidden">
-                  <NavtorScreenshot fieldId={field.id} className="w-full" />
+                  {/* NAVTOR Screenshot */}
+                  <div className="rounded-lg overflow-hidden">
+                    <NavtorScreenshot fieldId={field.id} className="w-full" />
+                  </div>
+
+                  {/* Right Arrow */}
+                  <button
+                    onClick={() => setSourcePreviewIndex(Math.min(sourcePreviewCount - 1, sourcePreviewIndex + 1))}
+                    disabled={sourcePreviewIndex === sourcePreviewCount - 1}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 w-7 h-7 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRightIcon className="w-4 h-4 text-gray-600" />
+                  </button>
+
+                  {/* Expand Icon */}
+                  <button className="absolute top-2 right-2 w-7 h-7 rounded bg-white/80 backdrop-blur-sm border border-gray-200 flex items-center justify-center hover:bg-white">
+                    <ExternalLink className="w-3.5 h-3.5 text-gray-600" />
+                  </button>
                 </div>
 
-                {/* Right Arrow */}
-                <button
-                  onClick={() => setSourcePreviewIndex(Math.min(sourcePreviewCount - 1, sourcePreviewIndex + 1))}
-                  disabled={sourcePreviewIndex === sourcePreviewCount - 1}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 w-7 h-7 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <ChevronRightIcon className="w-4 h-4 text-gray-600" />
-                </button>
-
-                {/* Expand Icon */}
-                <button className="absolute top-2 right-2 w-7 h-7 rounded bg-white/80 backdrop-blur-sm border border-gray-200 flex items-center justify-center hover:bg-white">
-                  <ExternalLink className="w-3.5 h-3.5 text-gray-600" />
-                </button>
+                {/* Pagination indicator */}
+                <div className="flex items-center justify-center mt-3">
+                  <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-gray-200">
+                    {sourcePreviewIndex + 1}/{sourcePreviewCount}
+                  </span>
+                </div>
               </div>
-
-              {/* Pagination indicator */}
-              <div className="flex items-center justify-center mt-3">
-                <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-gray-200">
-                  {sourcePreviewIndex + 1}/{sourcePreviewCount}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Footer Action Bar - Fixed at bottom */}
       <div className="border-t border-gray-200 bg-white px-5 py-4">
         <div className="flex items-center gap-3">
-          {/* Verify Button */}
-          <button
-            onClick={onVerify}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
-              isVerified
-                ? "bg-green-50 text-green-700 border-green-200"
-                : "bg-white text-gray-700 border-gray-200 hover:bg-green-50 hover:text-green-700 hover:border-green-200"
-            }`}
-          >
-            <Check className="w-4 h-4" />
-            Verify field
-          </button>
+          {/* Verify/Confirm Entry Button */}
+          {isManualFill ? (
+            <button
+              onClick={onConfirmEntry}
+              disabled={manualFillStatus === "awaiting"}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
+                manualFillStatus === "confirmed"
+                  ? "bg-green-50 text-green-700 border-green-200"
+                  : manualFillStatus === "entered"
+                  ? "bg-purple-600 text-white border-purple-600 hover:bg-purple-700 animate-pulse"
+                  : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+              }`}
+            >
+              <Check className="w-4 h-4" />
+              {manualFillStatus === "confirmed" ? "Confirmed" : "Confirm entry"}
+            </button>
+          ) : (
+            <button
+              onClick={onVerify}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
+                isVerified
+                  ? "bg-green-50 text-green-700 border-green-200"
+                  : "bg-white text-gray-700 border-gray-200 hover:bg-green-50 hover:text-green-700 hover:border-green-200"
+              }`}
+            >
+              <Check className="w-4 h-4" />
+              Verify field
+            </button>
+          )}
 
           {/* Navigation Paginator */}
           <div className="flex items-center gap-1 border border-gray-200 rounded-lg">
@@ -1764,9 +1907,23 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
     setSelectedField(field)
   }
 
-  // Critical field metadata for proper labels and source mappings
-  const getCriticalFieldMetadata = (fieldId: string) => {
-    const metadata: Record<string, { label: string; sourceTab: string; sourceField: string; value: string }> = {
+  // Field metadata for proper labels and source mappings (includes both critical and manual-fill)
+  const getFieldMetadata = (fieldId: string) => {
+    type FieldMetadata = { 
+      label: string
+      sourceTab: string
+      sourceField: string
+      value: string
+      fieldType?: FieldType
+      unit?: string
+      whyNeeded?: string
+      whereToFind?: string
+      inputKind?: "text" | "select"
+      options?: string[]
+    }
+    
+    const metadata: Record<string, FieldMetadata> = {
+      // Critical fields
       "date-time": { label: "Date/Time", sourceTab: "Operational", sourceField: "Report Date/Time", value: "14/04/2026 12:00" },
       "voyage-number": { label: "Voyage Number", sourceTab: "Operational", sourceField: "Voyage Number", value: "124" },
       "vessel-condition": { label: "Vessel Condition", sourceTab: "Operational", sourceField: "Vessel Condition", value: "Laden" },
@@ -1775,7 +1932,6 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
       "distance-to-go": { label: "Distance to Go", sourceTab: "Operational", sourceField: "Distance to Go", value: "2847" },
       "cp-ordered-speed": { label: "CP / Ordered Speed", sourceTab: "Operational", sourceField: "Ordered Speed", value: "12.5" },
       "reported-speed": { label: "Reported Speed", sourceTab: "Operational", sourceField: "Reported Speed", value: "12.3" },
-      "observed-distance": { label: "Observed Distance", sourceTab: "Operational", sourceField: "Observed Distance", value: "142.3" },
       "time-since-last": { label: "Time Since Last Report", sourceTab: "Operational", sourceField: "Time Since Last Report", value: "24.0" },
       "main-engine-rpm": { label: "Main Engine RPM", sourceTab: "Power", sourceField: "ME RPM", value: "85.2" },
       "beaufort": { label: "Beaufort", sourceTab: "Pos & Weather", sourceField: "Beaufort Scale", value: "4" },
@@ -1783,6 +1939,38 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
       "fresh-water-rob": { label: "Fresh Water ROB", sourceTab: "Stock", sourceField: "Fresh Water ROB", value: "125.4" },
       "distilled-water-rob": { label: "Distilled Water ROB", sourceTab: "Stock", sourceField: "Distilled Water ROB", value: "48.2" },
       "slops-rob": { label: "Slops ROB", sourceTab: "Stock", sourceField: "Slops ROB", value: "12.8" },
+      // Manual-fill fields
+      "observed-distance": { 
+        label: "Observed Distance (nm)", 
+        sourceTab: "", 
+        sourceField: "", 
+        value: "",
+        fieldType: "manualFill",
+        unit: "nm",
+        whyNeeded: "Observed distance is the actual distance the vessel has travelled through the water since the last noon report, as read directly from the ship's log. It anchors fuel-per-mile and slip calculations, and is a regulated input for charter-party performance reporting. NAVTOR does not have access to this value, so it must be entered manually from the ship's log.",
+        whereToFind: "Read from the doppler speed log or deck log. Officer on watch at noon typically records the cumulative reading."
+      },
+      "engine-distance": { 
+        label: "Engine Distance (nm)", 
+        sourceTab: "", 
+        sourceField: "", 
+        value: "",
+        fieldType: "manualFill",
+        unit: "nm",
+        whyNeeded: "Engine distance is the theoretical distance based on main-engine revolutions, derived from RPM × pitch × hours. Together with observed distance it's used to compute propeller slip — a core indicator of hull and propeller performance. NAVTOR does not capture this value; it comes from the engine room log.",
+        whereToFind: "Engine room log; 2nd Engineer typically records engine distance at noon."
+      },
+      "sea-state": { 
+        label: "Sea State", 
+        sourceTab: "", 
+        sourceField: "", 
+        value: "",
+        fieldType: "manualFill",
+        inputKind: "select",
+        options: ["Select...", "00 CALM (GLASSY)", "01 CALM (RIPPLED)", "02 SMOOTH", "03 SLIGHT", "04 MODERATE", "05 ROUGH", "06 VERY ROUGH", "07 HIGH", "08 VERY HIGH", "09 PHENOMENAL", "10 NOT APPLICABLE"],
+        whyNeeded: "Sea State describes the surface condition of the sea on the Douglas scale (0–9, plus Not Applicable). It's used to contextualise vessel performance metrics — fuel consumption, speed loss, and slip all vary materially with sea state. Charterers and regulators require this value on every noon report. NAVTOR does not provide an automated Douglas-scale classification, so the watch officer enters it based on visual observation.",
+        whereToFind: "Officer on watch observes at the time of the report and selects from the Douglas scale."
+      },
     }
     return metadata[fieldId] || { 
       label: fieldId.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
@@ -1791,6 +1979,9 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
       value: ""
     }
   }
+  
+  // Alias for backwards compatibility
+  const getCriticalFieldMetadata = getFieldMetadata
 
   // Helper to scroll to VesLink field
   const scrollToVesLinkField = useCallback((fieldId: string) => {
@@ -1833,16 +2024,25 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
     
     if (nextFieldId) {
       // Create a mock field object for the left panel with proper metadata
-      const metadata = getCriticalFieldMetadata(nextFieldId)
+      const metadata = getFieldMetadata(nextFieldId)
+      const isManualFill = metadata.fieldType === "manualFill"
       const mockField: FormField = {
         id: nextFieldId,
         label: metadata.label,
         value: metadata.value,
-        confidence: 95 + Math.floor(Math.random() * 5),
+        unit: metadata.unit,
+        confidence: isManualFill ? 0 : 95 + Math.floor(Math.random() * 5),
         status: verifiedVesLinkFields.has(nextFieldId) ? "verified" : "pending",
-        isCritical: true,
+        isCritical: !isManualFill,
+        fieldType: metadata.fieldType,
+        sourceAvailable: !isManualFill,
+        manualFillStatus: isManualFill ? "awaiting" : undefined,
         sourceTab: metadata.sourceTab,
         sourceField: metadata.sourceField,
+        whyNeeded: metadata.whyNeeded,
+        whereToFind: metadata.whereToFind,
+        inputKind: metadata.inputKind,
+        options: metadata.options,
       }
       setSelectedField(mockField)
       setCurrentCriticalIndex(nextIndex)
@@ -1856,7 +2056,7 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
         fieldCard.scrollIntoView({ behavior: "smooth", block: "center" })
       }
     }
-  }, [currentCriticalIndex, verifiedVesLinkFields, scrollToVesLinkField, getCriticalFieldMetadata])
+  }, [currentCriticalIndex, verifiedVesLinkFields, scrollToVesLinkField])
 
   // Navigate to previous critical field (cycles through all critical fields)
   const navigateToPrevCritical = useCallback(() => {
@@ -1865,16 +2065,25 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
     const prevFieldId = CRITICAL_FIELDS_NOON_SEA[prevIndex - 1]
     
     if (prevFieldId) {
-      const metadata = getCriticalFieldMetadata(prevFieldId)
+      const metadata = getFieldMetadata(prevFieldId)
+      const isManualFill = metadata.fieldType === "manualFill"
       const mockField: FormField = {
         id: prevFieldId,
         label: metadata.label,
         value: metadata.value,
-        confidence: 95 + Math.floor(Math.random() * 5),
+        unit: metadata.unit,
+        confidence: isManualFill ? 0 : 95 + Math.floor(Math.random() * 5),
         status: verifiedVesLinkFields.has(prevFieldId) ? "verified" : "pending",
-        isCritical: true,
+        isCritical: !isManualFill,
+        fieldType: metadata.fieldType,
+        sourceAvailable: !isManualFill,
+        manualFillStatus: isManualFill ? "awaiting" : undefined,
         sourceTab: metadata.sourceTab,
         sourceField: metadata.sourceField,
+        whyNeeded: metadata.whyNeeded,
+        whereToFind: metadata.whereToFind,
+        inputKind: metadata.inputKind,
+        options: metadata.options,
       }
       setSelectedField(mockField)
       setCurrentCriticalIndex(prevIndex)
@@ -1888,7 +2097,7 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
         fieldCard.scrollIntoView({ behavior: "smooth", block: "center" })
       }
     }
-  }, [currentCriticalIndex, verifiedVesLinkFields, scrollToVesLinkField, getCriticalFieldMetadata])
+  }, [currentCriticalIndex, verifiedVesLinkFields, scrollToVesLinkField])
 
   const handleVerify = useCallback(() => {
     if (!selectedField) return
@@ -2084,12 +2293,19 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
               fieldName: selectedField.label,
               status: selectedField.status,
               isCritical: selectedField.isCritical || false,
+              fieldType: selectedField.fieldType,
+              sourceAvailable: selectedField.sourceAvailable,
+              manualFillStatus: selectedField.manualFillStatus,
               mappedSource: selectedField.sourceField || "",
               sourceTab: selectedField.sourceTab || "",
               isPopulated: !!selectedField.value,
               value: selectedField.value,
               unit: selectedField.unit,
               confidence: selectedField.confidence,
+              whyNeeded: selectedField.whyNeeded,
+              whereToFind: selectedField.whereToFind,
+              inputKind: selectedField.inputKind,
+              options: selectedField.options,
             } : null}
             currentIndex={currentCriticalIndex}
             totalCount={vesLinkCriticalTotal}
@@ -2105,6 +2321,22 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
                 navigateToNextCritical()
               } else {
                 navigateToPrevCritical()
+              }
+            }}
+            onConfirmEntry={() => {
+              if (selectedField?.fieldType === "manualFill") {
+                setSelectedField({ ...selectedField, status: "verified", manualFillStatus: "confirmed" })
+                // Navigate to next pending field
+                navigateToNextCritical()
+              }
+            }}
+            manualFillValue={selectedField?.value}
+            onScrollToField={() => {
+              // Scroll the VesLink input into view
+              const inputEl = document.getElementById(`vl-field-${selectedField?.id}`)
+              if (inputEl) {
+                inputEl.scrollIntoView({ behavior: "smooth", block: "center" })
+                inputEl.focus()
               }
             }}
             sourceReports={["#4528", "#4529", "#4530"]}

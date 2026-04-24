@@ -3,8 +3,9 @@
 import React, { useState, useCallback } from "react"
 import { Check, Star } from "lucide-react"
 
-// EXACT Critical fields for Noon-Sea reports per Avinash's list (16 fields total)
+// EXACT Critical fields for Noon-Sea reports per Avinash's list (16 fields + 3 manual-fill)
 // Order matches the form flow for navigation: top to bottom
+// Manual-fill fields are marked with (Manual Fill) - these require user input, not AI pre-fill
 export const CRITICAL_FIELDS_NOON_SEA = [
   "date-time",           // 1. Date/Time (header section)
   "voyage-number",       // 2. Voyage Number (header section)
@@ -14,14 +15,23 @@ export const CRITICAL_FIELDS_NOON_SEA = [
   "distance-to-go",      // 6. Distance to Go (Distance and Vessel section)
   "cp-ordered-speed",    // 7. CP Ordered Speed (Distance and Vessel section)
   "reported-speed",      // 8. Reported Speed (Distance and Vessel section)
-  "observed-distance",   // 9. Observed Distance (Distance and Vessel section)
-  "time-since-last",     // 10. Time Since Last Report (Distance and Vessel section)
-  "main-engine-rpm",     // 11. Main Engine RPM (Machinery section)
-  "beaufort",            // 12. Beaufort (Weather section)
-  "bunkers-section",     // 13. ROB, Consumption & Used For (entire Bunkers section)
-  "fresh-water-rob",     // 14. Fresh Water ROB (Water section)
-  "distilled-water-rob", // 15. Distilled Water ROB (Water section)
-  "slops-rob"            // 16. Slops ROB (Water section)
+  "observed-distance",   // 9. Observed Distance (Manual Fill - not in NAVTOR)
+  "engine-distance",     // 10. Engine Distance (Manual Fill - not in NAVTOR)
+  "time-since-last",     // 11. Time Since Last Report (Distance and Vessel section)
+  "main-engine-rpm",     // 12. Main Engine RPM (Machinery section)
+  "beaufort",            // 13. Beaufort (Weather section)
+  "sea-state",           // 14. Sea State (Manual Fill - not in NAVTOR)
+  "bunkers-section",     // 15. ROB, Consumption & Used For (entire Bunkers section)
+  "fresh-water-rob",     // 16. Fresh Water ROB (Water section)
+  "distilled-water-rob", // 17. Distilled Water ROB (Water section)
+  "slops-rob"            // 18. Slops ROB (Water section)
+]
+
+// Manual fill field IDs (fields that require user input, not AI pre-fill)
+export const MANUAL_FILL_FIELDS = [
+  "observed-distance",
+  "engine-distance",
+  "sea-state"
 ]
 
 interface VesLinkFormProps {
@@ -58,11 +68,12 @@ const initialFormData: Record<string, FieldData> = {
   "eta-time": { id: "eta-time", value: "14:00", type: "text" },
   "eta": { id: "eta", value: "22/04/2026 14:00", type: "text" }, // Combined for critical field tracking
   
-  // Distance and Vessel - with NEW fields
+  // Distance and Vessel - with NEW fields (including Manual Fill fields)
   "distance-to-go": { id: "distance-to-go", value: "2847", type: "text" },
   "cp-ordered-speed": { id: "cp-ordered-speed", value: "12.5", type: "text" },
   "reported-speed": { id: "reported-speed", value: "12.3", type: "text" },
-  "observed-distance": { id: "observed-distance", value: "142.3", type: "text" },
+  "observed-distance": { id: "observed-distance", value: "", type: "text" }, // Manual Fill - empty by default
+  "engine-distance": { id: "engine-distance", value: "", type: "text" }, // Manual Fill - empty by default
   "ballast": { id: "ballast", value: "1896", type: "text" },
   "displacement": { id: "displacement", value: "172000", type: "text" },
   "slip": { id: "slip", value: "0.35", type: "text" },
@@ -84,7 +95,8 @@ const initialFormData: Record<string, FieldData> = {
   // Weather
   "beaufort": { id: "beaufort", value: "4", type: "select", options: ["Select...", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"] },
   "wind-direction": { id: "wind-direction", value: "NW", type: "select", options: ["Select...", "N", "NE", "E", "SE", "S", "SW", "W", "NW"] },
-  "sea-state": { id: "sea-state", value: "Moderate", type: "select", options: ["Select...", "Calm", "Slight", "Moderate", "Rough", "Very Rough", "High", "Very High", "Phenomenal"] },
+  // Manual Fill - Sea State with Douglas Scale options
+  "sea-state": { id: "sea-state", value: "", type: "select", options: ["Select...", "00 CALM (GLASSY)", "01 CALM (RIPPLED)", "02 SMOOTH", "03 SLIGHT", "04 MODERATE", "05 ROUGH", "06 VERY ROUGH", "07 HIGH", "08 VERY HIGH", "09 PHENOMENAL", "10 NOT APPLICABLE"] },
   "sea-height": { id: "sea-height", value: "1.5", type: "text" },
   "sea-temp": { id: "sea-temp", value: "18.2", type: "text" },
   
@@ -173,16 +185,24 @@ const initialFormData: Record<string, FieldData> = {
   "master-last": { id: "master-last", value: "FIGUEIREDO", type: "text" },
 }
 
-// Critical field indicator component - ONLY shows for fields in the critical list
-function CriticalIndicator({ fieldId, isVerified }: { fieldId: string; isVerified: boolean }) {
+// Critical/Manual-fill field indicator component
+// Shows orange star for manual-fill (not verified), red star for critical pending, green check for verified
+function CriticalIndicator({ fieldId, isVerified, isManualFill = false }: { fieldId: string; isVerified: boolean; isManualFill?: boolean }) {
   const isCritical = CRITICAL_FIELDS_NOON_SEA.includes(fieldId)
   if (!isCritical) return null
   
-  return isVerified ? (
-    <Check className="w-3.5 h-3.5 text-[#16a34a] flex-shrink-0" />
-  ) : (
-    <Star className="w-3.5 h-3.5 text-[#d97706] flex-shrink-0" fill="#d97706" />
-  )
+  if (isVerified) {
+    // Verified/Confirmed - green check
+    return <Check className="w-3.5 h-3.5 text-[#16a34a] flex-shrink-0" />
+  }
+  
+  if (isManualFill) {
+    // Manual fill pending - orange star (distinct from critical red)
+    return <Star className="w-3.5 h-3.5 text-[#f97316] flex-shrink-0" fill="#f97316" />
+  }
+  
+  // Critical pending - red star
+  return <Star className="w-3.5 h-3.5 text-[#dc2626] flex-shrink-0" fill="#dc2626" />
 }
 
 // Context for passing statusFilter to child components
@@ -199,7 +219,8 @@ function VLInput({
   onSelect,
   width = "auto",
   className = "",
-  isCritical = false
+  isCritical = false,
+  isManualFill = false
 }: { 
   id: string
   value: string
@@ -211,6 +232,7 @@ function VLInput({
   width?: string
   className?: string
   isCritical?: boolean
+  isManualFill?: boolean
 }) {
   const statusFilter = React.useContext(StatusFilterContext)
   
@@ -229,6 +251,12 @@ function VLInput({
         ? "border-2 border-[#16a34a] ring-2 ring-[#16a34a]/30 shadow-[0_0_8px_rgba(22,163,74,0.4)]" 
         : "border-2 border-[#16a34a]"
     }
+    if (isManualFill) {
+      // Manual fill field (not confirmed yet) = orange border
+      return isSelected 
+        ? "border-2 border-[#f97316] ring-2 ring-[#f97316]/30 shadow-[0_0_8px_rgba(249,115,22,0.4)]" 
+        : "border-2 border-[#f97316]"
+    }
     if (isCritical) {
       // Critical pending = red border
       return isSelected 
@@ -236,7 +264,7 @@ function VLInput({
         : "border-2 border-[#dc2626]"
     }
     if (isEdited) {
-      // Manual fill (edited but not verified) = orange border
+      // Edited field = amber border
       return isSelected 
         ? "border-2 border-[#f59e0b] ring-2 ring-[#f59e0b]/30 shadow-[0_0_8px_rgba(245,158,11,0.4)]" 
         : "border-2 border-[#f59e0b]"
@@ -245,6 +273,13 @@ function VLInput({
     return isSelected 
       ? "border border-[#7c3aed] ring-2 ring-[#7c3aed]/30 shadow-[0_0_8px_rgba(124,58,237,0.3)]" 
       : "border border-[#999]"
+  }
+  
+  // Get indicator icon for manual fill fields
+  const getIndicatorIcon = () => {
+    if (isManualFill && !isVerified) return "orange" // orange star
+    if (isVerified) return "green" // green check
+    return null
   }
   
   return (
@@ -281,7 +316,8 @@ function VLSelect({
   isVerified,
   onSelect,
   width = "auto",
-  isCritical = false
+  isCritical = false,
+  isManualFill = false
 }: { 
   id: string
   value: string
@@ -293,6 +329,7 @@ function VLSelect({
   onSelect: () => void
   width?: string
   isCritical?: boolean
+  isManualFill?: boolean
 }) {
   const statusFilter = React.useContext(StatusFilterContext)
   
@@ -311,6 +348,12 @@ function VLSelect({
         ? "border-2 border-[#16a34a] ring-2 ring-[#16a34a]/30 shadow-[0_0_8px_rgba(22,163,74,0.4)]" 
         : "border-2 border-[#16a34a]"
     }
+    if (isManualFill) {
+      // Manual fill field (not confirmed yet) = orange border
+      return isSelected 
+        ? "border-2 border-[#f97316] ring-2 ring-[#f97316]/30 shadow-[0_0_8px_rgba(249,115,22,0.4)]" 
+        : "border-2 border-[#f97316]"
+    }
     if (isCritical) {
       // Critical pending = red border
       return isSelected 
@@ -318,7 +361,7 @@ function VLSelect({
         : "border-2 border-[#dc2626]"
     }
     if (isEdited) {
-      // Manual fill (edited but not verified) = orange border
+      // Edited field = amber border
       return isSelected 
         ? "border-2 border-[#f59e0b] ring-2 ring-[#f59e0b]/30 shadow-[0_0_8px_rgba(245,158,11,0.4)]" 
         : "border-2 border-[#f59e0b]"
@@ -364,24 +407,26 @@ function SectionHeader({ title }: { title: string }) {
   )
 }
 
-// Form row with label and input - now with critical indicator
+// Form row with label and input - now with critical and manual-fill indicators
 function FormRow({ 
   label, 
   fieldId,
   children,
   labelWidth = "auto",
-  isVerified = false
+  isVerified = false,
+  isManualFill = false
 }: { 
   label: string
   fieldId?: string
   children: React.ReactNode
   labelWidth?: string
   isVerified?: boolean
+  isManualFill?: boolean
 }) {
   return (
     <div className="flex items-center gap-1.5 mb-1.5">
       <div className="flex items-center gap-1 shrink-0" style={{ width: labelWidth }}>
-        {fieldId && <CriticalIndicator fieldId={fieldId} isVerified={isVerified} />}
+        {fieldId && <CriticalIndicator fieldId={fieldId} isVerified={isVerified} isManualFill={isManualFill} />}
         <label 
           className="text-[13px] text-[#333] text-right flex-1"
           style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
@@ -871,12 +916,18 @@ export function VesLinkForm({
             </FormRow>
             <div />
             
-            {/* Existing fields */}
-            <FormRow label="Observed Distance (nm):" fieldId="observed-distance" labelWidth="150px" isVerified={isVerifiedField("observed-distance")}>
+            {/* Manual Fill Fields - Observed Distance and Engine Distance */}
+            <FormRow label="Observed Distance (nm):" fieldId="observed-distance" labelWidth="150px" isVerified={isVerifiedField("observed-distance")} isManualFill={true}>
               <VLInput id="observed-distance" value={formData["observed-distance"].value}
                 onChange={(v) => handleFieldChange("observed-distance", v)}
                 isSelected={isSelected("observed-distance")} isEdited={isEdited("observed-distance")} isVerified={isVerifiedField("observed-distance")}
-                onSelect={() => onFieldSelect("observed-distance")} width="100px" isCritical={true} />
+                onSelect={() => onFieldSelect("observed-distance")} width="100px" isManualFill={!isVerifiedField("observed-distance")} />
+            </FormRow>
+            <FormRow label="Engine Distance (nm):" fieldId="engine-distance" labelWidth="150px" isVerified={isVerifiedField("engine-distance")} isManualFill={true}>
+              <VLInput id="engine-distance" value={formData["engine-distance"]?.value || ""}
+                onChange={(v) => handleFieldChange("engine-distance", v)}
+                isSelected={isSelected("engine-distance")} isEdited={isEdited("engine-distance")} isVerified={isVerifiedField("engine-distance")}
+                onSelect={() => onFieldSelect("engine-distance")} width="100px" isManualFill={!isVerifiedField("engine-distance")} />
             </FormRow>
             <FormRow label="Ballast (MT):" labelWidth="150px">
               <VLInput id="ballast" value={formData["ballast"].value}
@@ -1010,12 +1061,12 @@ export function VesLinkForm({
                 onSelect={() => onFieldSelect("wind-direction")} width="100px" />
             </FormRow>
             
-            <FormRow label="Sea State:" labelWidth="130px">
+            <FormRow label="Sea State:" fieldId="sea-state" labelWidth="130px" isVerified={isVerifiedField("sea-state")} isManualFill={true}>
               <VLSelect id="sea-state" value={formData["sea-state"].value}
                 options={formData["sea-state"].options || []}
                 onChange={(v) => handleFieldChange("sea-state", v)}
                 isSelected={isSelected("sea-state")} isEdited={isEdited("sea-state")} isVerified={isVerifiedField("sea-state")}
-                onSelect={() => onFieldSelect("sea-state")} width="130px" />
+                onSelect={() => onFieldSelect("sea-state")} width="140px" isManualFill={!isVerifiedField("sea-state")} />
             </FormRow>
             <FormRow label="Sea Height:" labelWidth="130px">
               <VLInput id="sea-height" value={formData["sea-height"].value}
