@@ -239,16 +239,20 @@ function VLInput({
   // Compute validation warning
   const validationWarning = validate && value ? validate(value) : null
   
+  // For manual-fill fields, auto-complete when value is non-empty (no confirm button needed)
+  const isManualFillComplete = isManualFill && value && value.trim() !== ""
+  const effectivelyVerified = isVerified || isManualFillComplete
+  
   // Determine border color based on field state
   const getBorderStyle = () => {
-    if (isVerified) {
-      // Verified = green border
+    if (effectivelyVerified) {
+      // Verified/Complete = green border
       return isSelected 
         ? "border-2 border-[#16a34a] ring-2 ring-[#16a34a]/30 shadow-[0_0_8px_rgba(22,163,74,0.4)]" 
         : "border-2 border-[#16a34a]"
     }
     if (isManualFill) {
-      // Manual fill field (not confirmed yet) = orange border
+      // Manual fill field (empty/awaiting) = orange border
       return isSelected 
         ? "border-2 border-[#f97316] ring-2 ring-[#f97316]/30 shadow-[0_0_8px_rgba(249,115,22,0.4)]" 
         : "border-2 border-[#f97316]"
@@ -273,8 +277,8 @@ function VLInput({
   
   // Get indicator icon for manual fill fields
   const getIndicatorIcon = () => {
-    if (isManualFill && !isVerified) return "orange" // orange star
-    if (isVerified) return "green" // green check
+    if (isManualFill && !effectivelyVerified) return "orange" // orange star for empty
+    if (effectivelyVerified) return "green" // green check for complete
     return null
   }
   
@@ -338,16 +342,20 @@ function VLSelect({
   // Compute validation warning
   const validationWarning = validate && value ? validate(value) : null
   
+  // For manual-fill dropdowns, auto-complete when a real option is selected (not placeholder)
+  const isManualFillComplete = isManualFill && value && value.trim() !== "" && value !== "Select..."
+  const effectivelyVerified = isVerified || isManualFillComplete
+  
   // Determine border color based on field state
   const getBorderStyle = () => {
-    if (isVerified) {
-      // Verified = green border
+    if (effectivelyVerified) {
+      // Verified/Complete = green border
       return isSelected 
         ? "border-2 border-[#16a34a] ring-2 ring-[#16a34a]/30 shadow-[0_0_8px_rgba(22,163,74,0.4)]" 
         : "border-2 border-[#16a34a]"
     }
     if (isManualFill) {
-      // Manual fill field (not confirmed yet) = orange border
+      // Manual fill field (empty/awaiting) = orange border
       return isSelected 
         ? "border-2 border-[#f97316] ring-2 ring-[#f97316]/30 shadow-[0_0_8px_rgba(249,115,22,0.4)]" 
         : "border-2 border-[#f97316]"

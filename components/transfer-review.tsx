@@ -36,7 +36,7 @@ import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from
 // Field status types
 type FieldStatus = "verified" | "flagged" | "pending" | "not-populated" | "manually-edited"
 type FieldType = "standard" | "critical" | "manualFill"
-type ManualFillStatus = "awaiting" | "entered" | "confirmed"
+type ManualFillStatus = "awaiting" | "complete"
 
 interface FormField {
   id: string
@@ -486,10 +486,10 @@ function SingleFieldFocusPane({
     }
   }
 
-  // Get manual fill status
+  // Get manual fill status - auto-completes on any non-empty value
   const getManualFillStatus = (): ManualFillStatus => {
-    if (field.manualFillStatus === "confirmed" || field.status === "verified") return "confirmed"
-    if (manualFillValue && manualFillValue.trim() !== "" && manualFillValue !== "Select...") return "entered"
+    // Any non-empty, non-placeholder value = complete (auto-verified on typing)
+    if (manualFillValue && manualFillValue.trim() !== "" && manualFillValue !== "Select...") return "complete"
     return "awaiting"
   }
 
@@ -498,8 +498,8 @@ function SingleFieldFocusPane({
   const getFieldTypePillColor = () => {
     // Use color family matching the border system
     if (isManualFill) {
-      if (manualFillStatus === "confirmed") return "bg-green-50 text-green-700 border-green-200"
-      return "bg-orange-50 text-orange-700 border-orange-200" // Manual fill = orange
+      if (manualFillStatus === "complete") return "bg-green-50 text-green-700 border-green-200"
+      return "bg-orange-50 text-orange-700 border-orange-200" // Manual fill awaiting = orange
     }
     if (isVerified) return "bg-green-50 text-green-700 border-green-200"
     if (field.isCritical) return "bg-red-50 text-red-700 border-red-200" // Critical pending = red
@@ -507,7 +507,7 @@ function SingleFieldFocusPane({
   }
 
   const confidencePercent = field.confidence || 98
-  const isVerified = field.status === "verified" || (isManualFill && manualFillStatus === "confirmed")
+  const isVerified = field.status === "verified" || (isManualFill && manualFillStatus === "complete")
   const isFlagged = field.status === "flagged"
   const isCritical = field.isCritical === true
 
@@ -588,16 +588,10 @@ function SingleFieldFocusPane({
                   <span className="text-sm font-medium text-orange-600">Status: Awaiting input</span>
                 </>
               )}
-              {manualFillStatus === "entered" && (
-                <>
-                  <span className="w-2 h-2 rounded-full bg-blue-500" />
-                  <span className="text-sm font-medium text-blue-600">Status: Entered — confirm below</span>
-                </>
-              )}
-              {manualFillStatus === "confirmed" && (
+              {manualFillStatus === "complete" && (
                 <>
                   <span className="w-2 h-2 rounded-full bg-green-500" />
-                  <span className="text-sm font-medium text-green-600">Status: Confirmed</span>
+                  <span className="text-sm font-medium text-green-600">Status: Complete</span>
                 </>
               )}
             </div>
@@ -1734,12 +1728,12 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
   const criticalOnlyTotal = criticalOnlyFieldIds.length
   
   // Updated counts for Pending/Verified toggle
-  // Pending = critical-pending + manualFill-pending + manualFill-entered-not-confirmed
-  // Verified = critical-verified + manualFill-confirmed
+  // Pending = critical-pending + manualFill-empty (awaiting)
+  // Complete = critical-verified + manualFill-populated (auto-completes on typing)
   const displayPendingCount = (criticalOnlyTotal - criticalOnlyVerified) + (manualFillTotal - manualFillVerified)
   const displayVerifiedCount = criticalOnlyVerified + manualFillVerified
   
-  // Submit gating: ALL critical fields verified/flagged AND ALL manualFill fields confirmed/flagged
+  // Submit gating: ALL critical fields verified/flagged AND ALL manualFill fields populated/flagged
   const allCriticalDone = criticalOnlyVerified === criticalOnlyTotal
   const allManualFillDone = manualFillVerified === manualFillTotal
   const canSubmit = allCriticalDone && allManualFillDone
@@ -2157,7 +2151,7 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
             }}
             onConfirmEntry={() => {
               if (selectedField?.fieldType === "manualFill") {
-                setSelectedField({ ...selectedField, status: "verified", manualFillStatus: "confirmed" })
+                setSelectedField({ ...selectedField, status: "verified", manualFillStatus: "complete" })
                 // Navigate to next pending field
                 navigateToNextCritical()
               }
@@ -2199,7 +2193,7 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
                   isCritical: !isManualFillField && isCritical,
                   fieldType: metadata.fieldType,
                   sourceAvailable: !isManualFillField,
-                  manualFillStatus: isManualFillField ? (verifiedVesLinkFields.has(fieldId) ? "confirmed" : "awaiting") : undefined,
+                  manualFillStatus: isManualFillField ? (currentValue && currentValue.trim() !== "" && currentValue !== "Select..." ? "complete" : "awaiting") : undefined,
                   sourceTab: metadata.sourceTab,
                   sourceField: metadata.sourceField,
                   whyNeeded: metadata.whyNeeded,
@@ -2230,6 +2224,20 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
                 // Update the selected field value if it's the currently selected manual-fill field
                 if (selectedField?.id === fieldId && MANUAL_FILL_FIELDS.includes(fieldId)) {
                   setSelectedField(prev => prev ? { ...prev, value } : null)
+                }
+                // Auto-verify manual-fill fields when they have a non-empty value
+                if (MANUAL_FILL_FIELDS.includes(fieldId)) {
+                  const isComplete = value && value.trim() !== "" && value !== "Select..."
+                  if (isComplete) {
+                    setVerifiedVesLinkFields(prev => new Set(prev).add(fieldId))
+                  } else {
+                    // Remove from verified if cleared
+                    setVerifiedVesLinkFields(prev => {
+                      const next = new Set(prev)
+                      next.delete(fieldId)
+                      return next
+                    })
+                  }
                 }
               }}
               verifiedFields={verifiedVesLinkFields}
