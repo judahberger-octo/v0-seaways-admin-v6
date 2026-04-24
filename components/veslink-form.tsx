@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useCallback, useEffect } from "react"
-import { Check, Star } from "lucide-react"
+import { Check } from "lucide-react"
 
 // EXACT Critical fields for Noon-Sea reports per Avinash's list (16 fields + 3 manual-fill)
 // Order matches the form flow for navigation: top to bottom
@@ -186,23 +186,11 @@ const initialFormData: Record<string, FieldData> = {
 }
 
 // Critical/Manual-fill field indicator component
-// Shows orange star for manual-fill (not verified), red star for critical pending, green check for verified
+// PROMPT 6: Stars removed - border colors + glow halos are now the sole status signal
+// Keeping the component stub for backwards compatibility with existing JSX
 function CriticalIndicator({ fieldId, isVerified, isManualFill = false }: { fieldId: string; isVerified: boolean; isManualFill?: boolean }) {
-  const isCritical = CRITICAL_FIELDS_NOON_SEA.includes(fieldId)
-  if (!isCritical) return null
-  
-  if (isVerified) {
-    // Verified/Confirmed - green check
-    return <Check className="w-3.5 h-3.5 text-[#16a34a] flex-shrink-0" />
-  }
-  
-  if (isManualFill) {
-    // Manual fill pending - orange star (distinct from critical red)
-    return <Star className="w-3.5 h-3.5 text-[#f97316] flex-shrink-0" fill="#f97316" />
-  }
-  
-  // Critical pending - red star
-  return <Star className="w-3.5 h-3.5 text-[#dc2626] flex-shrink-0" fill="#dc2626" />
+  // Return null - no visual indicator. Border colors carry the signal now.
+  return null
 }
 
 // Validation function type for soft warnings
@@ -273,13 +261,6 @@ function VLInput({
     return isSelected 
       ? "border border-[#7c3aed] ring-2 ring-[#7c3aed]/30 shadow-[0_0_8px_rgba(124,58,237,0.3)]" 
       : "border border-[#999]"
-  }
-  
-  // Get indicator icon for manual fill fields
-  const getIndicatorIcon = () => {
-    if (isManualFill && !effectivelyVerified) return "orange" // orange star for empty
-    if (effectivelyVerified) return "green" // green check for complete
-    return null
   }
   
   return (
