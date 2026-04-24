@@ -79,36 +79,42 @@ export function ReportSelection({ onGenerate }: ReportSelectionProps) {
               <p className="text-sm text-[#64748b] mt-0.5">Select reports to include in the transfer</p>
             </div>
 
-            {/* Search */}
-            <div className="relative mb-3">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8]" />
-              <input
-                type="text"
-                placeholder="Search by report number"
-                className="w-full pl-9 pr-4 py-2 text-sm border border-[#e2e8f0] rounded-lg bg-[#f8fafc] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/20 focus:border-[#7c3aed]"
-              />
-            </div>
+            {/* Filters Row */}
+            <div className="flex items-center gap-3">
+              {/* Search */}
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8]" />
+                <input
+                  type="text"
+                  placeholder="Search by report number..."
+                  className="w-full pl-9 pr-4 py-2 text-sm border border-[#e2e8f0] rounded-lg bg-white placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/20 focus:border-[#7c3aed]"
+                />
+              </div>
 
-            {/* Filters */}
-            <div className="flex items-center gap-2">
-              <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-[#e2e8f0] rounded-lg text-[#64748b] hover:bg-[#f8fafc]">
-                All Types
-                <ChevronDown className="w-3.5 h-3.5" />
+              {/* Date Picker */}
+              <button className="flex items-center gap-1.5 px-3 py-2 text-sm border border-[#e2e8f0] rounded-lg text-[#0f172a] bg-white hover:bg-[#f8fafc]">
+                <Calendar className="w-4 h-4 text-[#64748b]" />
+                Date: 16/04/2026
               </button>
-              <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-[#e2e8f0] rounded-lg text-[#64748b] hover:bg-[#f8fafc]">
-                <Calendar className="w-3.5 h-3.5" />
-                Date Range
-              </button>
+
+              {/* Sort by / All types */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-[#64748b]">Sort by</span>
+                <button className="flex items-center gap-1.5 px-3 py-2 text-sm border border-[#e2e8f0] rounded-lg text-[#0f172a] bg-white hover:bg-[#f8fafc]">
+                  All types
+                  <ChevronDown className="w-3.5 h-3.5 text-[#64748b]" />
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Selection Counter */}
-          <div className="px-4 py-2 border-b border-[#e2e8f0] bg-[#f8fafc] flex items-center justify-between">
+          <div className="px-4 py-2.5 border-b border-[#e2e8f0] flex items-center justify-between">
             <span className="text-sm text-[#64748b]">
-              {selectedReports.length} of {mockReports.length} reports selected
+              XX of XX reports selected
             </span>
             <button className="text-sm text-[#7c3aed] hover:underline">
-              Select all ready ({readyReportsCount})
+              Select all ready reports ({readyReportsCount})
             </button>
           </div>
 
@@ -122,62 +128,52 @@ export function ReportSelection({ onGenerate }: ReportSelectionProps) {
                 <button
                   key={report.id}
                   onClick={() => toggleReport(report.id)}
-                  className={`w-full p-4 flex items-start gap-3 text-left transition-colors ${
+                  className={`w-full px-4 py-3 flex items-start gap-3 text-left transition-colors ${
                     isSelected
-                      ? "bg-[#ede9fe] border-l-2 border-l-[#7c3aed]"
-                      : "hover:bg-[#f8fafc]"
+                      ? "bg-[#faf5ff] border-l-2 border-l-[#7c3aed]"
+                      : "hover:bg-[#f8fafc] border-l-2 border-l-transparent"
                   }`}
                 >
                   {/* Checkbox */}
                   <div
-                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
                       isSelected
                         ? "bg-[#7c3aed] border-[#7c3aed]"
-                        : "border-[#e2e8f0]"
+                        : "border-[#cbd5e1] bg-white"
                     }`}
                   >
                     {isSelected && <Check className="w-3 h-3 text-white" />}
                   </div>
 
-                  {/* Report Icon */}
-                  <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      isReady ? "bg-[#ede9fe]" : "bg-[#f1f5f9]"
-                    }`}
-                  >
-                    <FileText
-                      className={`w-5 h-5 ${
-                        isReady ? "text-[#7c3aed]" : "text-[#94a3b8]"
-                      }`}
-                    />
-                  </div>
-
                   {/* Report Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center justify-between">
                       <span className="font-semibold text-[#0f172a]">
                         Report {report.number}
                       </span>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${getReportTypeBadgeColor(
-                          report.type
-                        )}`}
-                      >
-                        {report.type}
-                      </span>
-                      {isReady ? (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-[#dcfce7] text-[#16a34a] font-medium">
-                          Ready
+                      <div className="flex items-center gap-2">
+                        {isReady ? (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-[#dcfce7] text-[#16a34a] font-medium">
+                            Ready
+                          </span>
+                        ) : (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-[#dbeafe] text-[#2563eb] font-medium">
+                            Transferred {report.transferredDate}
+                          </span>
+                        )}
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${getReportTypeBadgeColor(
+                            report.type
+                          )}`}
+                        >
+                          {report.type}
                         </span>
-                      ) : (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-[#dbeafe] text-[#2563eb] font-medium">
-                          Transferred {report.transferredDate}
-                        </span>
-                      )}
+                      </div>
                     </div>
-                    <p className="text-sm text-[#64748b] mt-0.5">
-                      {report.dateRange}
-                    </p>
+                    <div className="flex items-center gap-1.5 mt-1 text-sm text-[#64748b]">
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>{report.dateRange.replace("–", "12:00 –")} 12:00</span>
+                    </div>
                   </div>
                 </button>
               )
