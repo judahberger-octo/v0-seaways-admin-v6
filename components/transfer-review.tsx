@@ -1803,6 +1803,9 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
   const [statusFilter, setStatusFilter] = useState<"pending" | "verified">("pending")
   const [showValidationMessage, setShowValidationMessage] = useState(true)
   
+  // Ref to get VesLink form field values
+  const getVesLinkFieldValueRef = useRef<((fieldId: string) => string) | null>(null)
+  
   // Modal states
   const [showUnsavedModal, setShowUnsavedModal] = useState(false)
   const [showDiscardModal, setShowDiscardModal] = useState(false)
@@ -2422,22 +2425,36 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
               onFieldSelect={(fieldId) => {
                 // Map VesLink field IDs to our internal field data for the left panel
                 const isCritical = CRITICAL_FIELDS_NOON_SEA.includes(fieldId)
-                const metadata = getCriticalFieldMetadata(fieldId)
+                const isManualFillField = MANUAL_FILL_FIELDS.includes(fieldId)
+                const metadata = getFieldMetadata(fieldId)
+                
+                // Get current form value for manual-fill fields
+                const currentValue = getVesLinkFieldValueRef.current?.(fieldId) || metadata.value
+                
                 const mockField: FormField = {
                   id: fieldId,
                   label: metadata.label,
-                  value: metadata.value,
-                  confidence: 95 + Math.floor(Math.random() * 5),
+                  value: currentValue,
+                  unit: metadata.unit,
+                  confidence: isManualFillField ? 0 : 95 + Math.floor(Math.random() * 5),
                   status: verifiedVesLinkFields.has(fieldId) ? "verified" : "pending",
-                  isCritical,
+                  isCritical: !isManualFillField && isCritical,
+                  fieldType: metadata.fieldType,
+                  sourceAvailable: !isManualFillField,
+                  manualFillStatus: isManualFillField ? (verifiedVesLinkFields.has(fieldId) ? "confirmed" : "awaiting") : undefined,
                   sourceTab: metadata.sourceTab,
                   sourceField: metadata.sourceField,
+                  whyNeeded: metadata.whyNeeded,
+                  whereToFind: metadata.whereToFind,
+                  inputKind: metadata.inputKind,
+                  options: metadata.options,
                 }
                 setSelectedField(mockField)
                 
-                // Update critical field index if this is a critical field
-                if (isCritical) {
-                  const criticalIndex = CRITICAL_FIELDS_NOON_SEA.indexOf(fieldId)
+                // Update critical field index if this is a critical/manual-fill field
+                if (isCritical || isManualFillField) {
+                  const sortedFields = getSortedFieldIds()
+                  const criticalIndex = sortedFields.indexOf(fieldId)
                   if (criticalIndex !== -1) {
                     setCurrentCriticalIndex(criticalIndex + 1)
                   }
@@ -2452,9 +2469,16 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
               editedFields={editedFields}
               onFieldEdit={(fieldId, value) => {
                 setEditedFields(prev => new Set(prev).add(fieldId))
+                // Update the selected field value if it's the currently selected manual-fill field
+                if (selectedField?.id === fieldId && MANUAL_FILL_FIELDS.includes(fieldId)) {
+                  setSelectedField(prev => prev ? { ...prev, value } : null)
+                }
               }}
               verifiedFields={verifiedVesLinkFields}
               statusFilter={statusFilter}
+              onFormReady={(getFieldValue) => {
+                getVesLinkFieldValueRef.current = getFieldValue
+              }}
             />
           </div>
         </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useCallback } from "react"
+import React, { useState, useCallback, useEffect } from "react"
 import { Check, Star } from "lucide-react"
 
 // EXACT Critical fields for Noon-Sea reports per Avinash's list (16 fields + 3 manual-fill)
@@ -41,6 +41,7 @@ interface VesLinkFormProps {
   onFieldEdit: (fieldId: string, value: string) => void
   verifiedFields?: Set<string>
   statusFilter?: "pending" | "verified"
+  onFormReady?: (getFieldValue: (fieldId: string) => string) => void
 }
 
 // Form field data structure
@@ -697,9 +698,22 @@ export function VesLinkForm({
   editedFields,
   onFieldEdit,
   verifiedFields = new Set(),
-  statusFilter = "pending"
+  statusFilter = "pending",
+  onFormReady
 }: VesLinkFormProps) {
   const [formData, setFormData] = useState(initialFormData)
+  
+  // Expose getFieldValue to parent component
+  const getFieldValue = useCallback((fieldId: string) => {
+    return formData[fieldId]?.value || ""
+  }, [formData])
+  
+  // Call onFormReady when form is ready
+  useEffect(() => {
+    if (onFormReady) {
+      onFormReady(getFieldValue)
+    }
+  }, [onFormReady, getFieldValue])
   
   const handleFieldChange = useCallback((id: string, value: string) => {
     setFormData(prev => ({
