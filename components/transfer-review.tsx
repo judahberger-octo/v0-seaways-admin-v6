@@ -463,7 +463,7 @@ function SingleFieldFocusPane({
 }) {
   const [validationExpanded, setValidationExpanded] = useState(false)
   const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
-  const [whyNeededExpanded, setWhyNeededExpanded] = useState(false)
+  
   const [sourcePreviewIndex, setSourcePreviewIndex] = useState(0)
   const sourcePreviewCount = sourceReports.length
   
@@ -673,46 +673,8 @@ function SingleFieldFocusPane({
           )}
         </div>
 
-        {/* Source Preview Accordion OR Why this field is needed (for manual-fill) */}
-        {isManualFill ? (
-          /* Why This Field is Needed Accordion - for manual-fill fields */
-          <div className="border border-orange-200 rounded-lg bg-orange-50/30">
-            <button
-              onClick={() => setWhyNeededExpanded(!whyNeededExpanded)}
-              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-orange-50"
-            >
-              <div className="flex items-center gap-2">
-                <Info className="w-4 h-4 text-orange-500" />
-                <span>Why this field is needed</span>
-              </div>
-              {whyNeededExpanded ? (
-                <ChevronUp className="w-4 h-4 text-gray-500" />
-              ) : (
-                <ChevronDown className="w-4 h-4 text-gray-500" />
-              )}
-            </button>
-            {whyNeededExpanded && (
-              <div className="px-4 pb-4 border-t border-orange-100">
-                <div className="pt-3 space-y-3">
-                  {/* Primary explanation */}
-                  <p className="text-sm text-gray-600 leading-relaxed">
-                    {field.whyNeeded || "This field is required by VesLink but is not available in the NAVTOR source data. Please enter the value manually based on vessel records."}
-                  </p>
-                  {/* Where to find it */}
-                  {field.whereToFind && (
-                    <>
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Where to find it on the vessel</p>
-                      <p className="text-sm text-gray-600">
-                        {field.whereToFind}
-                      </p>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          /* Source Preview Accordion - for critical/standard fields */
+        {/* Source Preview Accordion - only for non-manual-fill fields */}
+        {!isManualFill && (
           <div className="border border-gray-200 rounded-lg">
             <button
               onClick={() => setSourcePreviewExpanded(!sourcePreviewExpanded)}
