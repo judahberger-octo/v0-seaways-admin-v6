@@ -509,6 +509,7 @@ function SingleFieldFocusPane({
   const confidencePercent = field.confidence || 98
   const isVerified = field.status === "verified" || (isManualFill && manualFillStatus === "confirmed")
   const isFlagged = field.status === "flagged"
+  const isCritical = field.isCritical === true
 
   // Get the left border color based on field status
   const getLeftBorderColor = () => {
@@ -725,71 +726,111 @@ function SingleFieldFocusPane({
         )}
       </div>
 
-      {/* Footer Action Bar - Fixed at bottom */}
+      {/* Footer Action Bar - Fixed at bottom, varies by field type */}
       <div className="border-t border-gray-200 bg-white px-5 py-4">
-        <div className="flex items-center gap-3">
-          {/* Verify/Confirm Entry Button */}
-          {isManualFill ? (
-            <button
-              onClick={onConfirmEntry}
-              disabled={manualFillStatus === "awaiting"}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
-                manualFillStatus === "confirmed"
-                  ? "bg-green-50 text-green-700 border-green-200"
-                  : manualFillStatus === "entered"
-                  ? "bg-purple-600 text-white border-purple-600 hover:bg-purple-700 animate-pulse"
-                  : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-              }`}
-            >
-              <Check className="w-4 h-4" />
-              {manualFillStatus === "confirmed" ? "Confirmed" : "Confirm entry"}
-            </button>
-          ) : (
+        {/* CRITICAL FIELD: [Verify field] [Stepper] [Flag] */}
+        {isCritical && !isManualFill && (
+          <div className="flex items-center gap-3">
+            {/* Verify Button */}
             <button
               onClick={onVerify}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
                 isVerified
                   ? "bg-green-50 text-green-700 border-green-200"
-                  : "bg-white text-gray-700 border-gray-200 hover:bg-green-50 hover:text-green-700 hover:border-green-200"
+                  : "bg-purple-600 text-white border-purple-600 hover:bg-purple-700"
               }`}
             >
               <Check className="w-4 h-4" />
-              Verify field
+              {isVerified ? "Verified" : "Verify field"}
             </button>
-          )}
 
-          {/* Navigation Paginator */}
-          <div className="flex items-center gap-1 border border-gray-200 rounded-lg">
+            {/* Navigation Paginator */}
+            <div className="flex items-center gap-1 border border-gray-200 rounded-lg">
+              <button
+                onClick={() => onNavigate("prev")}
+                className="p-2 hover:bg-gray-50 rounded-l-lg"
+              >
+                <ChevronUp className="w-4 h-4 text-gray-600" />
+              </button>
+              <span className="text-sm text-gray-600 font-medium px-2 min-w-[48px] text-center">
+                {currentIndex}/{totalCount}
+              </span>
+              <button
+                onClick={() => onNavigate("next")}
+                className="p-2 hover:bg-gray-50 rounded-r-lg"
+              >
+                <ChevronDown className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Flag Button */}
             <button
-              onClick={() => onNavigate("prev")}
-              className="p-2 hover:bg-gray-50 rounded-l-lg"
+              onClick={onFlag}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
+                isFlagged
+                  ? "bg-red-50 text-red-700 border-red-200"
+                  : "bg-white text-gray-700 border-gray-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200"
+              }`}
             >
-              <ChevronUp className="w-4 h-4 text-gray-600" />
-            </button>
-            <span className="text-sm text-gray-600 font-medium px-2 min-w-[48px] text-center">
-              {currentIndex}/{totalCount}
-            </span>
-            <button
-              onClick={() => onNavigate("next")}
-              className="p-2 hover:bg-gray-50 rounded-r-lg"
-            >
-              <ChevronDown className="w-4 h-4 text-gray-600" />
+              <Flag className="w-4 h-4" />
+              Flag
             </button>
           </div>
+        )}
 
-          {/* Flag Button */}
-          <button
-            onClick={onFlag}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
-              isFlagged
-                ? "bg-red-50 text-red-700 border-red-200"
-                : "bg-white text-gray-700 border-gray-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200"
-            }`}
-          >
-            <Flag className="w-4 h-4" />
-            Flag
-          </button>
-        </div>
+        {/* MANUAL FILL FIELD: [Stepper] [Flag] - No Verify, typing auto-completes */}
+        {isManualFill && (
+          <div className="flex items-center gap-3">
+            {/* Navigation Paginator */}
+            <div className="flex items-center gap-1 border border-gray-200 rounded-lg">
+              <button
+                onClick={() => onNavigate("prev")}
+                className="p-2 hover:bg-gray-50 rounded-l-lg"
+              >
+                <ChevronUp className="w-4 h-4 text-gray-600" />
+              </button>
+              <span className="text-sm text-gray-600 font-medium px-2 min-w-[48px] text-center">
+                {currentIndex}/{totalCount}
+              </span>
+              <button
+                onClick={() => onNavigate("next")}
+                className="p-2 hover:bg-gray-50 rounded-r-lg"
+              >
+                <ChevronDown className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Flag Button */}
+            <button
+              onClick={onFlag}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
+                isFlagged
+                  ? "bg-red-50 text-red-700 border-red-200"
+                  : "bg-white text-gray-700 border-gray-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200"
+              }`}
+            >
+              <Flag className="w-4 h-4" />
+              Flag
+            </button>
+          </div>
+        )}
+
+        {/* STANDARD FIELD: [Flag] only - centered */}
+        {!isCritical && !isManualFill && (
+          <div className="flex items-center justify-center">
+            <button
+              onClick={onFlag}
+              className={`flex items-center justify-center gap-2 py-2.5 px-8 rounded-lg font-medium transition-colors border ${
+                isFlagged
+                  ? "bg-red-50 text-red-700 border-red-200"
+                  : "bg-white text-gray-700 border-gray-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200"
+              }`}
+            >
+              <Flag className="w-4 h-4" />
+              Flag
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
