@@ -2348,7 +2348,7 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
         onSubmit={(reason, comment) => {
           setShowFlagModal(false)
           setToast({ 
-            message: `Field "${fieldToFlag?.name}" flagged for review`, 
+            message: `Field "${fieldToFlag?.name}" flagged for admin review`, 
             type: "flag" 
           })
           setFieldToFlag(null)

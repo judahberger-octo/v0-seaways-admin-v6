@@ -208,8 +208,8 @@ interface FlagFieldModalProps {
 }
 
 const FLAG_REASONS = [
-  "Incorrect source mapping",
-  "Ambiguous value",
+  "Incorrect value",
+  "Ambiguous source mapping",
   "Conflicts with other reports",
   "Missing data",
   "Other"
@@ -260,7 +260,7 @@ export function FlagFieldModal({
         </button>
 
         {/* Header with icon */}
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
             <Flag className="w-5 h-5 text-amber-600" />
           </div>
@@ -271,6 +271,11 @@ export function FlagFieldModal({
             <p className="text-sm text-[#64748b]">{fieldName}</p>
           </div>
         </div>
+        
+        {/* Subtitle explaining what flagging does */}
+        <p className="text-sm text-[#64748b] mb-4">
+          Flagging sends this field to an admin for review. The report can still be submitted.
+        </p>
 
         {/* Form */}
         <div className="space-y-4">
@@ -339,7 +344,7 @@ export function FlagFieldModal({
             disabled={!reason}
             className="px-5 py-2.5 bg-[#7c3aed] hover:bg-[#6d28d9] disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
           >
-            Submit
+            Flag as incorrect
           </button>
         </div>
       </div>
