@@ -405,7 +405,264 @@ function FieldCard({
   )
 }
 
-// Scrollable Field Card List Component
+// Single Field Focus Pane Component - shows ONE field at a time
+function SingleFieldFocusPane({
+  field,
+  currentIndex,
+  totalCount,
+  onVerify,
+  onFlag,
+  onNavigate,
+  sourceReports = ["#4528", "#4529", "#4530"],
+}: {
+  field: FieldCardData | null
+  currentIndex: number
+  totalCount: number
+  onVerify: () => void
+  onFlag: () => void
+  onNavigate: (direction: "prev" | "next") => void
+  sourceReports?: string[]
+}) {
+  const [validationExpanded, setValidationExpanded] = useState(false)
+  const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
+  const [sourcePreviewIndex, setSourcePreviewIndex] = useState(0)
+  const sourcePreviewCount = sourceReports.length
+
+  if (!field) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-gray-400">
+        <p>Select a field to review</p>
+      </div>
+    )
+  }
+
+  const getStatusPillColor = () => {
+    switch (field.status) {
+      case "verified":
+        return "bg-green-50 text-green-700 border-green-200"
+      case "flagged":
+        return "bg-red-50 text-red-700 border-red-200"
+      default:
+        return "bg-gray-50 text-gray-600 border-gray-200"
+    }
+  }
+
+  const getCriticalPillColor = () => {
+    if (field.isCritical) return "bg-amber-50 text-amber-700 border-amber-200"
+    return "bg-blue-50 text-blue-700 border-blue-200"
+  }
+
+  const confidencePercent = field.confidence || 98
+  const isVerified = field.status === "verified"
+  const isFlagged = field.status === "flagged"
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Main scrollable content */}
+      <div className="flex-1 overflow-y-auto p-5">
+        {/* Header Row: Field name with help icon, Status + Critical pills */}
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm text-gray-500">Field name</span>
+            <button className="text-gray-400 hover:text-gray-600" title="Field definition">
+              <Info className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${getStatusPillColor()}`}>
+              {field.status === "verified" ? "Verified" : field.status === "flagged" ? "Flagged" : "Status"}
+            </span>
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full border flex items-center gap-1 ${getCriticalPillColor()}`}>
+              {field.isCritical && <Star className="w-3 h-3" fill="currentColor" />}
+              {field.isCritical ? "Critical field" : "Standard field"}
+            </span>
+          </div>
+        </div>
+
+        {/* Large Value Display */}
+        <h2 className="text-3xl font-semibold text-gray-900 mb-3">
+          {field.value || "—"}
+          {field.unit && <span className="text-xl text-gray-500 ml-1">{field.unit}</span>}
+        </h2>
+
+        {/* Source Report Chips */}
+        <div className="flex items-center gap-1.5 mb-5 text-sm text-gray-500">
+          <FileText className="w-4 h-4" />
+          <span>Report {sourceReports.join(", Report ")}</span>
+        </div>
+
+        {/* Confidence Bar */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-600">Confidence</span>
+            <div className="flex items-center gap-3">
+              <span className={`text-sm font-semibold ${confidencePercent >= 90 ? "text-green-600" : confidencePercent >= 70 ? "text-amber-600" : "text-red-600"}`}>
+                {confidencePercent}%
+              </span>
+              {isVerified ? (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700 flex items-center gap-1">
+                  <Check className="w-3 h-3" />
+                  Verified
+                </span>
+              ) : (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                  Pending
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div 
+              className={`h-full rounded-full transition-all ${confidencePercent >= 90 ? "bg-green-500" : confidencePercent >= 70 ? "bg-amber-500" : "bg-red-500"}`}
+              style={{ width: `${confidencePercent}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Validation Checks Accordion */}
+        <div className="border border-gray-200 rounded-lg mb-4">
+          <button
+            onClick={() => setValidationExpanded(!validationExpanded)}
+            className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <span>Validation checks</span>
+            {validationExpanded ? (
+              <ChevronUp className="w-4 h-4 text-gray-500" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-gray-500" />
+            )}
+          </button>
+          {validationExpanded && (
+            <div className="px-4 pb-3 border-t border-gray-100">
+              <div className="pt-3 space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="w-4 h-4 text-green-500" />
+                  <span className="text-gray-600">Value within expected range</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="w-4 h-4 text-green-500" />
+                  <span className="text-gray-600">Format validation passed</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="w-4 h-4 text-green-500" />
+                  <span className="text-gray-600">Cross-reference check passed</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Source Preview Accordion */}
+        <div className="border border-gray-200 rounded-lg">
+          <button
+            onClick={() => setSourcePreviewExpanded(!sourcePreviewExpanded)}
+            className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <span>Source preview ({sourcePreviewCount})</span>
+            {sourcePreviewExpanded ? (
+              <ChevronUp className="w-4 h-4 text-gray-500" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-gray-500" />
+            )}
+          </button>
+          {sourcePreviewExpanded && (
+            <div className="p-3 border-t border-gray-100">
+              {/* Dark NAVTOR Preview with navigation */}
+              <div className="relative">
+                {/* Left Arrow */}
+                <button
+                  onClick={() => setSourcePreviewIndex(Math.max(0, sourcePreviewIndex - 1))}
+                  disabled={sourcePreviewIndex === 0}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 w-7 h-7 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeftIcon className="w-4 h-4 text-gray-600" />
+                </button>
+
+                {/* NAVTOR Screenshot */}
+                <div className="rounded-lg overflow-hidden">
+                  <NavtorScreenshot fieldId={field.id} className="w-full" />
+                </div>
+
+                {/* Right Arrow */}
+                <button
+                  onClick={() => setSourcePreviewIndex(Math.min(sourcePreviewCount - 1, sourcePreviewIndex + 1))}
+                  disabled={sourcePreviewIndex === sourcePreviewCount - 1}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 w-7 h-7 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRightIcon className="w-4 h-4 text-gray-600" />
+                </button>
+
+                {/* Expand Icon */}
+                <button className="absolute top-2 right-2 w-7 h-7 rounded bg-white/80 backdrop-blur-sm border border-gray-200 flex items-center justify-center hover:bg-white">
+                  <ExternalLink className="w-3.5 h-3.5 text-gray-600" />
+                </button>
+              </div>
+
+              {/* Pagination indicator */}
+              <div className="flex items-center justify-center mt-3">
+                <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-gray-200">
+                  {sourcePreviewIndex + 1}/{sourcePreviewCount}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer Action Bar - Fixed at bottom */}
+      <div className="border-t border-gray-200 bg-white px-5 py-4">
+        <div className="flex items-center gap-3">
+          {/* Verify Button */}
+          <button
+            onClick={onVerify}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
+              isVerified
+                ? "bg-green-50 text-green-700 border-green-200"
+                : "bg-white text-gray-700 border-gray-200 hover:bg-green-50 hover:text-green-700 hover:border-green-200"
+            }`}
+          >
+            <Check className="w-4 h-4" />
+            Verify field
+          </button>
+
+          {/* Navigation Paginator */}
+          <div className="flex items-center gap-1 border border-gray-200 rounded-lg">
+            <button
+              onClick={() => onNavigate("prev")}
+              className="p-2 hover:bg-gray-50 rounded-l-lg"
+            >
+              <ChevronUp className="w-4 h-4 text-gray-600" />
+            </button>
+            <span className="text-sm text-gray-600 font-medium px-2 min-w-[48px] text-center">
+              {currentIndex}/{totalCount}
+            </span>
+            <button
+              onClick={() => onNavigate("next")}
+              className="p-2 hover:bg-gray-50 rounded-r-lg"
+            >
+              <ChevronDown className="w-4 h-4 text-gray-600" />
+            </button>
+          </div>
+
+          {/* Flag Button */}
+          <button
+            onClick={onFlag}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
+              isFlagged
+                ? "bg-red-50 text-red-700 border-red-200"
+                : "bg-white text-gray-700 border-gray-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200"
+            }`}
+          >
+            <Flag className="w-4 h-4" />
+            Flag
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Scrollable Field Card List Component (kept for potential future use)
 function FieldCardList({
   sections,
   selectedFieldId,
@@ -1779,60 +2036,37 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
           </>
         )}
 
-        {/* Left Panel - Scrollable Field Card List */}
-        <div className="flex-1 min-w-0 max-w-[40%] border-r border-[#e2e8f0] flex flex-col overflow-hidden">
-          <FieldCardList
-            sections={createFieldCardSections(verifiedVesLinkFields)}
-            selectedFieldId={selectedField?.id ?? null}
-            onFieldSelect={(field) => {
-              // Convert FieldCardData to FormField for the rest of the component
-              const formField: FormField = {
-                id: field.id,
-                label: field.fieldName,
-                value: field.value || "",
-                unit: field.unit,
-                confidence: field.confidence || 95,
-                status: field.status,
-                isCritical: field.isCritical,
-                sourceTab: field.sourceTab,
-                sourceField: field.mappedSource,
+        {/* Left Panel - Single Field Focus View */}
+        <div className="flex-1 min-w-0 max-w-[40%] border-r border-[#e2e8f0] flex flex-col overflow-hidden bg-white">
+          <SingleFieldFocusPane
+            field={selectedField ? {
+              id: selectedField.id,
+              fieldName: selectedField.label,
+              status: selectedField.status,
+              isCritical: selectedField.isCritical || false,
+              mappedSource: selectedField.sourceField || "",
+              sourceTab: selectedField.sourceTab || "",
+              isPopulated: !!selectedField.value,
+              value: selectedField.value,
+              unit: selectedField.unit,
+              confidence: selectedField.confidence,
+            } : null}
+            currentIndex={currentCriticalIndex}
+            totalCount={vesLinkCriticalTotal}
+            onVerify={handleVerify}
+            onFlag={() => {
+              if (selectedField) {
+                setToast({ message: `Field "${selectedField.label}" flagged for review`, type: "warning" })
               }
-              setSelectedField(formField)
-              
-              // Update critical field index if this is a critical field
-              if (field.isCritical) {
-                const criticalIndex = CRITICAL_FIELDS_NOON_SEA.indexOf(field.id)
-                if (criticalIndex !== -1) {
-                  setCurrentCriticalIndex(criticalIndex + 1)
-                }
+            }}
+            onNavigate={(direction) => {
+              if (direction === "next") {
+                navigateToNextCritical()
+              } else {
+                navigateToPrevCritical()
               }
-              
-              // Scroll to corresponding field on VesLink form
-              scrollToVesLinkField(field.id)
             }}
-            onVerify={(fieldId) => {
-              // Find the field and verify it
-              const metadata = getCriticalFieldMetadata(fieldId)
-              const mockField: FormField = {
-                id: fieldId,
-                label: metadata.label,
-                value: metadata.value,
-                confidence: 95,
-                status: "pending",
-                isCritical: CRITICAL_FIELDS_NOON_SEA.includes(fieldId),
-                sourceTab: metadata.sourceTab,
-                sourceField: metadata.sourceField,
-              }
-              setSelectedField(mockField)
-              // Use setTimeout to allow state update then verify
-              setTimeout(() => {
-                handleVerify()
-              }, 0)
-            }}
-            onFlag={(fieldId) => {
-              setToast({ message: `Field "${fieldId}" flagged for review`, type: "warning" })
-            }}
-            avgConfidence={96}
+            sourceReports={["#4528", "#4529", "#4530"]}
           />
         </div>
 
