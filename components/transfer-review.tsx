@@ -448,16 +448,34 @@ function SingleFieldFocusPane({
   }
 
   const getCriticalPillColor = () => {
-    if (field.isCritical) return "bg-amber-50 text-amber-700 border-amber-200"
-    return "bg-blue-50 text-blue-700 border-blue-200"
+    // Use color family matching the border system
+    if (isVerified) return "bg-green-50 text-green-700 border-green-200"
+    if (field.isCritical) return "bg-red-50 text-red-700 border-red-200" // Critical pending = red
+    return "bg-amber-50 text-amber-700 border-amber-200" // Manual/standard = amber
   }
 
   const confidencePercent = field.confidence || 98
   const isVerified = field.status === "verified"
   const isFlagged = field.status === "flagged"
 
+  // Get the left border color based on field status
+  const getLeftBorderColor = () => {
+    if (isVerified) return "border-l-green-500"
+    if (isFlagged) return "border-l-red-500"
+    if (field.isCritical) return "border-l-red-500" // Critical pending = red
+    return "border-l-amber-500" // Manual/pending = amber
+  }
+
+  // Get background tint based on status
+  const getBackgroundTint = () => {
+    if (isVerified) return "bg-green-50/30"
+    if (isFlagged) return "bg-red-50/30"
+    if (field.isCritical) return "bg-red-50/30"
+    return "bg-amber-50/30"
+  }
+
   return (
-    <div className="flex flex-col h-full">
+    <div className={`flex flex-col h-full border-l-4 ${getLeftBorderColor()} ${getBackgroundTint()} transition-colors duration-300`}>
       {/* Main scrollable content */}
       <div className="flex-1 overflow-y-auto p-5">
         {/* Header Row: Field name with help icon, Status + Critical pills */}

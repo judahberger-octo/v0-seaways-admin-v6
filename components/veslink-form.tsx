@@ -184,7 +184,7 @@ function CriticalIndicator({ fieldId, isVerified }: { fieldId: string; isVerifie
   )
 }
 
-// Reusable input component that matches VesLink styling
+// Reusable input component that matches VesLink styling with color-coded borders
 function VLInput({ 
   id, 
   value, 
@@ -208,7 +208,31 @@ function VLInput({
   className?: string
   isCritical?: boolean
 }) {
-  const criticalUnverified = isCritical && !isVerified
+  // Determine border color based on field state
+  const getBorderStyle = () => {
+    if (isVerified) {
+      // Verified = green border
+      return isSelected 
+        ? "border-2 border-[#16a34a] ring-2 ring-[#16a34a]/30 shadow-[0_0_8px_rgba(22,163,74,0.4)]" 
+        : "border-2 border-[#16a34a]"
+    }
+    if (isCritical) {
+      // Critical pending = red border
+      return isSelected 
+        ? "border-2 border-[#dc2626] ring-2 ring-[#dc2626]/30 shadow-[0_0_8px_rgba(220,38,38,0.4)]" 
+        : "border-2 border-[#dc2626]"
+    }
+    if (isEdited) {
+      // Manual fill (edited but not verified) = orange border
+      return isSelected 
+        ? "border-2 border-[#f59e0b] ring-2 ring-[#f59e0b]/30 shadow-[0_0_8px_rgba(245,158,11,0.4)]" 
+        : "border-2 border-[#f59e0b]"
+    }
+    // Standard/default = neutral border
+    return isSelected 
+      ? "border border-[#7c3aed] ring-2 ring-[#7c3aed]/30 shadow-[0_0_8px_rgba(124,58,237,0.3)]" 
+      : "border border-[#999]"
+  }
   
   return (
     <div className="relative inline-block" style={{ width }}>
@@ -219,21 +243,21 @@ function VLInput({
         onChange={(e) => onChange(e.target.value)}
         onClick={onSelect}
         className={`
-          w-full h-6 px-1.5 text-[13px] bg-white border
+          w-full h-6 px-1.5 text-[13px] bg-white transition-all duration-300
           focus:outline-none
-          ${isSelected ? "ring-2 ring-[#7c3aed] ring-offset-0 border-[#7c3aed]" : criticalUnverified ? "border-[#f59e0b] border-2" : "border-[#999]"}
+          ${getBorderStyle()}
           ${className}
         `}
         style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
       />
-      {isEdited && (
-        <div className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-[#2563eb]" />
+      {isEdited && !isVerified && (
+        <div className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
       )}
     </div>
   )
 }
 
-// Reusable select component
+// Reusable select component with color-coded borders
 function VLSelect({ 
   id, 
   value, 
@@ -257,7 +281,31 @@ function VLSelect({
   width?: string
   isCritical?: boolean
 }) {
-  const criticalUnverified = isCritical && !isVerified
+  // Determine border color based on field state
+  const getBorderStyle = () => {
+    if (isVerified) {
+      // Verified = green border
+      return isSelected 
+        ? "border-2 border-[#16a34a] ring-2 ring-[#16a34a]/30 shadow-[0_0_8px_rgba(22,163,74,0.4)]" 
+        : "border-2 border-[#16a34a]"
+    }
+    if (isCritical) {
+      // Critical pending = red border
+      return isSelected 
+        ? "border-2 border-[#dc2626] ring-2 ring-[#dc2626]/30 shadow-[0_0_8px_rgba(220,38,38,0.4)]" 
+        : "border-2 border-[#dc2626]"
+    }
+    if (isEdited) {
+      // Manual fill (edited but not verified) = orange border
+      return isSelected 
+        ? "border-2 border-[#f59e0b] ring-2 ring-[#f59e0b]/30 shadow-[0_0_8px_rgba(245,158,11,0.4)]" 
+        : "border-2 border-[#f59e0b]"
+    }
+    // Standard/default = neutral border
+    return isSelected 
+      ? "border border-[#7c3aed] ring-2 ring-[#7c3aed]/30 shadow-[0_0_8px_rgba(124,58,237,0.3)]" 
+      : "border border-[#999]"
+  }
   
   return (
     <div className="relative inline-block" style={{ width }}>
@@ -267,9 +315,9 @@ function VLSelect({
         onChange={(e) => onChange(e.target.value)}
         onClick={onSelect}
         className={`
-          w-full h-6 px-1 text-[13px] bg-white border
+          w-full h-6 px-1 text-[13px] bg-white transition-all duration-300
           focus:outline-none appearance-none cursor-pointer
-          ${isSelected ? "ring-2 ring-[#7c3aed] ring-offset-0 border-[#7c3aed]" : criticalUnverified ? "border-[#f59e0b] border-2" : "border-[#999]"}
+          ${getBorderStyle()}
         `}
         style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
       >
@@ -278,8 +326,8 @@ function VLSelect({
         ))}
       </select>
       <div className="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-[10px]">▼</div>
-      {isEdited && (
-        <div className="absolute top-0.5 right-4 w-1.5 h-1.5 rounded-full bg-[#2563eb]" />
+      {isEdited && !isVerified && (
+        <div className="absolute top-0.5 right-4 w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
       )}
     </div>
   )
