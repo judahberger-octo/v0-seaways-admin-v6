@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { 
   ArrowLeft, 
-  Settings, 
   Send, 
   ChevronDown, 
   ChevronRight,
@@ -22,9 +21,7 @@ import {
   Cog,
   Info,
   Filter,
-  Image as ImageIcon,
-  Sparkles,
-  MessageSquare
+  Image as ImageIcon
 } from "lucide-react"
 import { AdminTestingSuite } from "./admin-testing-suite"
 import { VesLinkForm, CRITICAL_FIELDS_NOON_SEA, MANUAL_FILL_FIELDS } from "./veslink-form"
@@ -1509,86 +1506,6 @@ function FieldDefinitionPanel({
 
 
 
-// Critical Field Navigation Bar Component
-// Icon Rail Component (far left sidebar)
-type IconRailItem = "search" | "chat" | "ai" | "layers" | "settings"
-
-function IconRail({
-  activeItem,
-  onItemClick,
-  onLayersClick,
-  userInitials = "JD",
-}: {
-  activeItem: IconRailItem
-  onItemClick: (item: IconRailItem) => void
-  onLayersClick: () => void
-  userInitials?: string
-}) {
-  const icons: { id: IconRailItem; icon: React.ReactNode; label: string }[] = [
-    { id: "search", icon: <Search className="w-5 h-5" />, label: "Search" },
-    { id: "chat", icon: <MessageSquare className="w-5 h-5" />, label: "Comments" },
-    { id: "ai", icon: <Sparkles className="w-5 h-5" />, label: "AI Features" },
-    { id: "layers", icon: <Layers className="w-5 h-5" />, label: "Navigation" },
-  ]
-
-  return (
-    <div className="w-12 bg-white border-r border-gray-100 flex flex-col items-center py-4 flex-shrink-0">
-      {/* Top icons */}
-      <div className="flex flex-col items-center gap-6">
-        {icons.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => item.id === "layers" ? onLayersClick() : onItemClick(item.id)}
-            className="relative flex items-center justify-center w-10 h-10 rounded-lg transition-colors group"
-            title={item.label}
-          >
-            {/* Active indicator */}
-            {activeItem === item.id && (
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-purple-600 rounded-r" />
-            )}
-            <span className={`${
-              activeItem === item.id 
-                ? "text-purple-600" 
-                : "text-gray-400 group-hover:text-purple-600"
-            } transition-colors`}>
-              {item.icon}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* Spacer */}
-      <div className="flex-1" />
-
-      {/* Bottom icons */}
-      <div className="flex flex-col items-center gap-6">
-        <button
-          onClick={() => onItemClick("settings")}
-          className="relative flex items-center justify-center w-10 h-10 rounded-lg transition-colors group"
-          title="Settings"
-        >
-          {activeItem === "settings" && (
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-purple-600 rounded-r" />
-          )}
-          <Settings className={`w-5 h-5 ${
-            activeItem === "settings" 
-              ? "text-purple-600" 
-              : "text-gray-400 group-hover:text-purple-600"
-          } transition-colors`} />
-        </button>
-
-        {/* User Avatar */}
-        <div 
-          className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 text-xs font-bold flex items-center justify-center cursor-pointer hover:bg-purple-200 transition-colors"
-          title="User Profile"
-        >
-          {userInitials}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // Highlights Navigation Bar Component (for right panel)
 function HighlightsNavBar({
   vesselName,
@@ -1760,8 +1677,6 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
   const [editedFields, setEditedFields] = useState<Set<string>>(new Set())
   const [verifiedVesLinkFields, setVerifiedVesLinkFields] = useState<Set<string>>(new Set())
   const [currentCriticalIndex, setCurrentCriticalIndex] = useState(0)
-  const [activeIconRailItem, setActiveIconRailItem] = useState<IconRailItem>("ai")
-  const [showNavSidebar, setShowNavSidebar] = useState(false)
   const [statusFilter, setStatusFilter] = useState<"pending" | "verified">("pending")
   const [showValidationMessage, setShowValidationMessage] = useState(true)
   
@@ -2253,56 +2168,8 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
         />
       )}
 
-      {/* Main Content - Three Column Layout (Icon Rail + Field List + VesLink Form) */}
+      {/* Main Content - Two Column Layout (Field List + VesLink Form) */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Icon Rail - Far Left */}
-        <IconRail
-          activeItem={activeIconRailItem}
-          onItemClick={setActiveIconRailItem}
-          onLayersClick={() => setShowNavSidebar(!showNavSidebar)}
-          userInitials="JD"
-        />
-
-        {/* Navigation Sidebar Overlay */}
-        {showNavSidebar && (
-          <>
-            {/* Backdrop */}
-            <div 
-              className="absolute inset-0 bg-black/20 z-20"
-              onClick={() => setShowNavSidebar(false)}
-            />
-            {/* Sidebar Panel */}
-            <div className="absolute left-12 top-0 bottom-0 w-64 bg-white border-r border-gray-200 shadow-lg z-30 overflow-y-auto">
-              <div className="p-4 border-b border-gray-100">
-                <h3 className="text-sm font-semibold text-gray-900">Navigation</h3>
-              </div>
-              <div className="p-2">
-                <button 
-                  onClick={() => setShowNavSidebar(false)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-purple-50 text-purple-700 text-sm font-medium"
-                >
-                  <FileText className="w-4 h-4" />
-                  New Transfer
-                </button>
-                <button 
-                  onClick={() => setShowNavSidebar(false)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 text-sm mt-1"
-                >
-                  <Layers className="w-4 h-4" />
-                  In Progress (3)
-                </button>
-                <button 
-                  onClick={() => setShowNavSidebar(false)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 text-sm mt-1"
-                >
-                  <Check className="w-4 h-4" />
-                  History
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-
         {/* Left Panel - Single Field Focus View */}
         <div className="flex-1 min-w-0 max-w-[40%] border-r border-[#e2e8f0] flex flex-col overflow-hidden bg-white">
           <SingleFieldFocusPane
