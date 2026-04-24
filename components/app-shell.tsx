@@ -58,6 +58,31 @@ export function AppShell({
   // Modal states for close flow
   const [showUnsavedModal, setShowUnsavedModal] = useState(false)
   const [showDiscardModal, setShowDiscardModal] = useState(false)
+  
+  // Nav icon overlay states
+  const [showSearchOverlay, setShowSearchOverlay] = useState(false)
+  const [showCommentsPane, setShowCommentsPane] = useState(false)
+  
+  // Handle Layers click - navigate to Report management
+  const handleLayersClick = () => {
+    if (isReviewMode) {
+      // If in review mode, trigger back navigation (with unsaved check)
+      if (hasUnsavedChanges) {
+        setShowUnsavedModal(true)
+      } else {
+        onBackFromReview?.()
+      }
+    }
+    // If already on Report management, do nothing (already selected)
+  }
+  
+  // Handle Sparkles click - if on Report management, this is a no-op 
+  // since Sparkles view requires opening a specific report
+  const handleSparklesClick = () => {
+    // Sparkles is selected when in review mode - clicking it while already
+    // in review mode does nothing. From Report management, user must click
+    // a specific report to enter review mode.
+  }
 
   // Handle close button click
   const handleCloseClick = () => {
@@ -109,31 +134,51 @@ export function AppShell({
 
         {/* Primary Nav Icons - 16px gap from logo, 8px between icons */}
         <nav className="flex flex-col items-center gap-2">
-          {/* Search */}
-          <button className="w-10 h-10 flex items-center justify-center rounded-lg text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155] transition-colors">
+          {/* Search - opens command palette overlay */}
+          <button 
+            onClick={() => setShowSearchOverlay(true)}
+            className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
+              showSearchOverlay
+                ? "bg-[#f3e8ff] text-[#7c3aed]"
+                : "text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155]"
+            }`}
+            title="Search (Cmd+K)"
+          >
             <Search className="w-5 h-5" />
           </button>
-          {/* Chat/Comments */}
-          <button className="w-10 h-10 flex items-center justify-center rounded-lg text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155] transition-colors">
+          {/* Chat/Comments - opens comments pane */}
+          <button 
+            onClick={() => setShowCommentsPane(!showCommentsPane)}
+            className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
+              showCommentsPane
+                ? "bg-[#f3e8ff] text-[#7c3aed]"
+                : "text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155]"
+            }`}
+            title="Comments"
+          >
             <MessageSquare className="w-5 h-5" />
           </button>
           {/* Sparkles/AI - Selected when in review mode */}
           <button 
+            onClick={handleSparklesClick}
             className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
-              isReviewMode 
+              isReviewMode && !showSearchOverlay && !showCommentsPane
                 ? "bg-[#f3e8ff] text-[#7c3aed]" 
                 : "text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155]"
             }`}
+            title="AI Review"
           >
             <Sparkles className="w-5 h-5" />
           </button>
-          {/* Layers/Stack - Selected when NOT in review mode */}
+          {/* Layers/Stack - Selected when on Report management */}
           <button 
+            onClick={handleLayersClick}
             className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
-              !isReviewMode 
+              !isReviewMode && !showSearchOverlay && !showCommentsPane
                 ? "bg-[#f3e8ff] text-[#7c3aed]" 
                 : "text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155]"
             }`}
+            title="Report Management"
           >
             <Layers className="w-5 h-5" />
           </button>
@@ -255,6 +300,63 @@ export function AppShell({
         }}
         onConfirmDiscard={handleConfirmDiscard}
       />
+      
+      {/* Search Command Palette Overlay */}
+      {showSearchOverlay && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowSearchOverlay(false)}
+          />
+          {/* Search Modal */}
+          <div className="relative w-full max-w-xl bg-white rounded-xl shadow-2xl overflow-hidden">
+            {/* Search Input */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-[#e2e8f0]">
+              <Search className="w-5 h-5 text-[#64748b]" />
+              <input
+                type="text"
+                placeholder="Search reports, fields, vessels..."
+                className="flex-1 text-sm text-[#0f172a] placeholder-[#94a3b8] outline-none"
+                autoFocus
+              />
+              <kbd className="px-2 py-0.5 text-xs text-[#64748b] bg-[#f1f5f9] rounded">Esc</kbd>
+            </div>
+            {/* Results Placeholder */}
+            <div className="p-8 text-center">
+              <div className="text-[#94a3b8] text-sm">
+                Start typing to search across all reports and fields
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Comments Pane - slides in from right */}
+      {showCommentsPane && (
+        <div className="fixed right-0 top-0 bottom-0 w-80 bg-white border-l border-[#e2e8f0] shadow-lg z-40 flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[#e2e8f0]">
+            <h3 className="text-sm font-semibold text-[#0f172a]">Comments</h3>
+            <button 
+              onClick={() => setShowCommentsPane(false)}
+              className="p-1 hover:bg-[#f1f5f9] rounded transition-colors"
+            >
+              <X className="w-4 h-4 text-[#64748b]" />
+            </button>
+          </div>
+          {/* Empty State */}
+          <div className="flex-1 flex items-center justify-center p-8">
+            <div className="text-center">
+              <MessageSquare className="w-10 h-10 text-[#e2e8f0] mx-auto mb-3" />
+              <p className="text-sm font-medium text-[#64748b]">No comments yet</p>
+              <p className="text-xs text-[#94a3b8] mt-1">
+                Comments on this report will appear here
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
