@@ -532,36 +532,30 @@ function SingleFieldFocusPane({
     <div className={`flex flex-col h-full border-l-4 ${getLeftBorderColor()} ${getBackgroundTint()} transition-colors duration-300`}>
       {/* Main scrollable content */}
       <div className="flex-1 overflow-y-auto p-5">
-        {/* Header Row: Field name with help icon, Field type pill */}
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm text-gray-500">Field name</span>
-            <button className="text-gray-400 hover:text-gray-600" title="Field definition">
-              <Info className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Only show Status pill for critical fields, not manual-fill */}
-            {!isManualFill && (
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${getStatusPillColor()}`}>
-                {field.status === "verified" ? "Verified" : field.status === "flagged" ? "Flagged" : "Status"}
+        {/* Header Row: Field type pill on the right */}
+        <div className="flex items-start justify-between mb-3">
+          {/* Dynamic Field Name Heading */}
+          <h1 className="text-2xl font-semibold text-gray-900">
+            {field.label}
+          </h1>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Field Type Pill - Critical or Manual fill only, no pill for Standard */}
+            {(isManualFill || field.isCritical) && (
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full border flex items-center gap-1 ${getFieldTypePillColor()}`}>
+                <Star className="w-3 h-3" fill="currentColor" />
+                {isManualFill ? "Manual fill" : "Critical field"}
               </span>
             )}
-            {/* Field Type Pill */}
-            <span className={`text-xs font-medium px-2.5 py-1 rounded-full border flex items-center gap-1 ${getFieldTypePillColor()}`}>
-              <Star className="w-3 h-3" fill="currentColor" />
-              {isManualFill ? "Manual fill" : field.isCritical ? "Critical field" : "Standard field"}
-            </span>
           </div>
         </div>
 
-        {/* Large Value Display */}
-        <h2 className="text-3xl font-semibold text-gray-900 mb-3">
+        {/* Field Value Display - secondary beneath the heading */}
+        <p className="text-xl text-gray-600 mb-4">
           {isManualFill 
             ? (manualFillValue && manualFillValue !== "Select..." ? manualFillValue : "—") 
             : (field.value || "—")}
-          {field.unit && <span className="text-xl text-gray-500 ml-1">{field.unit}</span>}
-        </h2>
+          {field.unit && <span className="text-gray-400 ml-1">{field.unit}</span>}
+        </p>
 
         {/* Source Report Chips OR Manual Fill Caption */}
         {isManualFill ? (
