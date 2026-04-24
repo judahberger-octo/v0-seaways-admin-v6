@@ -947,7 +947,20 @@ export function VesLinkForm({
               <VLInput id="engine-distance" value={formData["engine-distance"]?.value || ""}
                 onChange={(v) => handleFieldChange("engine-distance", v)}
                 isSelected={isSelected("engine-distance")} isEdited={isEdited("engine-distance")} isVerified={isVerifiedField("engine-distance")}
-                onSelect={() => onFieldSelect("engine-distance")} width="100px" isManualFill={!isVerifiedField("engine-distance")} />
+                onSelect={() => onFieldSelect("engine-distance")} width="100px" isManualFill={!isVerifiedField("engine-distance")}
+                validate={(v) => {
+                  const num = parseFloat(v)
+                  if (isNaN(num)) return "Must be a number"
+                  if (num < 0) return "Must be >= 0"
+                  if (num > 1200) return "Unusually high for noon-to-noon"
+                  // Cross-field check: compare with observed distance
+                  const obsVal = parseFloat(formData["observed-distance"]?.value || "")
+                  if (!isNaN(obsVal) && obsVal > 0) {
+                    const diff = Math.abs(num - obsVal) / obsVal
+                    if (diff > 0.15) return "Diverges >15% from observed — check log"
+                  }
+                  return null
+                }} />
             </FormRow>
             <FormRow label="Ballast (MT):" labelWidth="150px">
               <VLInput id="ballast" value={formData["ballast"].value}
