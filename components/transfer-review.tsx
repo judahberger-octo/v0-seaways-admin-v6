@@ -174,6 +174,9 @@ interface TransferReviewProps {
   reportId: string
   onBack: () => void
   isAdminMode?: boolean
+  isReadOnly?: boolean // True when viewing submitted/history reports
+  submittedAt?: string // Timestamp when report was submitted
+  submittedBy?: string // Email of user who submitted
 }
 
 // Toast notification component - Dark style matching Figma
@@ -446,7 +449,8 @@ function SingleFieldFocusPane({
   sourceReports = ["#4528", "#4529", "#4530"],
   manualFillValue,
   onScrollToField,
-}: {
+  isReadOnly = false,
+  }: {
   field: FieldCardData | null
   currentIndex: number
   totalCount: number
@@ -457,6 +461,7 @@ function SingleFieldFocusPane({
   sourceReports?: string[]
   manualFillValue?: string
   onScrollToField?: () => void
+  isReadOnly?: boolean
 }) {
   const [validationExpanded, setValidationExpanded] = useState(false)
   const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
@@ -600,17 +605,25 @@ function SingleFieldFocusPane({
           /* Confidence Bar (only for non-manual-fill fields) */
           <div className="mb-5">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600">Confidence</span>
+              <span className="text-sm text-gray-600">
+                Confidence{isReadOnly && <span className="text-gray-400 ml-1">(at submission)</span>}
+              </span>
               <div className="flex items-center gap-3">
                 <span className={`text-sm font-semibold ${confidencePercent >= 90 ? "text-green-600" : confidencePercent >= 70 ? "text-amber-600" : "text-red-600"}`}>
                   {confidencePercent}%
                 </span>
-{isVerified ? (
-                <>
-                  <Check className="w-4 h-4 text-green-500" />
-                  <span className="text-sm font-medium text-green-600">Complete</span>
-                </>
-              ) : (
+                {/* In read-only mode, show terminal state */}
+                {isFlagged ? (
+                  <>
+                    <Flag className="w-4 h-4 text-red-500" />
+                    <span className="text-sm font-medium text-red-600">Flagged — under admin review</span>
+                  </>
+                ) : isVerified ? (
+                  <>
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span className="text-sm font-medium text-green-600">{isReadOnly ? "Verified" : "Complete"}</span>
+                  </>
+                ) : (
                   <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
                     Pending
                   </span>
@@ -722,21 +735,23 @@ function SingleFieldFocusPane({
 
       {/* Footer Action Bar - Fixed at bottom, varies by field type */}
       <div className="border-t border-gray-200 bg-white px-5 py-4">
-        {/* CRITICAL FIELD: [Verify field] [Stepper] [Flag] */}
+        {/* CRITICAL FIELD: [Verify field] [Stepper] [Flag] - In read-only: [Stepper] [Flag] */}
         {isCritical && !isManualFill && (
           <div className="flex items-center gap-3">
-            {/* Verify Button */}
-            <button
-              onClick={onVerify}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
-                isVerified
-                  ? "bg-green-50 text-green-700 border-green-200"
-                  : "bg-purple-600 text-white border-purple-600 hover:bg-purple-700"
-              }`}
-            >
-              <Check className="w-4 h-4" />
-              {isVerified ? "Complete" : "Verify field"}
-            </button>
+            {/* Verify Button - hidden in read-only mode */}
+            {!isReadOnly && (
+              <button
+                onClick={onVerify}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
+                  isVerified
+                    ? "bg-green-50 text-green-700 border-green-200"
+                    : "bg-purple-600 text-white border-purple-600 hover:bg-purple-700"
+                }`}
+              >
+                <Check className="w-4 h-4" />
+                {isVerified ? "Complete" : "Verify field"}
+              </button>
+            )}
 
             {/* Navigation Paginator */}
             <div className="flex items-center gap-1 border border-gray-200 rounded-lg">
@@ -757,7 +772,7 @@ function SingleFieldFocusPane({
               </button>
             </div>
 
-            {/* Flag Button */}
+            {/* Flag Button - always available, even in read-only mode */}
             <button
               onClick={onFlag}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
@@ -1606,7 +1621,14 @@ function BottomActionBar({
   )
 }
 
-export function TransferReview({ reportId, onBack, isAdminMode = false }: TransferReviewProps) {
+export function TransferReview({ 
+  reportId, 
+  onBack, 
+  isAdminMode = false,
+  isReadOnly = false,
+  submittedAt,
+  submittedBy = "transfer.agent@uniframe.ai"
+}: TransferReviewProps) {
   const [isLoading, setIsLoading] = useState(false) // Loading now handled at page level
   const [sections, setSections] = useState(createMockFormSections)
   const [selectedField, setSelectedField] = useState<FormField | null>(null)
@@ -2167,6 +2189,7 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
               }
             }}
             sourceReports={["#4528", "#4529", "#4530"]}
+            isReadOnly={isReadOnly}
           />
         </div>
 
@@ -2267,6 +2290,7 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
               onFormReady={(getFieldValue) => {
                 getVesLinkFieldValueRef.current = getFieldValue
               }}
+              isReadOnly={isReadOnly}
             />
           </div>
         </div>
@@ -2288,49 +2312,61 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
         />
       )}
 
-      {/* Sticky Bottom Action Bar with Validation Message */}
+      {/* Sticky Bottom Action Bar - Different for read-only vs edit mode */}
       <div className="bg-white border-t border-gray-200 flex-shrink-0">
-        {/* Validation Message Banner */}
-        {!canSubmit && showValidationMessage && (
-          <div className="flex items-center justify-center gap-2 py-2.5 px-4 bg-gray-50 border-b border-gray-100">
-            <Info className="w-4 h-4 text-gray-500 flex-shrink-0" />
-            <span className="text-sm text-gray-600">
-              All <span className="font-semibold text-amber-600">required fields</span> must be confirmed before submitting
-            </span>
-            <button
-              onClick={() => setShowValidationMessage(false)}
-              className="ml-2 p-0.5 hover:bg-gray-200 rounded transition-colors"
-            >
-              <X className="w-4 h-4 text-gray-400" />
-            </button>
+        {isReadOnly ? (
+          /* Read-only footer - just metadata, no action buttons */
+          <div className="px-6 py-3">
+            <p className="text-sm text-gray-500">
+              Submitted to VesLink at {submittedAt || "2:03 PM on January 25, 2026"} by {submittedBy}
+            </p>
           </div>
+        ) : (
+          /* Edit mode footer - validation message + action buttons */
+          <>
+            {/* Validation Message Banner */}
+            {!canSubmit && showValidationMessage && (
+              <div className="flex items-center justify-center gap-2 py-2.5 px-4 bg-gray-50 border-b border-gray-100">
+                <Info className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                <span className="text-sm text-gray-600">
+                  All <span className="font-semibold text-amber-600">required fields</span> must be confirmed before submitting
+                </span>
+                <button
+                  onClick={() => setShowValidationMessage(false)}
+                  className="ml-2 p-0.5 hover:bg-gray-200 rounded transition-colors"
+                >
+                  <X className="w-4 h-4 text-gray-400" />
+                </button>
+              </div>
+            )}
+            
+            {/* Action Buttons */}
+            <div className="px-6 py-3 flex justify-center gap-3">
+              <button
+                onClick={() => {
+                  const now = new Date()
+                  const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                  setToast({ message: `Draft saved at ${time}`, type: "save" })
+                }}
+                className="border border-gray-300 rounded-lg px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors min-w-[140px]"
+              >
+                Save as draft
+              </button>
+              <button
+                onClick={handleSubmitClick}
+                disabled={!canSubmit}
+                className={`rounded-lg px-6 py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-colors min-w-[180px] ${
+                  canSubmit
+                    ? "bg-purple-600 text-white hover:bg-purple-700"
+                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                }`}
+              >
+                <Send className="w-4 h-4" />
+                Submit to veslink
+              </button>
+            </div>
+          </>
         )}
-        
-        {/* Action Buttons */}
-        <div className="px-6 py-3 flex justify-center gap-3">
-          <button
-            onClick={() => {
-              const now = new Date()
-              const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-              setToast({ message: `Draft saved at ${time}`, type: "save" })
-            }}
-            className="border border-gray-300 rounded-lg px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors min-w-[140px]"
-          >
-            Save as draft
-          </button>
-          <button
-            onClick={handleSubmitClick}
-            disabled={!canSubmit}
-            className={`rounded-lg px-6 py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-colors min-w-[180px] ${
-              canSubmit
-                ? "bg-purple-600 text-white hover:bg-purple-700"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed"
-            }`}
-          >
-            <Send className="w-4 h-4" />
-            Submit to veslink
-          </button>
-        </div>
       </div>
 
       {/* Flag Field Modal */}

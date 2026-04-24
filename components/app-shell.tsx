@@ -39,6 +39,10 @@ interface AppShellProps {
   onBackFromReview?: () => void
   hasUnsavedChanges?: boolean
   onSaveAsDraft?: () => void
+  // For read-only (submitted/history) view
+  isReadOnly?: boolean
+  submittedAt?: string
+  submittedBy?: string
 }
 
 export function AppShell({ 
@@ -54,7 +58,10 @@ export function AppShell({
   reviewData,
   onBackFromReview,
   hasUnsavedChanges = false,
-  onSaveAsDraft
+  onSaveAsDraft,
+  isReadOnly = false,
+  submittedAt,
+  submittedBy = "transfer.agent@uniframe.ai"
 }: AppShellProps) {
   // Modal states for close flow
   const [showUnsavedModal, setShowUnsavedModal] = useState(false)
@@ -211,35 +218,52 @@ export function AppShell({
       {/* Main Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {isReviewMode && reviewData ? (
-          // Transfer Review Header - Redesigned per PROMPT 6
+          // Transfer Review Header - Varies by edit vs read-only mode
           <header className="h-12 border-b border-[#e2e8f0] bg-white flex items-center justify-between px-6 flex-shrink-0">
-            {/* Left - Last Saved Timestamp */}
+            {/* Left - Timestamp (different format for submitted vs draft) */}
             <div className="flex items-center gap-2 group relative">
               <Calendar className="w-4 h-4 text-[#64748b]" />
               <span className="text-sm text-[#64748b]">
-                Last saved: January 25, 2026 2:03 AM
+                {isReadOnly 
+                  ? `Submitted at ${submittedAt || "2:03 PM on January 25, 2026"}`
+                  : "Last saved: January 25, 2026 2:03 AM"
+                }
               </span>
               {/* Tooltip on hover */}
               <div className="absolute left-0 top-full mt-2 px-3 py-2 bg-[#0f172a] text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 shadow-lg">
-                Saved by chief.officer@seaways.com at 2:03 AM
+                {isReadOnly 
+                  ? `Submitted by ${submittedBy}`
+                  : "Saved by chief.officer@seaways.com at 2:03 AM"
+                }
                 <div className="absolute -top-1 left-4 w-2 h-2 bg-[#0f172a] rotate-45" />
               </div>
             </div>
 
-            {/* Center - Form Title + Edit + Status */}
+            {/* Center - Form Title + Status (no pencil in read-only) */}
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-[#64748b]" />
               <span className="text-sm font-medium text-[#0f172a]">
                 Form - In Port Noon Report Unav 5.0
               </span>
-              <button className="p-1 hover:bg-[#f1f5f9] rounded transition-colors">
-                <Pencil className="w-3.5 h-3.5 text-[#64748b]" />
-              </button>
+              {/* Edit button - only in draft mode */}
+              {!isReadOnly && (
+                <button className="p-1 hover:bg-[#f1f5f9] rounded transition-colors">
+                  <Pencil className="w-3.5 h-3.5 text-[#64748b]" />
+                </button>
+              )}
               <span className="text-[#94a3b8] mx-1">•</span>
-              <span className="text-xs px-2 py-0.5 rounded bg-[#f1f5f9] text-[#64748b] font-medium flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#7c3aed]" />
-                Draft
-              </span>
+              {/* Status pill - Draft vs Submitted */}
+              {isReadOnly ? (
+                <span className="text-xs px-2 py-0.5 rounded bg-[#dcfce7] text-[#16a34a] font-medium flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a]" />
+                  Submitted
+                </span>
+              ) : (
+                <span className="text-xs px-2 py-0.5 rounded bg-[#f1f5f9] text-[#64748b] font-medium flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#7c3aed]" />
+                  Draft
+                </span>
+              )}
             </div>
 
             {/* Right - Vessel Name + Divider + Close Button */}

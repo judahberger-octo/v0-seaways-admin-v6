@@ -41,6 +41,7 @@ interface VesLinkFormProps {
   onFieldEdit: (fieldId: string, value: string) => void
   verifiedFields?: Set<string>
   onFormReady?: (getFieldValue: (fieldId: string) => string) => void
+  isReadOnly?: boolean // True when viewing submitted/history reports
 }
 
 // Form field data structure
@@ -209,7 +210,8 @@ function VLInput({
   className = "",
   isCritical = false,
   isManualFill = false,
-  validate
+  validate,
+  isReadOnly = false
 }: { 
   id: string
   value: string
@@ -223,6 +225,7 @@ function VLInput({
   isCritical?: boolean
   isManualFill?: boolean
   validate?: ValidationFn
+  isReadOnly?: boolean
 }) {
   // Compute validation warning
   const validationWarning = validate && value ? validate(value) : null
@@ -269,12 +272,15 @@ function VLInput({
         id={`vl-field-${id}`}
         type="text"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => !isReadOnly && onChange(e.target.value)}
         onClick={onSelect}
+        readOnly={isReadOnly}
+        disabled={isReadOnly}
         className={`
-          w-full h-6 px-1.5 text-[13px] bg-white transition-all duration-300
+          w-full h-6 px-1.5 text-[13px] transition-all duration-300
           focus:outline-none
           ${getBorderStyle()}
+          ${isReadOnly ? "bg-gray-50 cursor-default" : "bg-white"}
           ${className}
         `}
         style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
@@ -305,7 +311,8 @@ function VLSelect({
   width = "auto",
   isCritical = false,
   isManualFill = false,
-  validate
+  validate,
+  isReadOnly = false
 }: { 
   id: string
   value: string
@@ -319,6 +326,7 @@ function VLSelect({
   isCritical?: boolean
   isManualFill?: boolean
   validate?: ValidationFn
+  isReadOnly?: boolean
 }) {
   // Compute validation warning
   const validationWarning = validate && value ? validate(value) : null
@@ -365,12 +373,14 @@ function VLSelect({
         <select
           id={`vl-field-${id}`}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => !isReadOnly && onChange(e.target.value)}
           onClick={onSelect}
+          disabled={isReadOnly}
           className={`
-            w-full h-6 px-1 text-[13px] bg-white transition-all duration-300
-            focus:outline-none appearance-none cursor-pointer
+            w-full h-6 px-1 text-[13px] transition-all duration-300
+            focus:outline-none appearance-none
             ${getBorderStyle()}
+            ${isReadOnly ? "bg-gray-50 cursor-default" : "bg-white cursor-pointer"}
           `}
           style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
         >
@@ -660,13 +670,14 @@ function BunkerFuelRow({
 }
 
 // Export component
-export function VesLinkForm({ 
-  selectedFieldId, 
+export function VesLinkForm({
+  selectedFieldId,
   onFieldSelect,
   editedFields,
   onFieldEdit,
   verifiedFields = new Set(),
-  onFormReady
+  onFormReady,
+  isReadOnly = false
 }: VesLinkFormProps) {
   const [formData, setFormData] = useState(initialFormData)
   
@@ -683,12 +694,15 @@ export function VesLinkForm({
   }, [onFormReady, getFieldValue])
   
   const handleFieldChange = useCallback((id: string, value: string) => {
+    // In read-only mode, do not allow changes
+    if (isReadOnly) return
+    
     setFormData(prev => ({
       ...prev,
       [id]: { ...prev[id], value }
     }))
     onFieldEdit(id, value)
-  }, [onFieldEdit])
+  }, [onFieldEdit, isReadOnly])
   
   const isSelected = (id: string) => selectedFieldId === id
   const isEdited = (id: string) => editedFields.has(id)
@@ -765,7 +779,8 @@ export function VesLinkForm({
               isVerified={isVerifiedField("latitude")}
               onSelect={() => onFieldSelect("latitude")}
               width="140px"
-              
+              isCritical={true}
+              isReadOnly={isReadOnly}
             />
           </FormRow>
           <FormRow label="Voyage Number:" fieldId="voyage-number" labelWidth="90px" isVerified={verifiedFields.has("voyage-number")}>
@@ -779,6 +794,7 @@ export function VesLinkForm({
               onSelect={() => onFieldSelect("voyage-number")}
               width="100px"
               isCritical={true}
+              isReadOnly={isReadOnly}
             />
           </FormRow>
           
@@ -792,6 +808,8 @@ export function VesLinkForm({
               isVerified={isVerifiedField("longitude")}
               onSelect={() => onFieldSelect("longitude")}
               width="140px"
+              isCritical={true}
+              isReadOnly={isReadOnly}
             />
           </FormRow>
           <FormRow label="Vessel Condition:" fieldId="vessel-condition" labelWidth="90px" isVerified={verifiedFields.has("vessel-condition")}>
@@ -928,6 +946,7 @@ export function VesLinkForm({
                 onChange={(v) => handleFieldChange("observed-distance", v)}
                 isSelected={isSelected("observed-distance")} isEdited={isEdited("observed-distance")} isVerified={isVerifiedField("observed-distance")}
                 onSelect={() => onFieldSelect("observed-distance")} width="100px" isManualFill={!isVerifiedField("observed-distance")}
+                isReadOnly={isReadOnly}
                 validate={(v) => {
                   const num = parseFloat(v)
                   if (isNaN(num)) return "Must be a number"
@@ -1093,6 +1112,7 @@ export function VesLinkForm({
                 onChange={(v) => handleFieldChange("sea-state", v)}
                 isSelected={isSelected("sea-state")} isEdited={isEdited("sea-state")} isVerified={isVerifiedField("sea-state")}
                 onSelect={() => onFieldSelect("sea-state")} width="160px" isManualFill={!isVerifiedField("sea-state")}
+                isReadOnly={isReadOnly}
                 validate={(v) => {
                   if (!v || v === "Select...") return "Selection required"
                   return null
