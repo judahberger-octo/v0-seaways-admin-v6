@@ -9,7 +9,7 @@ import { HistoryPage } from "@/components/history-page"
 type AppView = "selection" | "review"
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"new-transfer" | "in-progress" | "history">("new-transfer")
+  const [activeTab, setActiveTab] = useState<"new-transfer" | "drafts" | "history">("new-transfer")
   const [currentView, setCurrentView] = useState<AppView>("selection")
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
   const [isAdminMode, setIsAdminMode] = useState(false)
@@ -61,10 +61,10 @@ export default function Home() {
           {activeTab === "new-transfer" && (
             <ReportSelection onGenerate={handleGenerate} />
           )}
-          {activeTab === "in-progress" && (
+          {activeTab === "drafts" && (
             <div className="flex items-center justify-center h-full text-[#64748b]">
               <div className="text-center">
-                <p className="text-lg font-medium">In Progress</p>
+                <p className="text-lg font-medium">Drafts</p>
                 <p className="text-sm">2 transfers pending review</p>
               </div>
             </div>

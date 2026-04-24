@@ -57,27 +57,15 @@ export function ReportSelection({ onGenerate }: ReportSelectionProps) {
 
   return (
     <div className="max-w-6xl mx-auto p-8">
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-[#0f172a]">
-          New Transfer — Seaways Skopelos
-        </h1>
-        <p className="text-[#64748b] mt-1">Select a source report to transfer</p>
-      </div>
-
       {/* Two Column Layout */}
       <div className="grid grid-cols-[1.5fr_1fr] gap-6">
         {/* Left Column - Source Reports */}
         <div className="bg-white border border-[#e2e8f0] rounded-xl shadow-sm">
           {/* Header */}
           <div className="p-4 border-b border-[#e2e8f0]">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold text-[#0f172a]">NAVTOR Source Reports</h2>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-[#dcfce7] text-[#16a34a] font-medium">
-                  Connected
-                </span>
-              </div>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-[#0f172a]">NAVTOR Source Reports</h2>
+              <p className="text-sm text-[#64748b] mt-0.5">Select reports to include in the transfer</p>
             </div>
 
             {/* Search */}
