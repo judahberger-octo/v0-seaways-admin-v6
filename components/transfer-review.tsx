@@ -327,7 +327,7 @@ function FieldCard({
   const getStatusChip = () => {
     switch (field.status) {
       case "verified":
-        return <span className="text-xs font-medium px-2 py-0.5 rounded-full text-green-600 bg-green-50">Verified</span>
+        return <span className="text-xs font-medium px-2 py-0.5 rounded-full text-green-600 bg-green-50">Complete</span>
       case "flagged":
         return <span className="text-xs font-medium px-2 py-0.5 rounded-full text-red-600 bg-red-50">Flagged</span>
       default:
@@ -605,12 +605,12 @@ function SingleFieldFocusPane({
                 <span className={`text-sm font-semibold ${confidencePercent >= 90 ? "text-green-600" : confidencePercent >= 70 ? "text-amber-600" : "text-red-600"}`}>
                   {confidencePercent}%
                 </span>
-                {isVerified ? (
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700 flex items-center gap-1">
-                    <Check className="w-3 h-3" />
-                    Verified
-                  </span>
-                ) : (
+{isVerified ? (
+                <>
+                  <Check className="w-4 h-4 text-green-500" />
+                  <span className="text-sm font-medium text-green-600">Complete</span>
+                </>
+              ) : (
                   <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
                     Pending
                   </span>
@@ -735,7 +735,7 @@ function SingleFieldFocusPane({
               }`}
             >
               <Check className="w-4 h-4" />
-              {isVerified ? "Verified" : "Verify field"}
+              {isVerified ? "Complete" : "Verify field"}
             </button>
 
             {/* Navigation Paginator */}
@@ -1728,10 +1728,11 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
   const criticalOnlyTotal = criticalOnlyFieldIds.length
   
   // Updated counts for Pending/Verified toggle
-  // Pending = critical-pending + manualFill-empty (awaiting)
+  // Count definitions for floating Pending/Complete counter:
+  // Pending  = critical-pending + manualFill-empty (awaiting)
   // Complete = critical-verified + manualFill-populated (auto-completes on typing)
   const displayPendingCount = (criticalOnlyTotal - criticalOnlyVerified) + (manualFillTotal - manualFillVerified)
-  const displayVerifiedCount = criticalOnlyVerified + manualFillVerified
+  const displayCompleteCount = criticalOnlyVerified + manualFillVerified
   
   // Submit gating: ALL critical fields verified/flagged AND ALL manualFill fields populated/flagged
   const allCriticalDone = criticalOnlyVerified === criticalOnlyTotal
@@ -2172,6 +2173,28 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
         {/* Right Panel - VesLink Form (authentic replica) */}
         <div className="flex-1 flex flex-col overflow-hidden bg-white">
           <div className="flex-1 overflow-y-auto relative">
+            {/* Floating Pending/Complete Counter - sticky at top of VesLink panel */}
+            <div className="sticky top-0 z-20 flex justify-center py-2 pointer-events-none">
+              <div 
+                role="status" 
+                aria-live="polite"
+                className="pointer-events-auto inline-flex items-center bg-white border border-gray-200 rounded-full px-4 py-1.5 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <span className="sr-only">Review progress:</span>
+                {/* Pending count */}
+                <span className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  Pending ({displayPendingCount})
+                </span>
+                {/* Divider */}
+                <span className="w-px h-3 bg-gray-300 mx-3" />
+                {/* Complete count */}
+                <span className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
+                  <Check className="w-3 h-3 text-green-500" />
+                  Complete ({displayCompleteCount})
+                </span>
+              </div>
+            </div>
             <VesLinkForm
               selectedFieldId={selectedField?.id ?? null}
               onFieldSelect={(fieldId) => {
