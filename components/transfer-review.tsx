@@ -782,7 +782,7 @@ function SingleFieldFocusPane({
               }`}
             >
               <Flag className="w-4 h-4" />
-              Flag
+              Flag as Incorrect
             </button>
           </div>
         )}
@@ -819,7 +819,7 @@ function SingleFieldFocusPane({
               }`}
             >
               <Flag className="w-4 h-4" />
-              Flag
+              Flag as Incorrect
             </button>
           </div>
         )}
@@ -836,7 +836,7 @@ function SingleFieldFocusPane({
               }`}
             >
               <Flag className="w-4 h-4" />
-              Flag
+              Flag as Incorrect
             </button>
           </div>
         )}
