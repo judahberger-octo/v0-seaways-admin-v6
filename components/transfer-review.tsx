@@ -637,38 +637,40 @@ function SingleFieldFocusPane({
           </div>
         )}
 
-        {/* Validation Checks Accordion */}
-        <div className="border border-gray-200 rounded-lg mb-4">
-          <button
-            onClick={() => setValidationExpanded(!validationExpanded)}
-            className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            <span>Validation checks</span>
-            {validationExpanded ? (
-              <ChevronUp className="w-4 h-4 text-gray-500" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-gray-500" />
-            )}
-          </button>
-          {validationExpanded && (
-            <div className="px-4 pb-3 border-t border-gray-100">
-              <div className="pt-3 space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Check className="w-4 h-4 text-green-500" />
-                  <span className="text-gray-600">Value within expected range</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Check className="w-4 h-4 text-green-500" />
-                  <span className="text-gray-600">Format validation passed</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Check className="w-4 h-4 text-green-500" />
-                  <span className="text-gray-600">Cross-reference check passed</span>
+        {/* Validation Checks Accordion - only for non-manual-fill fields */}
+        {!isManualFill && (
+          <div className="border border-gray-200 rounded-lg mb-4">
+            <button
+              onClick={() => setValidationExpanded(!validationExpanded)}
+              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <span>Validation checks</span>
+              {validationExpanded ? (
+                <ChevronUp className="w-4 h-4 text-gray-500" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-gray-500" />
+              )}
+            </button>
+            {validationExpanded && (
+              <div className="px-4 pb-3 border-t border-gray-100">
+                <div className="pt-3 space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span className="text-gray-600">Value within expected range</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span className="text-gray-600">Format validation passed</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span className="text-gray-600">Cross-reference check passed</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {/* Source Preview Accordion - only for non-manual-fill fields */}
         {!isManualFill && (
