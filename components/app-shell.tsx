@@ -95,37 +95,61 @@ export function AppShell({
 
   return (
     <div className="h-screen flex bg-[#f8fafc] overflow-hidden">
-      {/* Left Icon Rail */}
+      {/* Left Icon Rail - 56px wide, matches Figma spec */}
       <aside className="w-14 flex-shrink-0 flex flex-col border-r border-[#e2e8f0] bg-white">
-        {/* Logo */}
-        <div className="h-14 flex items-center justify-center border-b border-[#e2e8f0]">
-          <div className="w-8 h-8 rounded-lg bg-[#7c3aed] flex items-center justify-center">
+        {/* Brand Mark - U logo with gradient, 32px, 16px top padding */}
+        <div className="pt-4 pb-4 flex items-center justify-center">
+          <div 
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg, #06b6d4 0%, #7c3aed 100%)" }}
+          >
             <span className="text-white font-bold text-sm">U</span>
           </div>
         </div>
 
-        {/* Icon Navigation */}
-        <nav className="flex-1 py-3 flex flex-col items-center gap-1">
-          <button className="w-10 h-10 flex items-center justify-center rounded-lg text-[#64748b] hover:bg-[#f1f5f9] transition-colors">
+        {/* Primary Nav Icons - 16px gap from logo, 8px between icons */}
+        <nav className="flex flex-col items-center gap-2">
+          {/* Search */}
+          <button className="w-10 h-10 flex items-center justify-center rounded-lg text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155] transition-colors">
             <Search className="w-5 h-5" />
           </button>
-          <button className="w-10 h-10 flex items-center justify-center rounded-lg text-[#64748b] hover:bg-[#f1f5f9] transition-colors">
+          {/* Chat/Comments */}
+          <button className="w-10 h-10 flex items-center justify-center rounded-lg text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155] transition-colors">
             <MessageSquare className="w-5 h-5" />
           </button>
-          <button className="w-10 h-10 flex items-center justify-center rounded-lg text-[#64748b] hover:bg-[#f1f5f9] transition-colors">
+          {/* Sparkles/AI - Selected when in review mode */}
+          <button 
+            className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
+              isReviewMode 
+                ? "bg-[#f3e8ff] text-[#7c3aed]" 
+                : "text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155]"
+            }`}
+          >
             <Sparkles className="w-5 h-5" />
           </button>
-          <button className="w-10 h-10 flex items-center justify-center rounded-lg text-[#64748b] hover:bg-[#f1f5f9] transition-colors">
+          {/* Layers/Stack - Selected when NOT in review mode */}
+          <button 
+            className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
+              !isReviewMode 
+                ? "bg-[#f3e8ff] text-[#7c3aed]" 
+                : "text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155]"
+            }`}
+          >
             <Layers className="w-5 h-5" />
           </button>
         </nav>
 
-        {/* Bottom Icons */}
-        <div className="py-3 flex flex-col items-center gap-1 border-t border-[#e2e8f0]">
-          <button className="w-10 h-10 flex items-center justify-center rounded-lg text-[#64748b] hover:bg-[#f1f5f9] transition-colors">
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Bottom Section - Settings gear + Avatar */}
+        <div className="pb-4 flex flex-col items-center gap-4">
+          {/* Settings - never selected, just hover state */}
+          <button className="w-10 h-10 flex items-center justify-center rounded-lg text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155] transition-colors">
             <Settings className="w-5 h-5" />
           </button>
-          <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-white text-xs font-medium">
+          {/* User Avatar - 32px purple circle with initials */}
+          <div className="w-8 h-8 rounded-full bg-[#7c3aed] flex items-center justify-center text-white text-xs font-semibold cursor-pointer hover:bg-[#6d28d9] transition-colors">
             EM
           </div>
         </div>
