@@ -48,6 +48,15 @@ export function DraftsPage({ onEditDraft }: DraftsPageProps) {
     }
   }, [toast])
 
+  // Close menu on outside click
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (openMenuId) setOpenMenuId(null)
+    }
+    document.addEventListener("click", handleClickOutside)
+    return () => document.removeEventListener("click", handleClickOutside)
+  }, [openMenuId])
+
   const handleRowClick = (draftId: string) => {
     onEditDraft(draftId)
   }
@@ -157,24 +166,24 @@ export function DraftsPage({ onEditDraft }: DraftsPageProps) {
 
                       {/* Action Menu Popover */}
                       {isMenuOpen && (
-                        <div className="absolute right-4 top-full mt-1 bg-white border border-[#e2e8f0] rounded-lg shadow-lg z-10 py-1 min-w-40">
+                        <div className="absolute right-0 top-full mt-1 bg-white border border-[#e2e8f0] rounded-lg shadow-lg z-10 py-1 min-w-[160px]">
                           <button
                             onClick={(e) => handlePreview(e, draft.id)}
-                            className="w-full px-3 py-2 text-sm text-left hover:bg-[#f8fafc] flex items-center gap-2 text-[#0f172a]"
+                            className="w-full h-9 px-3 text-sm text-left hover:bg-[#f8fafc] flex items-center gap-2 text-[#0f172a]"
                           >
                             <Eye className="w-4 h-4 text-[#64748b]" />
                             Preview
                           </button>
                           <button
                             onClick={(e) => handleEditDraft(e, draft.id)}
-                            className="w-full px-3 py-2 text-sm text-left hover:bg-[#f8fafc] flex items-center gap-2 text-[#0f172a]"
+                            className="w-full h-9 px-3 text-sm text-left hover:bg-[#f8fafc] flex items-center gap-2 text-[#0f172a]"
                           >
                             <Pencil className="w-4 h-4 text-[#64748b]" />
                             Edit draft
                           </button>
                           <button
                             onClick={(e) => handleDeleteDraft(e, draft.id)}
-                            className="w-full px-3 py-2 text-sm text-left hover:bg-[#f8fafc] flex items-center gap-2 text-[#ef4444]"
+                            className="w-full h-9 px-3 text-sm text-left hover:bg-[#f8fafc] flex items-center gap-2 text-[#ef4444]"
                           >
                             <Trash2 className="w-4 h-4" />
                             Delete draft

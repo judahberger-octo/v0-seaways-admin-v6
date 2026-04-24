@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Search, SlidersHorizontal, Download, Filter, MoreHorizontal, Eye, ExternalLink } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Search, SlidersHorizontal, Download, Filter, MoreHorizontal, Eye, Copy } from "lucide-react"
 
 interface HistoryEntry {
   id: string
@@ -49,6 +49,15 @@ interface HistoryPageProps {
 export function HistoryPage({ onViewReport }: HistoryPageProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
 
+  // Close menu on outside click
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (openMenuId) setOpenMenuId(null)
+    }
+    document.addEventListener("click", handleClickOutside)
+    return () => document.removeEventListener("click", handleClickOutside)
+  }, [openMenuId])
+
   const handleRowClick = (reportId: string) => {
     // Open preview modal (read-only)
     onViewReport?.(reportId)
@@ -65,11 +74,16 @@ export function HistoryPage({ onViewReport }: HistoryPageProps) {
     onViewReport?.(reportId)
   }
 
-  const handleViewOnVesLink = (e: React.MouseEvent) => {
+  const handleDownload = (e: React.MouseEvent, reportId: string) => {
     e.stopPropagation()
     setOpenMenuId(null)
-    // Open external VesLink URL
-    window.open("https://veslink.com", "_blank")
+    // Download report logic
+  }
+
+  const handleDuplicate = (e: React.MouseEvent, reportId: string) => {
+    e.stopPropagation()
+    setOpenMenuId(null)
+    // Duplicate as new transfer logic
   }
 
   return (
@@ -143,20 +157,27 @@ export function HistoryPage({ onViewReport }: HistoryPageProps) {
 
                       {/* Action Menu Popover */}
                       {isMenuOpen && (
-                        <div className="absolute right-4 top-full mt-1 bg-white border border-[#e2e8f0] rounded-lg shadow-lg z-10 py-1 min-w-40">
+                        <div className="absolute right-0 top-full mt-1 bg-white border border-[#e2e8f0] rounded-lg shadow-lg z-10 py-1 min-w-[200px]">
                           <button
                             onClick={(e) => handlePreview(e, entry.id)}
-                            className="w-full px-3 py-2 text-sm text-left hover:bg-[#f8fafc] flex items-center gap-2 text-[#0f172a]"
+                            className="w-full h-9 px-3 text-sm text-left hover:bg-[#f8fafc] flex items-center gap-2 text-[#0f172a]"
                           >
                             <Eye className="w-4 h-4 text-[#64748b]" />
                             Preview
                           </button>
                           <button
-                            onClick={handleViewOnVesLink}
-                            className="w-full px-3 py-2 text-sm text-left hover:bg-[#f8fafc] flex items-center gap-2 text-[#0f172a]"
+                            onClick={(e) => handleDownload(e, entry.id)}
+                            className="w-full h-9 px-3 text-sm text-left hover:bg-[#f8fafc] flex items-center gap-2 text-[#0f172a]"
                           >
-                            <ExternalLink className="w-4 h-4 text-[#64748b]" />
-                            View on VesLink
+                            <Download className="w-4 h-4 text-[#64748b]" />
+                            Download
+                          </button>
+                          <button
+                            onClick={(e) => handleDuplicate(e, entry.id)}
+                            className="w-full h-9 px-3 text-sm text-left hover:bg-[#f8fafc] flex items-center gap-2 text-[#0f172a]"
+                          >
+                            <Copy className="w-4 h-4 text-[#64748b]" />
+                            Duplicate as new transfer
                           </button>
                         </div>
                       )}
