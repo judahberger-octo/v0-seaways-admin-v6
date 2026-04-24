@@ -1641,6 +1641,7 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
   const [activeIconRailItem, setActiveIconRailItem] = useState<IconRailItem>("ai")
   const [showNavSidebar, setShowNavSidebar] = useState(false)
   const [statusFilter, setStatusFilter] = useState<"pending" | "verified">("pending")
+  const [showValidationMessage, setShowValidationMessage] = useState(true)
 
   // Get the section name for the selected field - supports VesLink field IDs
   const getFieldSectionName = (fieldId: string) => {
@@ -2168,28 +2169,47 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
         />
       )}
 
-      {/* Sticky Bottom Action Bar */}
-      <div className="bg-white border-t border-gray-200 px-6 py-3 flex justify-end gap-3 flex-shrink-0">
-        <button
-          onClick={() => {
-            setToast({ message: "Draft saved successfully", type: "success" })
-          }}
-          className="border border-gray-300 rounded-lg px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-        >
-          Save as draft
-        </button>
-        <button
-          onClick={handleSubmitClick}
-          disabled={!canSubmit}
-          className={`rounded-lg px-5 py-2.5 text-sm font-medium flex items-center gap-2 transition-colors ${
-            canSubmit
-              ? "bg-purple-600 text-white hover:bg-purple-700"
-              : "bg-gray-300 text-gray-500 opacity-50 cursor-not-allowed"
-          }`}
-        >
-          <Send className="w-4 h-4" />
-          Submit to veslink
-        </button>
+      {/* Sticky Bottom Action Bar with Validation Message */}
+      <div className="bg-white border-t border-gray-200 flex-shrink-0">
+        {/* Validation Message Banner */}
+        {!canSubmit && showValidationMessage && (
+          <div className="flex items-center justify-center gap-2 py-2.5 px-4 bg-gray-50 border-b border-gray-100">
+            <Info className="w-4 h-4 text-gray-500 flex-shrink-0" />
+            <span className="text-sm text-gray-600">
+              All <span className="font-semibold text-amber-600">required fields</span> must be confirmed before submitting
+            </span>
+            <button
+              onClick={() => setShowValidationMessage(false)}
+              className="ml-2 p-0.5 hover:bg-gray-200 rounded transition-colors"
+            >
+              <X className="w-4 h-4 text-gray-400" />
+            </button>
+          </div>
+        )}
+        
+        {/* Action Buttons */}
+        <div className="px-6 py-3 flex justify-center gap-3">
+          <button
+            onClick={() => {
+              setToast({ message: "Draft saved successfully", type: "success" })
+            }}
+            className="border border-gray-300 rounded-lg px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors min-w-[140px]"
+          >
+            Save as draft
+          </button>
+          <button
+            onClick={handleSubmitClick}
+            disabled={!canSubmit}
+            className={`rounded-lg px-6 py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-colors min-w-[180px] ${
+              canSubmit
+                ? "bg-purple-600 text-white hover:bg-purple-700"
+                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+            }`}
+          >
+            <Send className="w-4 h-4" />
+            Submit to veslink
+          </button>
+        </div>
       </div>
     </div>
   )
