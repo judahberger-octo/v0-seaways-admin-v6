@@ -1515,8 +1515,6 @@ function HighlightsNavBar({
   totalCount,
   pendingCount,
   verifiedCount,
-  activeFilter,
-  onFilterChange,
   onPrev,
   onNext,
   onVesselClick,
@@ -1526,8 +1524,6 @@ function HighlightsNavBar({
   totalCount: number
   pendingCount: number
   verifiedCount: number
-  activeFilter: "pending" | "verified"
-  onFilterChange: (filter: "pending" | "verified") => void
   onPrev: () => void
   onNext: () => void
   onVesselClick: () => void
@@ -1545,33 +1541,27 @@ function HighlightsNavBar({
         </button>
       </div>
       
-      {/* Right side - Status toggle + Counter + navigation */}
+      {/* Right side - Status counter (passive, non-interactive) + navigation */}
       <div className="flex items-center gap-4">
-        {/* Status Filter Toggle - Pending/Verified */}
-        <div className="flex items-center bg-gray-100 rounded-full p-0.5">
-          <button
-            onClick={() => onFilterChange("pending")}
-            className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 rounded-full transition-all ${
-              activeFilter === "pending"
-                ? "bg-white text-amber-700 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
+        {/* Passive Status Counter - Pending/Verified */}
+        <div 
+          role="status" 
+          aria-live="polite"
+          className="flex items-center bg-white border border-gray-200 rounded-full px-3 py-1.5"
+        >
+          <span className="sr-only">Review progress:</span>
+          {/* Pending count */}
+          <span className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
             Pending ({pendingCount})
-          </button>
-          <span className="text-gray-300 mx-0.5">/</span>
-          <button
-            onClick={() => onFilterChange("verified")}
-            className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 rounded-full transition-all ${
-              activeFilter === "verified"
-                ? "bg-white text-green-700 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <Check className="w-3 h-3" />
+          </span>
+          {/* Divider */}
+          <span className="w-px h-3 bg-gray-300 mx-2.5" />
+          {/* Verified count */}
+          <span className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
+            <Check className="w-3 h-3 text-green-500" />
             Verified ({verifiedCount})
-          </button>
+          </span>
         </div>
 
         {/* Counter + navigation */}
@@ -1679,7 +1669,6 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
   const [editedFields, setEditedFields] = useState<Set<string>>(new Set())
   const [verifiedVesLinkFields, setVerifiedVesLinkFields] = useState<Set<string>>(new Set())
   const [currentCriticalIndex, setCurrentCriticalIndex] = useState(0)
-  const [statusFilter, setStatusFilter] = useState<"pending" | "verified">("pending")
   const [showValidationMessage, setShowValidationMessage] = useState(true)
   
   // Ref to get VesLink form field values
@@ -2239,10 +2228,6 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
             totalCount={vesLinkCriticalTotal}
             pendingCount={displayPendingCount}
             verifiedCount={displayVerifiedCount}
-            activeFilter={statusFilter}
-            onFilterChange={(filter) => {
-              setStatusFilter(filter)
-            }}
             onPrev={navigateToPrevCritical}
             onNext={navigateToNextCritical}
             onVesselClick={() => {
@@ -2306,7 +2291,6 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
                 }
               }}
               verifiedFields={verifiedVesLinkFields}
-              statusFilter={statusFilter}
               onFormReady={(getFieldValue) => {
                 getVesLinkFieldValueRef.current = getFieldValue
               }}

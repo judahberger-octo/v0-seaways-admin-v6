@@ -40,7 +40,6 @@ interface VesLinkFormProps {
   editedFields: Set<string>
   onFieldEdit: (fieldId: string, value: string) => void
   verifiedFields?: Set<string>
-  statusFilter?: "pending" | "verified"
   onFormReady?: (getFieldValue: (fieldId: string) => string) => void
 }
 
@@ -206,9 +205,6 @@ function CriticalIndicator({ fieldId, isVerified, isManualFill = false }: { fiel
   return <Star className="w-3.5 h-3.5 text-[#dc2626] flex-shrink-0" fill="#dc2626" />
 }
 
-// Context for passing statusFilter to child components
-const StatusFilterContext = React.createContext<"pending" | "verified">("pending")
-
 // Validation function type for soft warnings
 type ValidationFn = (value: string) => string | null
 
@@ -242,14 +238,6 @@ function VLInput({
 }) {
   // Compute validation warning
   const validationWarning = validate && value ? validate(value) : null
-  const statusFilter = React.useContext(StatusFilterContext)
-  
-  // Calculate opacity based on status filter - dim non-matching fields
-  const getDimClass = () => {
-    if (statusFilter === "pending" && isVerified) return "opacity-40"
-    if (statusFilter === "verified" && !isVerified) return "opacity-40"
-    return ""
-  }
   
   // Determine border color based on field state
   const getBorderStyle = () => {
@@ -291,7 +279,7 @@ function VLInput({
   }
   
   return (
-    <div className={`relative inline-flex flex-col transition-opacity duration-200 ${getDimClass()}`} style={{ width }}>
+    <div className="relative inline-flex flex-col" style={{ width }}>
       <input
         id={`vl-field-${id}`}
         type="text"
@@ -347,17 +335,8 @@ function VLSelect({
   isManualFill?: boolean
   validate?: ValidationFn
 }) {
-  const statusFilter = React.useContext(StatusFilterContext)
-  
   // Compute validation warning
   const validationWarning = validate && value ? validate(value) : null
-  
-  // Calculate opacity based on status filter - dim non-matching fields
-  const getDimClass = () => {
-    if (statusFilter === "pending" && isVerified) return "opacity-40"
-    if (statusFilter === "verified" && !isVerified) return "opacity-40"
-    return ""
-  }
   
   // Determine border color based on field state
   const getBorderStyle = () => {
@@ -392,7 +371,7 @@ function VLSelect({
   }
   
   return (
-    <div className={`relative inline-flex flex-col transition-opacity duration-200 ${getDimClass()}`} style={{ width }}>
+    <div className="relative inline-flex flex-col" style={{ width }}>
       <div className="relative">
         <select
           id={`vl-field-${id}`}
@@ -698,7 +677,6 @@ export function VesLinkForm({
   editedFields,
   onFieldEdit,
   verifiedFields = new Set(),
-  statusFilter = "pending",
   onFormReady
 }: VesLinkFormProps) {
   const [formData, setFormData] = useState(initialFormData)
@@ -729,7 +707,6 @@ export function VesLinkForm({
   const isCritical = (id: string) => CRITICAL_FIELDS_NOON_SEA.includes(id)
   
   return (
-    <StatusFilterContext.Provider value={statusFilter}>
     <div className="bg-white font-sans text-[13px]" style={{ fontFamily: "Arial, Helvetica, sans-serif" }}>
       {/* VesLink Header */}
       <div className="bg-[#2b3e50] px-4 py-3">
@@ -1274,6 +1251,5 @@ export function VesLinkForm({
         </div>
       </div>
     </div>
-    </StatusFilterContext.Provider>
   )
 }
