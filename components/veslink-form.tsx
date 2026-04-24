@@ -208,6 +208,9 @@ function CriticalIndicator({ fieldId, isVerified, isManualFill = false }: { fiel
 // Context for passing statusFilter to child components
 const StatusFilterContext = React.createContext<"pending" | "verified">("pending")
 
+// Validation function type for soft warnings
+type ValidationFn = (value: string) => string | null
+
 // Reusable input component that matches VesLink styling with color-coded borders
 function VLInput({ 
   id, 
@@ -220,7 +223,8 @@ function VLInput({
   width = "auto",
   className = "",
   isCritical = false,
-  isManualFill = false
+  isManualFill = false,
+  validate
 }: { 
   id: string
   value: string
@@ -233,7 +237,10 @@ function VLInput({
   className?: string
   isCritical?: boolean
   isManualFill?: boolean
+  validate?: ValidationFn
 }) {
+  // Compute validation warning
+  const validationWarning = validate && value ? validate(value) : null
   const statusFilter = React.useContext(StatusFilterContext)
   
   // Calculate opacity based on status filter - dim non-matching fields
@@ -283,7 +290,7 @@ function VLInput({
   }
   
   return (
-    <div className={`relative inline-block transition-opacity duration-200 ${getDimClass()}`} style={{ width }}>
+    <div className={`relative inline-flex flex-col transition-opacity duration-200 ${getDimClass()}`} style={{ width }}>
       <input
         id={`vl-field-${id}`}
         type="text"
@@ -300,6 +307,12 @@ function VLInput({
       />
       {isEdited && !isVerified && (
         <div className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
+      )}
+      {/* Validation warning - soft warning, non-blocking */}
+      {validationWarning && (
+        <span className="text-[10px] text-amber-600 mt-0.5 leading-tight whitespace-nowrap">
+          {validationWarning}
+        </span>
       )}
     </div>
   )
@@ -921,7 +934,14 @@ export function VesLinkForm({
               <VLInput id="observed-distance" value={formData["observed-distance"].value}
                 onChange={(v) => handleFieldChange("observed-distance", v)}
                 isSelected={isSelected("observed-distance")} isEdited={isEdited("observed-distance")} isVerified={isVerifiedField("observed-distance")}
-                onSelect={() => onFieldSelect("observed-distance")} width="100px" isManualFill={!isVerifiedField("observed-distance")} />
+                onSelect={() => onFieldSelect("observed-distance")} width="100px" isManualFill={!isVerifiedField("observed-distance")}
+                validate={(v) => {
+                  const num = parseFloat(v)
+                  if (isNaN(num)) return "Must be a number"
+                  if (num < 0) return "Must be >= 0"
+                  if (num > 1200) return "Unusually high for noon-to-noon"
+                  return null
+                }} />
             </FormRow>
             <FormRow label="Engine Distance (nm):" fieldId="engine-distance" labelWidth="150px" isVerified={isVerifiedField("engine-distance")} isManualFill={true}>
               <VLInput id="engine-distance" value={formData["engine-distance"]?.value || ""}
