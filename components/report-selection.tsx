@@ -39,7 +39,7 @@ const targetFormOptions = [
 
 export function ReportSelection({ onGenerate }: ReportSelectionProps) {
   const [selectedReports, setSelectedReports] = useState<string[]>(["1"])
-  const [selectedTargetForm, setSelectedTargetForm] = useState<string>("")
+  const [selectedTargetForm, setSelectedTargetForm] = useState<string>("Noon Report — In Port")
   const [showInfoBox, setShowInfoBox] = useState(true)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 

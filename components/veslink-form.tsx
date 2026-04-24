@@ -525,7 +525,7 @@ function BunkerFuelRow({
             onChange={(v) => handleFieldChange(robId, v)}
             isSelected={isSelected(robId)}
             isEdited={isEdited(robId)}
-            isVerified={isVerifiedField(robId)}
+            isVerified={isVerified(robId)}
             onSelect={() => onFieldSelect(robId)}
             width="55px"
           />
@@ -534,37 +534,37 @@ function BunkerFuelRow({
         <td className="border border-[#999] px-0.5 py-0.5">
           <VLInput id={`${prefix}-main`} value={formData[`${prefix}-main`]?.value || ""}
             onChange={(v) => handleFieldChange(`${prefix}-main`, v)}
-            isSelected={isSelected(`${prefix}-main`)} isEdited={isEdited(`${prefix}-main`)} isVerified={isVerifiedField(`${prefix}-main`)}
+            isSelected={isSelected(`${prefix}-main`)} isEdited={isEdited(`${prefix}-main`)} isVerified={isVerified(`${prefix}-main`)}
             onSelect={() => onFieldSelect(`${prefix}-main`)} width="40px" />
         </td>
         <td className="border border-[#999] px-0.5 py-0.5">
           <VLInput id={`${prefix}-prop`} value={formData[`${prefix}-prop`]?.value || ""}
             onChange={(v) => handleFieldChange(`${prefix}-prop`, v)}
-            isSelected={isSelected(`${prefix}-prop`)} isEdited={isEdited(`${prefix}-prop`)} isVerified={isVerifiedField(`${prefix}-prop`)}
+            isSelected={isSelected(`${prefix}-prop`)} isEdited={isEdited(`${prefix}-prop`)} isVerified={isVerified(`${prefix}-prop`)}
             onSelect={() => onFieldSelect(`${prefix}-prop`)} width="40px" />
         </td>
         <td className="border border-[#999] px-0.5 py-0.5">
           <VLInput id={`${prefix}-gen`} value={formData[`${prefix}-gen`]?.value || ""}
             onChange={(v) => handleFieldChange(`${prefix}-gen`, v)}
-            isSelected={isSelected(`${prefix}-gen`)} isEdited={isEdited(`${prefix}-gen`)} isVerified={isVerifiedField(`${prefix}-gen`)}
+            isSelected={isSelected(`${prefix}-gen`)} isEdited={isEdited(`${prefix}-gen`)} isVerified={isVerified(`${prefix}-gen`)}
             onSelect={() => onFieldSelect(`${prefix}-gen`)} width="40px" />
         </td>
         <td className="border border-[#999] px-0.5 py-0.5">
           <VLInput id={`${prefix}-disch`} value={formData[`${prefix}-disch`]?.value || ""}
             onChange={(v) => handleFieldChange(`${prefix}-disch`, v)}
-            isSelected={isSelected(`${prefix}-disch`)} isEdited={isEdited(`${prefix}-disch`)} isVerified={isVerifiedField(`${prefix}-disch`)}
+            isSelected={isSelected(`${prefix}-disch`)} isEdited={isEdited(`${prefix}-disch`)} isVerified={isVerified(`${prefix}-disch`)}
             onSelect={() => onFieldSelect(`${prefix}-disch`)} width="40px" />
         </td>
         <td className="border border-[#999] px-0.5 py-0.5">
           <VLInput id={`${prefix}-loading`} value={formData[`${prefix}-loading`]?.value || ""}
             onChange={(v) => handleFieldChange(`${prefix}-loading`, v)}
-            isSelected={isSelected(`${prefix}-loading`)} isEdited={isEdited(`${prefix}-loading`)} isVerified={isVerifiedField(`${prefix}-loading`)}
+            isSelected={isSelected(`${prefix}-loading`)} isEdited={isEdited(`${prefix}-loading`)} isVerified={isVerified(`${prefix}-loading`)}
             onSelect={() => onFieldSelect(`${prefix}-loading`)} width="40px" />
         </td>
         <td className="border border-[#999] px-0.5 py-0.5">
           <VLInput id={`${prefix}-igs`} value={formData[`${prefix}-igs`]?.value || ""}
             onChange={(v) => handleFieldChange(`${prefix}-igs`, v)}
-            isSelected={isSelected(`${prefix}-igs`)} isEdited={isEdited(`${prefix}-igs`)} isVerified={isVerifiedField(`${prefix}-igs`)}
+            isSelected={isSelected(`${prefix}-igs`)} isEdited={isEdited(`${prefix}-igs`)} isVerified={isVerified(`${prefix}-igs`)}
             onSelect={() => onFieldSelect(`${prefix}-igs`)} width="40px" />
         </td>
       </tr>
@@ -574,7 +574,7 @@ function BunkerFuelRow({
         <td className="border border-[#999] px-0.5 py-0.5">
           <VLInput id={`${prefix}-aux`} value={formData[`${prefix}-aux`]?.value || ""}
             onChange={(v) => handleFieldChange(`${prefix}-aux`, v)}
-            isSelected={isSelected(`${prefix}-aux`)} isEdited={isEdited(`${prefix}-aux`)} isVerified={isVerifiedField(`${prefix}-aux`)}
+            isSelected={isSelected(`${prefix}-aux`)} isEdited={isEdited(`${prefix}-aux`)} isVerified={isVerified(`${prefix}-aux`)}
             onSelect={() => onFieldSelect(`${prefix}-aux`)} width="40px" />
         </td>
         <td className="border border-[#999] px-0.5 py-0.5 text-[9px] text-[#666]" colSpan={5}>
@@ -587,30 +587,30 @@ function BunkerFuelRow({
         <td className="border border-[#999] px-0.5 py-0.5">
           <VLInput id={`${prefix}-total`} value={formData[`${prefix}-total`]?.value || ""}
             onChange={(v) => handleFieldChange(`${prefix}-total`, v)}
-            isSelected={isSelected(`${prefix}-total`)} isEdited={isEdited(`${prefix}-total`)} isVerified={isVerifiedField(`${prefix}-total`)}
+            isSelected={isSelected(`${prefix}-total`)} isEdited={isEdited(`${prefix}-total`)} isVerified={isVerified(`${prefix}-total`)}
             onSelect={() => onFieldSelect(`${prefix}-total`)} width="40px" />
         </td>
         <td className="border border-[#999] px-0.5 py-0.5" colSpan={5}>
           <div className="flex gap-1">
             <VLInput id={`${prefix}-cargo-heat`} value={formData[`${prefix}-cargo-heat`]?.value || ""}
               onChange={(v) => handleFieldChange(`${prefix}-cargo-heat`, v)}
-              isSelected={isSelected(`${prefix}-cargo-heat`)} isEdited={isEdited(`${prefix}-cargo-heat`)} isVerified={isVerifiedField(`${prefix}-cargo-heat`)}
+              isSelected={isSelected(`${prefix}-cargo-heat`)} isEdited={isEdited(`${prefix}-cargo-heat`)} isVerified={isVerified(`${prefix}-cargo-heat`)}
               onSelect={() => onFieldSelect(`${prefix}-cargo-heat`)} width="35px" />
             <VLInput id={`${prefix}-bunker-heat`} value={formData[`${prefix}-bunker-heat`]?.value || ""}
               onChange={(v) => handleFieldChange(`${prefix}-bunker-heat`, v)}
-              isSelected={isSelected(`${prefix}-bunker-heat`)} isEdited={isEdited(`${prefix}-bunker-heat`)} isVerified={isVerifiedField(`${prefix}-bunker-heat`)}
+              isSelected={isSelected(`${prefix}-bunker-heat`)} isEdited={isEdited(`${prefix}-bunker-heat`)} isVerified={isVerified(`${prefix}-bunker-heat`)}
               onSelect={() => onFieldSelect(`${prefix}-bunker-heat`)} width="35px" />
             <VLInput id={`${prefix}-tank-clean`} value={formData[`${prefix}-tank-clean`]?.value || ""}
               onChange={(v) => handleFieldChange(`${prefix}-tank-clean`, v)}
-              isSelected={isSelected(`${prefix}-tank-clean`)} isEdited={isEdited(`${prefix}-tank-clean`)} isVerified={isVerifiedField(`${prefix}-tank-clean`)}
+              isSelected={isSelected(`${prefix}-tank-clean`)} isEdited={isEdited(`${prefix}-tank-clean`)} isVerified={isVerified(`${prefix}-tank-clean`)}
               onSelect={() => onFieldSelect(`${prefix}-tank-clean`)} width="35px" />
             <VLInput id={`${prefix}-other`} value={formData[`${prefix}-other`]?.value || ""}
               onChange={(v) => handleFieldChange(`${prefix}-other`, v)}
-              isSelected={isSelected(`${prefix}-other`)} isEdited={isEdited(`${prefix}-other`)} isVerified={isVerifiedField(`${prefix}-other`)}
+              isSelected={isSelected(`${prefix}-other`)} isEdited={isEdited(`${prefix}-other`)} isVerified={isVerified(`${prefix}-other`)}
               onSelect={() => onFieldSelect(`${prefix}-other`)} width="35px" />
             <VLInput id={`${prefix}-adj`} value={formData[`${prefix}-adj`]?.value || ""}
               onChange={(v) => handleFieldChange(`${prefix}-adj`, v)}
-              isSelected={isSelected(`${prefix}-adj`)} isEdited={isEdited(`${prefix}-adj`)} isVerified={isVerifiedField(`${prefix}-adj`)}
+              isSelected={isSelected(`${prefix}-adj`)} isEdited={isEdited(`${prefix}-adj`)} isVerified={isVerified(`${prefix}-adj`)}
               onSelect={() => onFieldSelect(`${prefix}-adj`)} width="35px" />
           </div>
         </td>
