@@ -6,6 +6,7 @@ import {
   MessageSquare, 
   Sparkles, 
   Layers,
+  Waves,
   Settings,
   Calendar,
   FileText,
@@ -181,6 +182,13 @@ export function AppShell({
             title="Report Management"
           >
             <Layers className="w-5 h-5" />
+          </button>
+          {/* Waves - Voyages/Fleet view (decorative per Figma) */}
+          <button 
+            className="w-10 h-10 flex items-center justify-center rounded-lg text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155] transition-colors"
+            title="Voyages"
+          >
+            <Waves className="w-5 h-5" />
           </button>
         </nav>
 
