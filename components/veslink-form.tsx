@@ -330,7 +330,8 @@ function VLSelect({
   onSelect,
   width = "auto",
   isCritical = false,
-  isManualFill = false
+  isManualFill = false,
+  validate
 }: { 
   id: string
   value: string
@@ -343,8 +344,12 @@ function VLSelect({
   width?: string
   isCritical?: boolean
   isManualFill?: boolean
+  validate?: ValidationFn
 }) {
   const statusFilter = React.useContext(StatusFilterContext)
+  
+  // Compute validation warning
+  const validationWarning = validate && value ? validate(value) : null
   
   // Calculate opacity based on status filter - dim non-matching fields
   const getDimClass = () => {
@@ -386,26 +391,34 @@ function VLSelect({
   }
   
   return (
-    <div className={`relative inline-block transition-opacity duration-200 ${getDimClass()}`} style={{ width }}>
-      <select
-        id={`vl-field-${id}`}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onClick={onSelect}
-        className={`
-          w-full h-6 px-1 text-[13px] bg-white transition-all duration-300
-          focus:outline-none appearance-none cursor-pointer
-          ${getBorderStyle()}
-        `}
-        style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
-      >
-        {options.map(opt => (
-          <option key={opt} value={opt}>{opt}</option>
-        ))}
-      </select>
-      <div className="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-[10px]">▼</div>
-      {isEdited && !isVerified && (
-        <div className="absolute top-0.5 right-4 w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
+    <div className={`relative inline-flex flex-col transition-opacity duration-200 ${getDimClass()}`} style={{ width }}>
+      <div className="relative">
+        <select
+          id={`vl-field-${id}`}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onClick={onSelect}
+          className={`
+            w-full h-6 px-1 text-[13px] bg-white transition-all duration-300
+            focus:outline-none appearance-none cursor-pointer
+            ${getBorderStyle()}
+          `}
+          style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
+        >
+          {options.map(opt => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+        <div className="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-[10px]">▼</div>
+        {isEdited && !isVerified && (
+          <div className="absolute top-0.5 right-4 w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
+        )}
+      </div>
+      {/* Validation warning - soft warning, non-blocking */}
+      {validationWarning && (
+        <span className="text-[10px] text-amber-600 mt-0.5 leading-tight whitespace-nowrap">
+          {validationWarning}
+        </span>
       )}
     </div>
   )
@@ -1099,7 +1112,11 @@ export function VesLinkForm({
                 options={formData["sea-state"].options || []}
                 onChange={(v) => handleFieldChange("sea-state", v)}
                 isSelected={isSelected("sea-state")} isEdited={isEdited("sea-state")} isVerified={isVerifiedField("sea-state")}
-                onSelect={() => onFieldSelect("sea-state")} width="140px" isManualFill={!isVerifiedField("sea-state")} />
+                onSelect={() => onFieldSelect("sea-state")} width="160px" isManualFill={!isVerifiedField("sea-state")}
+                validate={(v) => {
+                  if (!v || v === "Select...") return "Selection required"
+                  return null
+                }} />
             </FormRow>
             <FormRow label="Sea Height:" labelWidth="130px">
               <VLInput id="sea-height" value={formData["sea-height"].value}

@@ -560,7 +560,9 @@ function SingleFieldFocusPane({
 
         {/* Large Value Display */}
         <h2 className="text-3xl font-semibold text-gray-900 mb-3">
-          {isManualFill ? (manualFillValue || "—") : (field.value || "—")}
+          {isManualFill 
+            ? (manualFillValue && manualFillValue !== "Select..." ? manualFillValue : "—") 
+            : (field.value || "—")}
           {field.unit && <span className="text-xl text-gray-500 ml-1">{field.unit}</span>}
         </h2>
 
