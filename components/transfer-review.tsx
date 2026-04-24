@@ -27,7 +27,7 @@ import {
   MessageSquare
 } from "lucide-react"
 import { AdminTestingSuite } from "./admin-testing-suite"
-import { VesLinkForm, CRITICAL_FIELDS_NOON_SEA } from "./veslink-form"
+import { VesLinkForm, CRITICAL_FIELDS_NOON_SEA, MANUAL_FILL_FIELDS } from "./veslink-form"
 import { NavtorScreenshot } from "./navtor-screenshot"
 import { 
   UnsavedReportModal, 
@@ -1890,10 +1890,30 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
   const criticalVerified = criticalFields.filter((f) => f.status === "verified").length
   const criticalTotal = criticalFields.length
   
-  // VesLink critical fields - using the exported list
+  // VesLink critical and manual-fill field tracking
   const vesLinkCriticalTotal = CRITICAL_FIELDS_NOON_SEA.length
   const vesLinkCriticalVerified = verifiedVesLinkFields.size
-  const canSubmit = vesLinkCriticalVerified === vesLinkCriticalTotal
+  
+  // Manual fill fields - track separately
+  const manualFillFieldIds = MANUAL_FILL_FIELDS
+  const manualFillVerified = manualFillFieldIds.filter(id => verifiedVesLinkFields.has(id)).length
+  const manualFillTotal = manualFillFieldIds.length
+  
+  // Critical fields (excluding manual-fill)
+  const criticalOnlyFieldIds = CRITICAL_FIELDS_NOON_SEA.filter(id => !MANUAL_FILL_FIELDS.includes(id))
+  const criticalOnlyVerified = criticalOnlyFieldIds.filter(id => verifiedVesLinkFields.has(id)).length
+  const criticalOnlyTotal = criticalOnlyFieldIds.length
+  
+  // Updated counts for Pending/Verified toggle
+  // Pending = critical-pending + manualFill-pending + manualFill-entered-not-confirmed
+  // Verified = critical-verified + manualFill-confirmed
+  const displayPendingCount = (criticalOnlyTotal - criticalOnlyVerified) + (manualFillTotal - manualFillVerified)
+  const displayVerifiedCount = criticalOnlyVerified + manualFillVerified
+  
+  // Submit gating: ALL critical fields verified/flagged AND ALL manualFill fields confirmed/flagged
+  const allCriticalDone = criticalOnlyVerified === criticalOnlyTotal
+  const allManualFillDone = manualFillVerified === manualFillTotal
+  const canSubmit = allCriticalDone && allManualFillDone
 
   const toggleSection = (sectionId: string) => {
     setSections((prev) =>
@@ -2016,11 +2036,38 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
     return nextField
   }, [sections])
 
-  // Navigate to next critical field (cycles through all critical fields)
+  // Compute sorted field order for navigation:
+  // (1) critical-pending, (2) manualFill-pending/entered, (3) flagged, (4) verified/everything else
+  const getSortedFieldIds = useCallback(() => {
+    const criticalPending: string[] = []
+    const manualFillPending: string[] = []
+    const flagged: string[] = []
+    const verified: string[] = []
+    
+    CRITICAL_FIELDS_NOON_SEA.forEach(fieldId => {
+      const isVerified = verifiedVesLinkFields.has(fieldId)
+      const isManualFillField = MANUAL_FILL_FIELDS.includes(fieldId)
+      
+      // For now, we don't have a separate flagged state tracking, so treat all non-verified as pending
+      if (isVerified) {
+        verified.push(fieldId)
+      } else if (isManualFillField) {
+        manualFillPending.push(fieldId)
+      } else {
+        criticalPending.push(fieldId)
+      }
+    })
+    
+    // Return in priority order: critical-pending -> manualFill-pending -> flagged -> verified
+    return [...criticalPending, ...manualFillPending, ...flagged, ...verified]
+  }, [verifiedVesLinkFields])
+
+  // Navigate to next critical field (cycles through all critical fields in priority order)
   const navigateToNextCritical = useCallback(() => {
-    const totalCritical = CRITICAL_FIELDS_NOON_SEA.length
+    const sortedFields = getSortedFieldIds()
+    const totalCritical = sortedFields.length
     const nextIndex = (currentCriticalIndex % totalCritical) + 1
-    const nextFieldId = CRITICAL_FIELDS_NOON_SEA[nextIndex - 1]
+    const nextFieldId = sortedFields[nextIndex - 1]
     
     if (nextFieldId) {
       // Create a mock field object for the left panel with proper metadata
@@ -2056,13 +2103,14 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
         fieldCard.scrollIntoView({ behavior: "smooth", block: "center" })
       }
     }
-  }, [currentCriticalIndex, verifiedVesLinkFields, scrollToVesLinkField])
+  }, [currentCriticalIndex, verifiedVesLinkFields, scrollToVesLinkField, getSortedFieldIds])
 
-  // Navigate to previous critical field (cycles through all critical fields)
+  // Navigate to previous critical field (cycles through all critical fields in priority order)
   const navigateToPrevCritical = useCallback(() => {
-    const totalCritical = CRITICAL_FIELDS_NOON_SEA.length
+    const sortedFields = getSortedFieldIds()
+    const totalCritical = sortedFields.length
     const prevIndex = currentCriticalIndex <= 1 ? totalCritical : currentCriticalIndex - 1
-    const prevFieldId = CRITICAL_FIELDS_NOON_SEA[prevIndex - 1]
+    const prevFieldId = sortedFields[prevIndex - 1]
     
     if (prevFieldId) {
       const metadata = getFieldMetadata(prevFieldId)
@@ -2097,7 +2145,7 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
         fieldCard.scrollIntoView({ behavior: "smooth", block: "center" })
       }
     }
-  }, [currentCriticalIndex, verifiedVesLinkFields, scrollToVesLinkField])
+  }, [currentCriticalIndex, verifiedVesLinkFields, scrollToVesLinkField, getSortedFieldIds])
 
   const handleVerify = useCallback(() => {
     if (!selectedField) return
@@ -2121,10 +2169,13 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
     // Update selected field to reflect new status
     setSelectedField({ ...selectedField, status: "verified" })
     
-    // Check if this was the last critical field
+    // Check if this was the last required field (critical + manual-fill)
     const newVerifiedCount = verifiedVesLinkFields.size + 1
-    if (isCriticalField && newVerifiedCount === vesLinkCriticalTotal) {
-      setToast({ message: "All critical fields verified — ready to submit", type: "success" })
+    const allCriticalNowDone = criticalOnlyFieldIds.filter(id => verifiedVesLinkFields.has(id) || id === fieldId).length === criticalOnlyTotal
+    const allManualFillNowDone = manualFillFieldIds.filter(id => verifiedVesLinkFields.has(id) || id === fieldId).length === manualFillTotal
+    
+    if (allCriticalNowDone && allManualFillNowDone) {
+      setToast({ message: "All required fields confirmed — ready to submit", type: "success" })
       return
     }
     
@@ -2350,8 +2401,8 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
             vesselName="SEAWAYS SKOPELOS"
             currentIndex={currentCriticalIndex}
             totalCount={vesLinkCriticalTotal}
-            pendingCount={vesLinkCriticalTotal - vesLinkCriticalVerified}
-            verifiedCount={vesLinkCriticalVerified}
+            pendingCount={displayPendingCount}
+            verifiedCount={displayVerifiedCount}
             activeFilter={statusFilter}
             onFilterChange={(filter) => {
               setStatusFilter(filter)
