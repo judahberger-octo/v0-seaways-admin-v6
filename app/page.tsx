@@ -4,6 +4,7 @@ import { useState } from "react"
 import { AppShell } from "@/components/app-shell"
 import { ReportSelection } from "@/components/report-selection"
 import { TransferReview } from "@/components/transfer-review"
+import { DraftsPage } from "@/components/drafts-page"
 import { HistoryPage } from "@/components/history-page"
 
 type AppView = "selection" | "review"
@@ -62,12 +63,10 @@ export default function Home() {
             <ReportSelection onGenerate={handleGenerate} />
           )}
           {activeTab === "drafts" && (
-            <div className="flex items-center justify-center h-full text-[#64748b]">
-              <div className="text-center">
-                <p className="text-lg font-medium">Drafts</p>
-                <p className="text-sm">2 transfers pending review</p>
-              </div>
-            </div>
+            <DraftsPage onEditDraft={(draftId) => {
+              setSelectedReportId(draftId)
+              setCurrentView("review")
+            }} />
           )}
           {activeTab === "history" && (
             <HistoryPage onViewReport={handleViewHistoryReport} />
