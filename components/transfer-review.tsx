@@ -1197,6 +1197,10 @@ function HighlightsNavBar({
   vesselName,
   currentIndex,
   totalCount,
+  pendingCount,
+  verifiedCount,
+  activeFilter,
+  onFilterChange,
   onPrev,
   onNext,
   onVesselClick,
@@ -1204,6 +1208,10 @@ function HighlightsNavBar({
   vesselName: string
   currentIndex: number
   totalCount: number
+  pendingCount: number
+  verifiedCount: number
+  activeFilter: "pending" | "verified"
+  onFilterChange: (filter: "pending" | "verified") => void
   onPrev: () => void
   onNext: () => void
   onVesselClick: () => void
@@ -1221,25 +1229,55 @@ function HighlightsNavBar({
         </button>
       </div>
       
-      {/* Right side - Counter + navigation */}
-      <div className="flex items-center gap-1">
-        <span className="text-xs text-gray-600 font-medium mr-1">
-          {currentIndex} / {totalCount}
-        </span>
-        <button
-          onClick={onPrev}
-          className="p-1 hover:bg-gray-100 rounded transition-colors"
-          title="Previous critical field (P)"
-        >
-          <ChevronUp className="w-4 h-4 text-gray-500" />
-        </button>
-        <button
-          onClick={onNext}
-          className="p-1 hover:bg-gray-100 rounded transition-colors"
-          title="Next critical field (N)"
-        >
-          <ChevronDown className="w-4 h-4 text-gray-500" />
-        </button>
+      {/* Right side - Status toggle + Counter + navigation */}
+      <div className="flex items-center gap-4">
+        {/* Status Filter Toggle */}
+        <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+          <button
+            onClick={() => onFilterChange("pending")}
+            className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors ${
+              activeFilter === "pending"
+                ? "bg-purple-50 text-purple-700"
+                : "text-gray-500 hover:bg-gray-50"
+            }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            Pending ({pendingCount})
+          </button>
+          <div className="w-px h-4 bg-gray-200" />
+          <button
+            onClick={() => onFilterChange("verified")}
+            className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors ${
+              activeFilter === "verified"
+                ? "bg-green-50 text-green-700"
+                : "text-gray-500 hover:bg-gray-50"
+            }`}
+          >
+            <Check className="w-3 h-3" />
+            Verified ({verifiedCount})
+          </button>
+        </div>
+
+        {/* Counter + navigation */}
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-gray-600 font-medium mr-1">
+            {currentIndex} / {totalCount}
+          </span>
+          <button
+            onClick={onPrev}
+            className="p-1 hover:bg-gray-100 rounded transition-colors"
+            title="Previous critical field (P)"
+          >
+            <ChevronUp className="w-4 h-4 text-gray-500" />
+          </button>
+          <button
+            onClick={onNext}
+            className="p-1 hover:bg-gray-100 rounded transition-colors"
+            title="Next critical field (N)"
+          >
+            <ChevronDown className="w-4 h-4 text-gray-500" />
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -1327,6 +1365,7 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
   const [currentCriticalIndex, setCurrentCriticalIndex] = useState(0)
   const [activeIconRailItem, setActiveIconRailItem] = useState<IconRailItem>("ai")
   const [showNavSidebar, setShowNavSidebar] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<"pending" | "verified">("pending")
 
   // Get the section name for the selected field - supports VesLink field IDs
   const getFieldSectionName = (fieldId: string) => {
@@ -1804,6 +1843,12 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
             vesselName="SEAWAYS SKOPELOS"
             currentIndex={currentCriticalIndex}
             totalCount={vesLinkCriticalTotal}
+            pendingCount={vesLinkCriticalTotal - vesLinkCriticalVerified}
+            verifiedCount={vesLinkCriticalVerified}
+            activeFilter={statusFilter}
+            onFilterChange={(filter) => {
+              setStatusFilter(filter)
+            }}
             onPrev={navigateToPrevCritical}
             onNext={navigateToNextCritical}
             onVesselClick={() => {

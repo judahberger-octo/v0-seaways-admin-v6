@@ -1,13 +1,16 @@
 "use client"
 
+import { useState } from "react"
 import { 
   Search, 
   MessageSquare, 
   Sparkles, 
   Layers,
   Settings,
-  User,
-  ArrowLeft
+  Calendar,
+  FileText,
+  Pencil,
+  X
 } from "lucide-react"
 
 interface AppShellProps {
@@ -94,53 +97,44 @@ export function AppShell({
       {/* Main Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {isReviewMode && reviewData ? (
-          // Transfer Review Header
-          <header className="h-14 border-b border-[#e2e8f0] bg-white flex items-center justify-between px-6 flex-shrink-0">
-            {/* Left - Back + Report Info */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={onBackFromReview}
-                className="p-1.5 hover:bg-[#f1f5f9] rounded-lg transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4 text-[#64748b]" />
-              </button>
-              <span className="font-semibold text-sm text-[#0f172a]">{reviewData.vesselName}</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-[#f97316] text-white font-medium">
-                {reviewData.reportType}
+          // Transfer Review Header - Redesigned per PROMPT 6
+          <header className="h-12 border-b border-[#e2e8f0] bg-white flex items-center justify-between px-6 flex-shrink-0">
+            {/* Left - Last Saved Timestamp */}
+            <div className="flex items-center gap-2 group relative">
+              <Calendar className="w-4 h-4 text-[#64748b]" />
+              <span className="text-sm text-[#64748b]">
+                Last saved: January 25, 2026 2:03 AM
               </span>
-              <span className="text-xs text-[#94a3b8]">Report #{reviewData.reportId}</span>
+              {/* Tooltip on hover */}
+              <div className="absolute left-0 top-full mt-2 px-3 py-2 bg-[#0f172a] text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 shadow-lg">
+                Saved by chief.officer@seaways.com at 2:03 AM
+                <div className="absolute -top-1 left-4 w-2 h-2 bg-[#0f172a] rotate-45" />
+              </div>
             </div>
 
-            {/* Right - Actions */}
+            {/* Center - Form Title + Edit + Status */}
             <div className="flex items-center gap-2">
-              {/* Admin Toggle */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] text-[#94a3b8]">Admin</span>
-                <button
-                  onClick={() => onAdminModeChange?.(!isAdminMode)}
-                  className={`relative w-8 h-4 rounded-full transition-colors ${
-                    isAdminMode ? "bg-[#7c3aed]" : "bg-[#e2e8f0]"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${
-                      isAdminMode ? "translate-x-4" : "translate-x-0"
-                    }`}
-                  />
-                </button>
-                {isAdminMode && (
-                  <span className="text-[10px] font-medium text-[#7c3aed] bg-[#ede9fe] px-1.5 py-0.5 rounded">
-                    ON
-                  </span>
-                )}
-              </div>
-              
-              <div className="h-4 w-px bg-[#e2e8f0]" />
-
-              <span className="text-xs px-2 py-0.5 rounded bg-[#e2e8f0] text-[#64748b] font-medium">
+              <FileText className="w-4 h-4 text-[#64748b]" />
+              <span className="text-sm font-medium text-[#0f172a]">
+                Form - In Port Noon Report Unav 5.0
+              </span>
+              <button className="p-1 hover:bg-[#f1f5f9] rounded transition-colors">
+                <Pencil className="w-3.5 h-3.5 text-[#64748b]" />
+              </button>
+              <span className="text-[#94a3b8] mx-1">•</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-[#f1f5f9] text-[#64748b] font-medium flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#7c3aed]" />
                 Draft
               </span>
             </div>
+
+            {/* Right - Close Button */}
+            <button
+              onClick={onBackFromReview}
+              className="p-1.5 hover:bg-[#f1f5f9] rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-[#64748b]" />
+            </button>
           </header>
         ) : (
           // Standard Page Header with Tabs
