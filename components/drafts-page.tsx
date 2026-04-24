@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Search, SlidersHorizontal, Download, Filter, MoreHorizontal, Eye, Pencil, Trash2 } from "lucide-react"
+import { DeleteDraftModal } from "./modals"
 
 interface Draft {
   id: string
@@ -34,6 +35,8 @@ interface DraftsPageProps {
 
 export function DraftsPage({ onEditDraft }: DraftsPageProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [draftToDelete, setDraftToDelete] = useState<string | null>(null)
 
   const handleRowClick = (draftId: string) => {
     onEditDraft(draftId)
@@ -59,7 +62,14 @@ export function DraftsPage({ onEditDraft }: DraftsPageProps) {
   const handleDeleteDraft = (e: React.MouseEvent, draftId: string) => {
     e.stopPropagation()
     setOpenMenuId(null)
-    // Delete logic here
+    setDraftToDelete(draftId)
+    setShowDeleteModal(true)
+  }
+
+  const confirmDelete = () => {
+    // Delete logic here - would remove from list
+    setShowDeleteModal(false)
+    setDraftToDelete(null)
   }
 
   return (
@@ -165,6 +175,21 @@ export function DraftsPage({ onEditDraft }: DraftsPageProps) {
           </table>
         </div>
       </div>
+
+      {/* Delete Draft Confirmation Modal */}
+      <DeleteDraftModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false)
+          setDraftToDelete(null)
+        }}
+        draftId={draftToDelete || ""}
+        onCancel={() => {
+          setShowDeleteModal(false)
+          setDraftToDelete(null)
+        }}
+        onDelete={confirmDelete}
+      />
     </div>
   )
 }

@@ -14,6 +14,7 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<AppView>("selection")
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
   const [isAdminMode, setIsAdminMode] = useState(false)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(true) // Default to true when in review mode
 
   // Mock review data - in real app this would come from the TransferReview state
   const reviewData = currentView === "review" ? {
@@ -50,6 +51,10 @@ export default function Home() {
       isReviewMode={currentView === "review"}
       reviewData={reviewData}
       onBackFromReview={handleBackToSelection}
+      hasUnsavedChanges={currentView === "review" && hasUnsavedChanges}
+      onSaveAsDraft={() => {
+        setHasUnsavedChanges(false)
+      }}
     >
       {currentView === "review" && selectedReportId ? (
         <TransferReview 

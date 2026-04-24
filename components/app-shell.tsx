@@ -12,6 +12,7 @@ import {
   Pencil,
   X
 } from "lucide-react"
+import { UnsavedReportModal, DiscardReportModal } from "./modals"
 
 interface AppShellProps {
   activeTab: "new-transfer" | "drafts" | "history"
@@ -35,6 +36,8 @@ interface AppShellProps {
     total: number
   }
   onBackFromReview?: () => void
+  hasUnsavedChanges?: boolean
+  onSaveAsDraft?: () => void
 }
 
 export function AppShell({ 
@@ -48,8 +51,42 @@ export function AppShell({
   historyCount = 15,
   isReviewMode = false,
   reviewData,
-  onBackFromReview
+  onBackFromReview,
+  hasUnsavedChanges = false,
+  onSaveAsDraft
 }: AppShellProps) {
+  // Modal states for close flow
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false)
+  const [showDiscardModal, setShowDiscardModal] = useState(false)
+
+  // Handle close button click
+  const handleCloseClick = () => {
+    if (hasUnsavedChanges) {
+      setShowUnsavedModal(true)
+    } else {
+      onBackFromReview?.()
+    }
+  }
+
+  // Handle save as draft from unsaved modal
+  const handleSaveAsDraft = () => {
+    onSaveAsDraft?.()
+    setShowUnsavedModal(false)
+    onBackFromReview?.()
+  }
+
+  // Handle discard click (shows confirmation)
+  const handleDiscardClick = () => {
+    setShowUnsavedModal(false)
+    setShowDiscardModal(true)
+  }
+
+  // Handle final discard confirmation
+  const handleConfirmDiscard = () => {
+    setShowDiscardModal(false)
+    onBackFromReview?.()
+  }
+
   const tabs = [
     { id: "new-transfer" as const, label: "New transfer", count: newTransferCount },
     { id: "drafts" as const, label: "Drafts", count: draftsCount },
@@ -130,7 +167,7 @@ export function AppShell({
 
             {/* Right - Close Button */}
             <button
-              onClick={onBackFromReview}
+              onClick={handleCloseClick}
               className="p-1.5 hover:bg-[#f1f5f9] rounded-lg transition-colors"
             >
               <X className="w-5 h-5 text-[#64748b]" />
@@ -177,6 +214,23 @@ export function AppShell({
           {children}
         </main>
       </div>
+
+      {/* Modals */}
+      <UnsavedReportModal
+        isOpen={showUnsavedModal}
+        onClose={() => setShowUnsavedModal(false)}
+        onSaveAsDraft={handleSaveAsDraft}
+        onDiscard={handleDiscardClick}
+      />
+      <DiscardReportModal
+        isOpen={showDiscardModal}
+        onClose={() => setShowDiscardModal(false)}
+        onCancel={() => {
+          setShowDiscardModal(false)
+          setShowUnsavedModal(true)
+        }}
+        onConfirmDiscard={handleConfirmDiscard}
+      />
     </div>
   )
 }

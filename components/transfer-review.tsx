@@ -29,6 +29,11 @@ import {
 import { AdminTestingSuite } from "./admin-testing-suite"
 import { VesLinkForm, CRITICAL_FIELDS_NOON_SEA } from "./veslink-form"
 import { NavtorScreenshot } from "./navtor-screenshot"
+import { 
+  UnsavedReportModal, 
+  DiscardReportModal, 
+  FlagFieldModal 
+} from "./modals"
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from "lucide-react"
 
 // Field status types
@@ -1642,6 +1647,12 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
   const [showNavSidebar, setShowNavSidebar] = useState(false)
   const [statusFilter, setStatusFilter] = useState<"pending" | "verified">("pending")
   const [showValidationMessage, setShowValidationMessage] = useState(true)
+  
+  // Modal states
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false)
+  const [showDiscardModal, setShowDiscardModal] = useState(false)
+  const [showFlagModal, setShowFlagModal] = useState(false)
+  const [fieldToFlag, setFieldToFlag] = useState<{ id: string; name: string } | null>(null)
 
   // Get the section name for the selected field - supports VesLink field IDs
   const getFieldSectionName = (fieldId: string) => {
@@ -2075,7 +2086,8 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
             onVerify={handleVerify}
             onFlag={() => {
               if (selectedField) {
-                setToast({ message: `Field "${selectedField.label}" flagged for review`, type: "warning" })
+                setFieldToFlag({ id: selectedField.id, name: selectedField.label })
+                setShowFlagModal(true)
               }
             }}
             onNavigate={(direction) => {
@@ -2211,6 +2223,28 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
           </button>
         </div>
       </div>
+
+      {/* Flag Field Modal */}
+      <FlagFieldModal
+        isOpen={showFlagModal}
+        onClose={() => {
+          setShowFlagModal(false)
+          setFieldToFlag(null)
+        }}
+        fieldName={fieldToFlag?.name || ""}
+        onCancel={() => {
+          setShowFlagModal(false)
+          setFieldToFlag(null)
+        }}
+        onSubmit={(reason, comment) => {
+          setShowFlagModal(false)
+          setToast({ 
+            message: `Field "${fieldToFlag?.name}" flagged for review`, 
+            type: "warning" 
+          })
+          setFieldToFlag(null)
+        }}
+      />
     </div>
   )
 }
