@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import React, { useState, useCallback } from "react"
 import { Check, Star } from "lucide-react"
 
 // EXACT Critical fields for Noon-Sea reports per Avinash's list (16 fields total)
@@ -30,6 +30,7 @@ interface VesLinkFormProps {
   editedFields: Set<string>
   onFieldEdit: (fieldId: string, value: string) => void
   verifiedFields?: Set<string>
+  statusFilter?: "pending" | "verified"
 }
 
 // Form field data structure
@@ -184,6 +185,9 @@ function CriticalIndicator({ fieldId, isVerified }: { fieldId: string; isVerifie
   )
 }
 
+// Context for passing statusFilter to child components
+const StatusFilterContext = React.createContext<"pending" | "verified">("pending")
+
 // Reusable input component that matches VesLink styling with color-coded borders
 function VLInput({ 
   id, 
@@ -208,6 +212,15 @@ function VLInput({
   className?: string
   isCritical?: boolean
 }) {
+  const statusFilter = React.useContext(StatusFilterContext)
+  
+  // Calculate opacity based on status filter - dim non-matching fields
+  const getDimClass = () => {
+    if (statusFilter === "pending" && isVerified) return "opacity-40"
+    if (statusFilter === "verified" && !isVerified) return "opacity-40"
+    return ""
+  }
+  
   // Determine border color based on field state
   const getBorderStyle = () => {
     if (isVerified) {
@@ -235,7 +248,7 @@ function VLInput({
   }
   
   return (
-    <div className="relative inline-block" style={{ width }}>
+    <div className={`relative inline-block transition-opacity duration-200 ${getDimClass()}`} style={{ width }}>
       <input
         id={`vl-field-${id}`}
         type="text"
@@ -281,6 +294,15 @@ function VLSelect({
   width?: string
   isCritical?: boolean
 }) {
+  const statusFilter = React.useContext(StatusFilterContext)
+  
+  // Calculate opacity based on status filter - dim non-matching fields
+  const getDimClass = () => {
+    if (statusFilter === "pending" && isVerified) return "opacity-40"
+    if (statusFilter === "verified" && !isVerified) return "opacity-40"
+    return ""
+  }
+  
   // Determine border color based on field state
   const getBorderStyle = () => {
     if (isVerified) {
@@ -308,7 +330,7 @@ function VLSelect({
   }
   
   return (
-    <div className="relative inline-block" style={{ width }}>
+    <div className={`relative inline-block transition-opacity duration-200 ${getDimClass()}`} style={{ width }}>
       <select
         id={`vl-field-${id}`}
         value={value}
@@ -503,7 +525,7 @@ function BunkerFuelRow({
             onChange={(v) => handleFieldChange(robId, v)}
             isSelected={isSelected(robId)}
             isEdited={isEdited(robId)}
-            isVerified={isVerified(robId)}
+            isVerified={isVerifiedField(robId)}
             onSelect={() => onFieldSelect(robId)}
             width="55px"
           />
@@ -512,37 +534,37 @@ function BunkerFuelRow({
         <td className="border border-[#999] px-0.5 py-0.5">
           <VLInput id={`${prefix}-main`} value={formData[`${prefix}-main`]?.value || ""}
             onChange={(v) => handleFieldChange(`${prefix}-main`, v)}
-            isSelected={isSelected(`${prefix}-main`)} isEdited={isEdited(`${prefix}-main`)} isVerified={isVerified(`${prefix}-main`)}
+            isSelected={isSelected(`${prefix}-main`)} isEdited={isEdited(`${prefix}-main`)} isVerified={isVerifiedField(`${prefix}-main`)}
             onSelect={() => onFieldSelect(`${prefix}-main`)} width="40px" />
         </td>
         <td className="border border-[#999] px-0.5 py-0.5">
           <VLInput id={`${prefix}-prop`} value={formData[`${prefix}-prop`]?.value || ""}
             onChange={(v) => handleFieldChange(`${prefix}-prop`, v)}
-            isSelected={isSelected(`${prefix}-prop`)} isEdited={isEdited(`${prefix}-prop`)} isVerified={isVerified(`${prefix}-prop`)}
+            isSelected={isSelected(`${prefix}-prop`)} isEdited={isEdited(`${prefix}-prop`)} isVerified={isVerifiedField(`${prefix}-prop`)}
             onSelect={() => onFieldSelect(`${prefix}-prop`)} width="40px" />
         </td>
         <td className="border border-[#999] px-0.5 py-0.5">
           <VLInput id={`${prefix}-gen`} value={formData[`${prefix}-gen`]?.value || ""}
             onChange={(v) => handleFieldChange(`${prefix}-gen`, v)}
-            isSelected={isSelected(`${prefix}-gen`)} isEdited={isEdited(`${prefix}-gen`)} isVerified={isVerified(`${prefix}-gen`)}
+            isSelected={isSelected(`${prefix}-gen`)} isEdited={isEdited(`${prefix}-gen`)} isVerified={isVerifiedField(`${prefix}-gen`)}
             onSelect={() => onFieldSelect(`${prefix}-gen`)} width="40px" />
         </td>
         <td className="border border-[#999] px-0.5 py-0.5">
           <VLInput id={`${prefix}-disch`} value={formData[`${prefix}-disch`]?.value || ""}
             onChange={(v) => handleFieldChange(`${prefix}-disch`, v)}
-            isSelected={isSelected(`${prefix}-disch`)} isEdited={isEdited(`${prefix}-disch`)} isVerified={isVerified(`${prefix}-disch`)}
+            isSelected={isSelected(`${prefix}-disch`)} isEdited={isEdited(`${prefix}-disch`)} isVerified={isVerifiedField(`${prefix}-disch`)}
             onSelect={() => onFieldSelect(`${prefix}-disch`)} width="40px" />
         </td>
         <td className="border border-[#999] px-0.5 py-0.5">
           <VLInput id={`${prefix}-loading`} value={formData[`${prefix}-loading`]?.value || ""}
             onChange={(v) => handleFieldChange(`${prefix}-loading`, v)}
-            isSelected={isSelected(`${prefix}-loading`)} isEdited={isEdited(`${prefix}-loading`)} isVerified={isVerified(`${prefix}-loading`)}
+            isSelected={isSelected(`${prefix}-loading`)} isEdited={isEdited(`${prefix}-loading`)} isVerified={isVerifiedField(`${prefix}-loading`)}
             onSelect={() => onFieldSelect(`${prefix}-loading`)} width="40px" />
         </td>
         <td className="border border-[#999] px-0.5 py-0.5">
           <VLInput id={`${prefix}-igs`} value={formData[`${prefix}-igs`]?.value || ""}
             onChange={(v) => handleFieldChange(`${prefix}-igs`, v)}
-            isSelected={isSelected(`${prefix}-igs`)} isEdited={isEdited(`${prefix}-igs`)} isVerified={isVerified(`${prefix}-igs`)}
+            isSelected={isSelected(`${prefix}-igs`)} isEdited={isEdited(`${prefix}-igs`)} isVerified={isVerifiedField(`${prefix}-igs`)}
             onSelect={() => onFieldSelect(`${prefix}-igs`)} width="40px" />
         </td>
       </tr>
@@ -552,7 +574,7 @@ function BunkerFuelRow({
         <td className="border border-[#999] px-0.5 py-0.5">
           <VLInput id={`${prefix}-aux`} value={formData[`${prefix}-aux`]?.value || ""}
             onChange={(v) => handleFieldChange(`${prefix}-aux`, v)}
-            isSelected={isSelected(`${prefix}-aux`)} isEdited={isEdited(`${prefix}-aux`)} isVerified={isVerified(`${prefix}-aux`)}
+            isSelected={isSelected(`${prefix}-aux`)} isEdited={isEdited(`${prefix}-aux`)} isVerified={isVerifiedField(`${prefix}-aux`)}
             onSelect={() => onFieldSelect(`${prefix}-aux`)} width="40px" />
         </td>
         <td className="border border-[#999] px-0.5 py-0.5 text-[9px] text-[#666]" colSpan={5}>
@@ -565,30 +587,30 @@ function BunkerFuelRow({
         <td className="border border-[#999] px-0.5 py-0.5">
           <VLInput id={`${prefix}-total`} value={formData[`${prefix}-total`]?.value || ""}
             onChange={(v) => handleFieldChange(`${prefix}-total`, v)}
-            isSelected={isSelected(`${prefix}-total`)} isEdited={isEdited(`${prefix}-total`)} isVerified={isVerified(`${prefix}-total`)}
+            isSelected={isSelected(`${prefix}-total`)} isEdited={isEdited(`${prefix}-total`)} isVerified={isVerifiedField(`${prefix}-total`)}
             onSelect={() => onFieldSelect(`${prefix}-total`)} width="40px" />
         </td>
         <td className="border border-[#999] px-0.5 py-0.5" colSpan={5}>
           <div className="flex gap-1">
             <VLInput id={`${prefix}-cargo-heat`} value={formData[`${prefix}-cargo-heat`]?.value || ""}
               onChange={(v) => handleFieldChange(`${prefix}-cargo-heat`, v)}
-              isSelected={isSelected(`${prefix}-cargo-heat`)} isEdited={isEdited(`${prefix}-cargo-heat`)} isVerified={isVerified(`${prefix}-cargo-heat`)}
+              isSelected={isSelected(`${prefix}-cargo-heat`)} isEdited={isEdited(`${prefix}-cargo-heat`)} isVerified={isVerifiedField(`${prefix}-cargo-heat`)}
               onSelect={() => onFieldSelect(`${prefix}-cargo-heat`)} width="35px" />
             <VLInput id={`${prefix}-bunker-heat`} value={formData[`${prefix}-bunker-heat`]?.value || ""}
               onChange={(v) => handleFieldChange(`${prefix}-bunker-heat`, v)}
-              isSelected={isSelected(`${prefix}-bunker-heat`)} isEdited={isEdited(`${prefix}-bunker-heat`)} isVerified={isVerified(`${prefix}-bunker-heat`)}
+              isSelected={isSelected(`${prefix}-bunker-heat`)} isEdited={isEdited(`${prefix}-bunker-heat`)} isVerified={isVerifiedField(`${prefix}-bunker-heat`)}
               onSelect={() => onFieldSelect(`${prefix}-bunker-heat`)} width="35px" />
             <VLInput id={`${prefix}-tank-clean`} value={formData[`${prefix}-tank-clean`]?.value || ""}
               onChange={(v) => handleFieldChange(`${prefix}-tank-clean`, v)}
-              isSelected={isSelected(`${prefix}-tank-clean`)} isEdited={isEdited(`${prefix}-tank-clean`)} isVerified={isVerified(`${prefix}-tank-clean`)}
+              isSelected={isSelected(`${prefix}-tank-clean`)} isEdited={isEdited(`${prefix}-tank-clean`)} isVerified={isVerifiedField(`${prefix}-tank-clean`)}
               onSelect={() => onFieldSelect(`${prefix}-tank-clean`)} width="35px" />
             <VLInput id={`${prefix}-other`} value={formData[`${prefix}-other`]?.value || ""}
               onChange={(v) => handleFieldChange(`${prefix}-other`, v)}
-              isSelected={isSelected(`${prefix}-other`)} isEdited={isEdited(`${prefix}-other`)} isVerified={isVerified(`${prefix}-other`)}
+              isSelected={isSelected(`${prefix}-other`)} isEdited={isEdited(`${prefix}-other`)} isVerified={isVerifiedField(`${prefix}-other`)}
               onSelect={() => onFieldSelect(`${prefix}-other`)} width="35px" />
             <VLInput id={`${prefix}-adj`} value={formData[`${prefix}-adj`]?.value || ""}
               onChange={(v) => handleFieldChange(`${prefix}-adj`, v)}
-              isSelected={isSelected(`${prefix}-adj`)} isEdited={isEdited(`${prefix}-adj`)} isVerified={isVerified(`${prefix}-adj`)}
+              isSelected={isSelected(`${prefix}-adj`)} isEdited={isEdited(`${prefix}-adj`)} isVerified={isVerifiedField(`${prefix}-adj`)}
               onSelect={() => onFieldSelect(`${prefix}-adj`)} width="35px" />
           </div>
         </td>
@@ -603,7 +625,8 @@ export function VesLinkForm({
   onFieldSelect,
   editedFields,
   onFieldEdit,
-  verifiedFields = new Set()
+  verifiedFields = new Set(),
+  statusFilter = "pending"
 }: VesLinkFormProps) {
   const [formData, setFormData] = useState(initialFormData)
   
@@ -617,10 +640,11 @@ export function VesLinkForm({
   
   const isSelected = (id: string) => selectedFieldId === id
   const isEdited = (id: string) => editedFields.has(id)
-  const isVerified = (id: string) => verifiedFields.has(id)
+  const isVerifiedField = (id: string) => verifiedFields.has(id)
   const isCritical = (id: string) => CRITICAL_FIELDS_NOON_SEA.includes(id)
   
   return (
+    <StatusFilterContext.Provider value={statusFilter}>
     <div className="bg-white font-sans text-[13px]" style={{ fontFamily: "Arial, Helvetica, sans-serif" }}>
       {/* VesLink Header */}
       <div className="bg-[#2b3e50] px-4 py-3">
@@ -661,19 +685,19 @@ export function VesLinkForm({
               onChange={(v) => handleFieldChange("vessel-name", v)}
               isSelected={isSelected("vessel-name")}
               isEdited={isEdited("vessel-name")}
-              isVerified={isVerified("vessel-name")}
+              isVerified={isVerifiedField("vessel-name")}
               onSelect={() => onFieldSelect("vessel-name")}
               width="160px"
             />
           </FormRow>
-          <FormRow label="Date/Time:" fieldId="date-time" labelWidth="90px" isVerified={isVerified("date-time")}>
+          <FormRow label="Date/Time:" fieldId="date-time" labelWidth="90px" isVerified={verifiedFields.has("date-time")}>
             <VLInput 
               id="date-time" 
               value={formData["date-time"].value}
               onChange={(v) => handleFieldChange("date-time", v)}
               isSelected={isSelected("date-time")}
               isEdited={isEdited("date-time")}
-              isVerified={isVerified("date-time")}
+              isVerified={isVerifiedField("date-time")}
               onSelect={() => onFieldSelect("date-time")}
               width="140px"
               isCritical={true}
@@ -687,19 +711,20 @@ export function VesLinkForm({
               onChange={(v) => handleFieldChange("latitude", v)}
               isSelected={isSelected("latitude")}
               isEdited={isEdited("latitude")}
-              isVerified={isVerified("latitude")}
+              isVerified={isVerifiedField("latitude")}
               onSelect={() => onFieldSelect("latitude")}
               width="140px"
+              
             />
           </FormRow>
-          <FormRow label="Voyage Number:" fieldId="voyage-number" labelWidth="90px" isVerified={isVerified("voyage-number")}>
+          <FormRow label="Voyage Number:" fieldId="voyage-number" labelWidth="90px" isVerified={verifiedFields.has("voyage-number")}>
             <VLInput 
               id="voyage-number" 
               value={formData["voyage-number"].value}
               onChange={(v) => handleFieldChange("voyage-number", v)}
               isSelected={isSelected("voyage-number")}
               isEdited={isEdited("voyage-number")}
-              isVerified={isVerified("voyage-number")}
+              isVerified={isVerifiedField("voyage-number")}
               onSelect={() => onFieldSelect("voyage-number")}
               width="100px"
               isCritical={true}
@@ -713,12 +738,12 @@ export function VesLinkForm({
               onChange={(v) => handleFieldChange("longitude", v)}
               isSelected={isSelected("longitude")}
               isEdited={isEdited("longitude")}
-              isVerified={isVerified("longitude")}
+              isVerified={isVerifiedField("longitude")}
               onSelect={() => onFieldSelect("longitude")}
               width="140px"
             />
           </FormRow>
-          <FormRow label="Vessel Condition:" fieldId="vessel-condition" labelWidth="90px" isVerified={isVerified("vessel-condition")}>
+          <FormRow label="Vessel Condition:" fieldId="vessel-condition" labelWidth="90px" isVerified={verifiedFields.has("vessel-condition")}>
             <VLSelect 
               id="vessel-condition" 
               value={formData["vessel-condition"].value}
@@ -726,7 +751,7 @@ export function VesLinkForm({
               onChange={(v) => handleFieldChange("vessel-condition", v)}
               isSelected={isSelected("vessel-condition")}
               isEdited={isEdited("vessel-condition")}
-              isVerified={isVerified("vessel-condition")}
+              isVerified={isVerifiedField("vessel-condition")}
               onSelect={() => onFieldSelect("vessel-condition")}
               width="120px"
               isCritical={true}
@@ -741,7 +766,7 @@ export function VesLinkForm({
               onChange={(v) => handleFieldChange("location", v)}
               isSelected={isSelected("location")}
               isEdited={isEdited("location")}
-              isVerified={isVerified("location")}
+              isVerified={isVerifiedField("location")}
               onSelect={() => onFieldSelect("location")}
               width="140px"
             />
@@ -751,14 +776,14 @@ export function VesLinkForm({
         
         {/* NEW: Next Port & ETA row */}
         <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 mb-4">
-          <FormRow label="Next Port:" fieldId="next-port" labelWidth="100px" isVerified={isVerified("next-port")}>
+          <FormRow label="Next Port:" fieldId="next-port" labelWidth="100px" isVerified={isVerifiedField("next-port")}>
             <VLInput 
               id="next-port" 
               value={formData["next-port"].value}
               onChange={(v) => handleFieldChange("next-port", v)}
               isSelected={isSelected("next-port")}
               isEdited={isEdited("next-port")}
-              isVerified={isVerified("next-port")}
+              isVerified={isVerifiedField("next-port")}
               onSelect={() => onFieldSelect("next-port")}
               width="140px"
               isCritical={true}
@@ -766,7 +791,7 @@ export function VesLinkForm({
           </FormRow>
           <div className="flex items-center gap-1.5">
             <div className="flex items-center gap-1 shrink-0" style={{ width: "90px" }}>
-              <CriticalIndicator fieldId="eta" isVerified={isVerified("eta")} />
+              <CriticalIndicator fieldId="eta" isVerified={isVerifiedField("eta")} />
               <label className="text-[13px] text-[#333] text-right flex-1" style={{ fontFamily: "Arial, Helvetica, sans-serif" }}>ETA:</label>
             </div>
             <VLInput 
@@ -775,7 +800,7 @@ export function VesLinkForm({
               onChange={(v) => handleFieldChange("eta-date", v)}
               isSelected={isSelected("eta")}
               isEdited={isEdited("eta-date")}
-              isVerified={isVerified("eta")}
+              isVerified={isVerifiedField("eta")}
               onSelect={() => onFieldSelect("eta")}
               width="90px"
               isCritical={true}
@@ -786,7 +811,7 @@ export function VesLinkForm({
               onChange={(v) => handleFieldChange("eta-time", v)}
               isSelected={isSelected("eta")}
               isEdited={isEdited("eta-time")}
-              isVerified={isVerified("eta")}
+              isVerified={isVerifiedField("eta")}
               onSelect={() => onFieldSelect("eta")}
               width="60px"
               isCritical={true}
@@ -824,65 +849,65 @@ export function VesLinkForm({
         <div className="border border-[#ddd] p-3 mb-6">
           <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
             {/* NEW: Distance to Go and CP Ordered Speed */}
-            <FormRow label="Distance to Go (nm):" fieldId="distance-to-go" labelWidth="150px" isVerified={isVerified("distance-to-go")}>
+            <FormRow label="Distance to Go (nm):" fieldId="distance-to-go" labelWidth="150px" isVerified={isVerifiedField("distance-to-go")}>
               <VLInput id="distance-to-go" value={formData["distance-to-go"].value}
                 onChange={(v) => handleFieldChange("distance-to-go", v)}
-                isSelected={isSelected("distance-to-go")} isEdited={isEdited("distance-to-go")} isVerified={isVerified("distance-to-go")}
+                isSelected={isSelected("distance-to-go")} isEdited={isEdited("distance-to-go")} isVerified={isVerifiedField("distance-to-go")}
                 onSelect={() => onFieldSelect("distance-to-go")} width="100px" isCritical={true} />
             </FormRow>
-            <FormRow label="CP / Ordered Speed (kts):" fieldId="cp-ordered-speed" labelWidth="150px" isVerified={isVerified("cp-ordered-speed")}>
+            <FormRow label="CP / Ordered Speed (kts):" fieldId="cp-ordered-speed" labelWidth="150px" isVerified={isVerifiedField("cp-ordered-speed")}>
               <VLInput id="cp-ordered-speed" value={formData["cp-ordered-speed"].value}
                 onChange={(v) => handleFieldChange("cp-ordered-speed", v)}
-                isSelected={isSelected("cp-ordered-speed")} isEdited={isEdited("cp-ordered-speed")} isVerified={isVerified("cp-ordered-speed")}
+                isSelected={isSelected("cp-ordered-speed")} isEdited={isEdited("cp-ordered-speed")} isVerified={isVerifiedField("cp-ordered-speed")}
                 onSelect={() => onFieldSelect("cp-ordered-speed")} width="100px" isCritical={true} />
             </FormRow>
             
             {/* NEW: Reported Speed */}
-            <FormRow label="Reported Speed (kts):" fieldId="reported-speed" labelWidth="150px" isVerified={isVerified("reported-speed")}>
+            <FormRow label="Reported Speed (kts):" fieldId="reported-speed" labelWidth="150px" isVerified={isVerifiedField("reported-speed")}>
               <VLInput id="reported-speed" value={formData["reported-speed"].value}
                 onChange={(v) => handleFieldChange("reported-speed", v)}
-                isSelected={isSelected("reported-speed")} isEdited={isEdited("reported-speed")} isVerified={isVerified("reported-speed")}
+                isSelected={isSelected("reported-speed")} isEdited={isEdited("reported-speed")} isVerified={isVerifiedField("reported-speed")}
                 onSelect={() => onFieldSelect("reported-speed")} width="100px" isCritical={true} />
             </FormRow>
             <div />
             
             {/* Existing fields */}
-            <FormRow label="Observed Distance (nm):" fieldId="observed-distance" labelWidth="150px" isVerified={isVerified("observed-distance")}>
+            <FormRow label="Observed Distance (nm):" fieldId="observed-distance" labelWidth="150px" isVerified={isVerifiedField("observed-distance")}>
               <VLInput id="observed-distance" value={formData["observed-distance"].value}
                 onChange={(v) => handleFieldChange("observed-distance", v)}
-                isSelected={isSelected("observed-distance")} isEdited={isEdited("observed-distance")} isVerified={isVerified("observed-distance")}
+                isSelected={isSelected("observed-distance")} isEdited={isEdited("observed-distance")} isVerified={isVerifiedField("observed-distance")}
                 onSelect={() => onFieldSelect("observed-distance")} width="100px" isCritical={true} />
             </FormRow>
             <FormRow label="Ballast (MT):" labelWidth="150px">
               <VLInput id="ballast" value={formData["ballast"].value}
                 onChange={(v) => handleFieldChange("ballast", v)}
-                isSelected={isSelected("ballast")} isEdited={isEdited("ballast")} isVerified={isVerified("ballast")}
+                isSelected={isSelected("ballast")} isEdited={isEdited("ballast")} isVerified={isVerifiedField("ballast")}
                 onSelect={() => onFieldSelect("ballast")} width="100px" />
             </FormRow>
             
-            <FormRow label="Time Since Last Report (hrs):" fieldId="time-since-last" labelWidth="150px" isVerified={isVerified("time-since-last")}>
+            <FormRow label="Time Since Last Report (hrs):" fieldId="time-since-last" labelWidth="150px" isVerified={isVerifiedField("time-since-last")}>
               <VLInput id="time-since-last" value={formData["time-since-last"].value}
                 onChange={(v) => handleFieldChange("time-since-last", v)}
-                isSelected={isSelected("time-since-last")} isEdited={isEdited("time-since-last")} isVerified={isVerified("time-since-last")}
+                isSelected={isSelected("time-since-last")} isEdited={isEdited("time-since-last")} isVerified={isVerifiedField("time-since-last")}
                 onSelect={() => onFieldSelect("time-since-last")} width="100px" isCritical={true} />
             </FormRow>
             <FormRow label="Displacement (t):" labelWidth="150px">
               <VLInput id="displacement" value={formData["displacement"].value}
                 onChange={(v) => handleFieldChange("displacement", v)}
-                isSelected={isSelected("displacement")} isEdited={isEdited("displacement")} isVerified={isVerified("displacement")}
+                isSelected={isSelected("displacement")} isEdited={isEdited("displacement")} isVerified={isVerifiedField("displacement")}
                 onSelect={() => onFieldSelect("displacement")} width="100px" />
             </FormRow>
             
             <FormRow label="Slip %:" labelWidth="150px">
               <VLInput id="slip" value={formData["slip"].value}
                 onChange={(v) => handleFieldChange("slip", v)}
-                isSelected={isSelected("slip")} isEdited={isEdited("slip")} isVerified={isVerified("slip")}
+                isSelected={isSelected("slip")} isEdited={isEdited("slip")} isVerified={isVerifiedField("slip")}
                 onSelect={() => onFieldSelect("slip")} width="100px" />
             </FormRow>
             <FormRow label="Fwd Draft (m):" labelWidth="150px">
               <VLInput id="fwd-draft" value={formData["fwd-draft"].value}
                 onChange={(v) => handleFieldChange("fwd-draft", v)}
-                isSelected={isSelected("fwd-draft")} isEdited={isEdited("fwd-draft")} isVerified={isVerified("fwd-draft")}
+                isSelected={isSelected("fwd-draft")} isEdited={isEdited("fwd-draft")} isVerified={isVerifiedField("fwd-draft")}
                 onSelect={() => onFieldSelect("fwd-draft")} width="100px" />
             </FormRow>
             
@@ -890,7 +915,7 @@ export function VesLinkForm({
             <FormRow label="Mid Draft (m):" labelWidth="150px">
               <VLInput id="mid-draft" value={formData["mid-draft"].value}
                 onChange={(v) => handleFieldChange("mid-draft", v)}
-                isSelected={isSelected("mid-draft")} isEdited={isEdited("mid-draft")} isVerified={isVerified("mid-draft")}
+                isSelected={isSelected("mid-draft")} isEdited={isEdited("mid-draft")} isVerified={isVerifiedField("mid-draft")}
                 onSelect={() => onFieldSelect("mid-draft")} width="100px" />
             </FormRow>
             
@@ -898,7 +923,7 @@ export function VesLinkForm({
             <FormRow label="Aft Draft (m):" labelWidth="150px">
               <VLInput id="aft-draft" value={formData["aft-draft"].value}
                 onChange={(v) => handleFieldChange("aft-draft", v)}
-                isSelected={isSelected("aft-draft")} isEdited={isEdited("aft-draft")} isVerified={isVerified("aft-draft")}
+                isSelected={isSelected("aft-draft")} isEdited={isEdited("aft-draft")} isVerified={isVerifiedField("aft-draft")}
                 onSelect={() => onFieldSelect("aft-draft")} width="100px" />
             </FormRow>
           </div>
@@ -909,10 +934,10 @@ export function VesLinkForm({
         <div className="border border-[#ddd] p-3 mb-6">
           <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
             {/* NEW: Main Engine RPM */}
-            <FormRow label="Main Engine RPM:" fieldId="main-engine-rpm" labelWidth="130px" isVerified={isVerified("main-engine-rpm")}>
+            <FormRow label="Main Engine RPM:" fieldId="main-engine-rpm" labelWidth="130px" isVerified={isVerifiedField("main-engine-rpm")}>
               <VLInput id="main-engine-rpm" value={formData["main-engine-rpm"].value}
                 onChange={(v) => handleFieldChange("main-engine-rpm", v)}
-                isSelected={isSelected("main-engine-rpm")} isEdited={isEdited("main-engine-rpm")} isVerified={isVerified("main-engine-rpm")}
+                isSelected={isSelected("main-engine-rpm")} isEdited={isEdited("main-engine-rpm")} isVerified={isVerifiedField("main-engine-rpm")}
                 onSelect={() => onFieldSelect("main-engine-rpm")} width="100px" isCritical={true} />
             </FormRow>
             <div />
@@ -920,39 +945,39 @@ export function VesLinkForm({
             <FormRow label="Generator 1 KWhrs:" labelWidth="130px">
               <VLInput id="gen1-kwhrs" value={formData["gen1-kwhrs"].value}
                 onChange={(v) => handleFieldChange("gen1-kwhrs", v)}
-                isSelected={isSelected("gen1-kwhrs")} isEdited={isEdited("gen1-kwhrs")} isVerified={isVerified("gen1-kwhrs")}
+                isSelected={isSelected("gen1-kwhrs")} isEdited={isEdited("gen1-kwhrs")} isVerified={isVerifiedField("gen1-kwhrs")}
                 onSelect={() => onFieldSelect("gen1-kwhrs")} width="100px" />
             </FormRow>
             <FormRow label="Generator 1 Hrs:" labelWidth="110px">
               <VLInput id="gen1-hrs" value={formData["gen1-hrs"].value}
                 onChange={(v) => handleFieldChange("gen1-hrs", v)}
-                isSelected={isSelected("gen1-hrs")} isEdited={isEdited("gen1-hrs")} isVerified={isVerified("gen1-hrs")}
+                isSelected={isSelected("gen1-hrs")} isEdited={isEdited("gen1-hrs")} isVerified={isVerifiedField("gen1-hrs")}
                 onSelect={() => onFieldSelect("gen1-hrs")} width="100px" />
             </FormRow>
             
             <FormRow label="Generator 2 KWhrs:" labelWidth="130px">
               <VLInput id="gen2-kwhrs" value={formData["gen2-kwhrs"].value}
                 onChange={(v) => handleFieldChange("gen2-kwhrs", v)}
-                isSelected={isSelected("gen2-kwhrs")} isEdited={isEdited("gen2-kwhrs")} isVerified={isVerified("gen2-kwhrs")}
+                isSelected={isSelected("gen2-kwhrs")} isEdited={isEdited("gen2-kwhrs")} isVerified={isVerifiedField("gen2-kwhrs")}
                 onSelect={() => onFieldSelect("gen2-kwhrs")} width="100px" />
             </FormRow>
             <FormRow label="Generator 2 Hrs:" labelWidth="110px">
               <VLInput id="gen2-hrs" value={formData["gen2-hrs"].value}
                 onChange={(v) => handleFieldChange("gen2-hrs", v)}
-                isSelected={isSelected("gen2-hrs")} isEdited={isEdited("gen2-hrs")} isVerified={isVerified("gen2-hrs")}
+                isSelected={isSelected("gen2-hrs")} isEdited={isEdited("gen2-hrs")} isVerified={isVerifiedField("gen2-hrs")}
                 onSelect={() => onFieldSelect("gen2-hrs")} width="100px" />
             </FormRow>
             
             <FormRow label="Generator 3 KWhrs:" labelWidth="130px">
               <VLInput id="gen3-kwhrs" value={formData["gen3-kwhrs"].value}
                 onChange={(v) => handleFieldChange("gen3-kwhrs", v)}
-                isSelected={isSelected("gen3-kwhrs")} isEdited={isEdited("gen3-kwhrs")} isVerified={isVerified("gen3-kwhrs")}
+                isSelected={isSelected("gen3-kwhrs")} isEdited={isEdited("gen3-kwhrs")} isVerified={isVerifiedField("gen3-kwhrs")}
                 onSelect={() => onFieldSelect("gen3-kwhrs")} width="100px" />
             </FormRow>
             <FormRow label="Generator 3 Hrs:" labelWidth="110px">
               <VLInput id="gen3-hrs" value={formData["gen3-hrs"].value}
                 onChange={(v) => handleFieldChange("gen3-hrs", v)}
-                isSelected={isSelected("gen3-hrs")} isEdited={isEdited("gen3-hrs")} isVerified={isVerified("gen3-hrs")}
+                isSelected={isSelected("gen3-hrs")} isEdited={isEdited("gen3-hrs")} isVerified={isVerifiedField("gen3-hrs")}
                 onSelect={() => onFieldSelect("gen3-hrs")} width="100px" />
             </FormRow>
             
@@ -960,7 +985,7 @@ export function VesLinkForm({
             <FormRow label="Boiler Hours:" labelWidth="110px">
               <VLInput id="boiler-hrs" value={formData["boiler-hrs"].value}
                 onChange={(v) => handleFieldChange("boiler-hrs", v)}
-                isSelected={isSelected("boiler-hrs")} isEdited={isEdited("boiler-hrs")} isVerified={isVerified("boiler-hrs")}
+                isSelected={isSelected("boiler-hrs")} isEdited={isEdited("boiler-hrs")} isVerified={isVerifiedField("boiler-hrs")}
                 onSelect={() => onFieldSelect("boiler-hrs")} width="100px" />
             </FormRow>
           </div>
@@ -970,18 +995,18 @@ export function VesLinkForm({
         <SectionHeader title="Weather" />
         <div className="border border-[#ddd] p-3 mb-6">
           <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
-            <FormRow label="Beaufort:" fieldId="beaufort" labelWidth="130px" isVerified={isVerified("beaufort")}>
+            <FormRow label="Beaufort:" fieldId="beaufort" labelWidth="130px" isVerified={isVerifiedField("beaufort")}>
               <VLSelect id="beaufort" value={formData["beaufort"].value}
                 options={formData["beaufort"].options || []}
                 onChange={(v) => handleFieldChange("beaufort", v)}
-                isSelected={isSelected("beaufort")} isEdited={isEdited("beaufort")} isVerified={isVerified("beaufort")}
+                isSelected={isSelected("beaufort")} isEdited={isEdited("beaufort")} isVerified={isVerifiedField("beaufort")}
                 onSelect={() => onFieldSelect("beaufort")} width="100px" isCritical={true} />
             </FormRow>
             <FormRow label="Wind Direction (deg):" labelWidth="130px">
               <VLSelect id="wind-direction" value={formData["wind-direction"].value}
                 options={formData["wind-direction"].options || []}
                 onChange={(v) => handleFieldChange("wind-direction", v)}
-                isSelected={isSelected("wind-direction")} isEdited={isEdited("wind-direction")} isVerified={isVerified("wind-direction")}
+                isSelected={isSelected("wind-direction")} isEdited={isEdited("wind-direction")} isVerified={isVerifiedField("wind-direction")}
                 onSelect={() => onFieldSelect("wind-direction")} width="100px" />
             </FormRow>
             
@@ -989,13 +1014,13 @@ export function VesLinkForm({
               <VLSelect id="sea-state" value={formData["sea-state"].value}
                 options={formData["sea-state"].options || []}
                 onChange={(v) => handleFieldChange("sea-state", v)}
-                isSelected={isSelected("sea-state")} isEdited={isEdited("sea-state")} isVerified={isVerified("sea-state")}
+                isSelected={isSelected("sea-state")} isEdited={isEdited("sea-state")} isVerified={isVerifiedField("sea-state")}
                 onSelect={() => onFieldSelect("sea-state")} width="130px" />
             </FormRow>
             <FormRow label="Sea Height:" labelWidth="130px">
               <VLInput id="sea-height" value={formData["sea-height"].value}
                 onChange={(v) => handleFieldChange("sea-height", v)}
-                isSelected={isSelected("sea-height")} isEdited={isEdited("sea-height")} isVerified={isVerified("sea-height")}
+                isSelected={isSelected("sea-height")} isEdited={isEdited("sea-height")} isVerified={isVerifiedField("sea-height")}
                 onSelect={() => onFieldSelect("sea-height")} width="100px" />
             </FormRow>
             
@@ -1003,7 +1028,7 @@ export function VesLinkForm({
             <FormRow label="Sea Temperature (deg C):" labelWidth="130px">
               <VLInput id="sea-temp" value={formData["sea-temp"].value}
                 onChange={(v) => handleFieldChange("sea-temp", v)}
-                isSelected={isSelected("sea-temp")} isEdited={isEdited("sea-temp")} isVerified={isVerified("sea-temp")}
+                isSelected={isSelected("sea-temp")} isEdited={isEdited("sea-temp")} isVerified={isVerifiedField("sea-temp")}
                 onSelect={() => onFieldSelect("sea-temp")} width="100px" />
             </FormRow>
           </div>
@@ -1013,7 +1038,7 @@ export function VesLinkForm({
         <BunkerSectionHeader 
           title="Bunkers" 
           fieldId="bunkers-section" 
-          isVerified={isVerified("bunkers-section")}
+          isVerified={isVerifiedField("bunkers-section")}
           isSelected={isSelected("bunkers-section")}
           onSelect={() => onFieldSelect("bunkers-section")}
         />
@@ -1023,7 +1048,7 @@ export function VesLinkForm({
               <VLSelect id="measurement-method" value={formData["measurement-method"].value}
                 options={formData["measurement-method"].options || []}
                 onChange={(v) => handleFieldChange("measurement-method", v)}
-                isSelected={isSelected("measurement-method")} isEdited={isEdited("measurement-method")} isVerified={isVerified("measurement-method")}
+                isSelected={isSelected("measurement-method")} isEdited={isEdited("measurement-method")} isVerified={isVerifiedField("measurement-method")}
                 onSelect={() => onFieldSelect("measurement-method")} width="140px" />
             </FormRow>
           </div>
@@ -1044,55 +1069,55 @@ export function VesLinkForm({
         <SectionHeader title="Water" />
         <div className="border border-[#ddd] p-3 mb-6">
           <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
-            <FormRow label="Fresh Water ROB (MT):" fieldId="fresh-water-rob" labelWidth="160px" isVerified={isVerified("fresh-water-rob")}>
+            <FormRow label="Fresh Water ROB (MT):" fieldId="fresh-water-rob" labelWidth="160px" isVerified={isVerifiedField("fresh-water-rob")}>
               <VLInput id="fresh-water-rob" value={formData["fresh-water-rob"].value}
                 onChange={(v) => handleFieldChange("fresh-water-rob", v)}
-                isSelected={isSelected("fresh-water-rob")} isEdited={isEdited("fresh-water-rob")} isVerified={isVerified("fresh-water-rob")}
+                isSelected={isSelected("fresh-water-rob")} isEdited={isEdited("fresh-water-rob")} isVerified={isVerifiedField("fresh-water-rob")}
                 onSelect={() => onFieldSelect("fresh-water-rob")} width="100px" isCritical={true} />
             </FormRow>
-            <FormRow label="Slops ROB (MT):" fieldId="slops-rob" labelWidth="160px" isVerified={isVerified("slops-rob")}>
+            <FormRow label="Slops ROB (MT):" fieldId="slops-rob" labelWidth="160px" isVerified={isVerifiedField("slops-rob")}>
               <VLInput id="slops-rob" value={formData["slops-rob"].value}
                 onChange={(v) => handleFieldChange("slops-rob", v)}
-                isSelected={isSelected("slops-rob")} isEdited={isEdited("slops-rob")} isVerified={isVerified("slops-rob")}
+                isSelected={isSelected("slops-rob")} isEdited={isEdited("slops-rob")} isVerified={isVerifiedField("slops-rob")}
                 onSelect={() => onFieldSelect("slops-rob")} width="100px" isCritical={true} />
             </FormRow>
             
-            <FormRow label="Distilled Water ROB (MT):" fieldId="distilled-water-rob" labelWidth="160px" isVerified={isVerified("distilled-water-rob")}>
+            <FormRow label="Distilled Water ROB (MT):" fieldId="distilled-water-rob" labelWidth="160px" isVerified={isVerifiedField("distilled-water-rob")}>
               <VLInput id="distilled-water-rob" value={formData["distilled-water-rob"].value}
                 onChange={(v) => handleFieldChange("distilled-water-rob", v)}
-                isSelected={isSelected("distilled-water-rob")} isEdited={isEdited("distilled-water-rob")} isVerified={isVerified("distilled-water-rob")}
+                isSelected={isSelected("distilled-water-rob")} isEdited={isEdited("distilled-water-rob")} isVerified={isVerifiedField("distilled-water-rob")}
                 onSelect={() => onFieldSelect("distilled-water-rob")} width="100px" isCritical={true} />
             </FormRow>
             <FormRow label="Tank Cleaning Chemical ROB (LTRS):" labelWidth="160px">
               <VLInput id="tank-clean-chem" value={formData["tank-clean-chem"].value}
                 onChange={(v) => handleFieldChange("tank-clean-chem", v)}
-                isSelected={isSelected("tank-clean-chem")} isEdited={isEdited("tank-clean-chem")} isVerified={isVerified("tank-clean-chem")}
+                isSelected={isSelected("tank-clean-chem")} isEdited={isEdited("tank-clean-chem")} isVerified={isVerifiedField("tank-clean-chem")}
                 onSelect={() => onFieldSelect("tank-clean-chem")} width="100px" />
             </FormRow>
             
             <FormRow label="Distilled Water Consumed (MT):" labelWidth="160px">
               <VLInput id="distilled-consumed" value={formData["distilled-consumed"].value}
                 onChange={(v) => handleFieldChange("distilled-consumed", v)}
-                isSelected={isSelected("distilled-consumed")} isEdited={isEdited("distilled-consumed")} isVerified={isVerified("distilled-consumed")}
+                isSelected={isSelected("distilled-consumed")} isEdited={isEdited("distilled-consumed")} isVerified={isVerifiedField("distilled-consumed")}
                 onSelect={() => onFieldSelect("distilled-consumed")} width="100px" />
             </FormRow>
             <FormRow label="Distilled Water Produced (MT):" labelWidth="160px">
               <VLInput id="distilled-produced" value={formData["distilled-produced"].value}
                 onChange={(v) => handleFieldChange("distilled-produced", v)}
-                isSelected={isSelected("distilled-produced")} isEdited={isEdited("distilled-produced")} isVerified={isVerified("distilled-produced")}
+                isSelected={isSelected("distilled-produced")} isEdited={isEdited("distilled-produced")} isVerified={isVerifiedField("distilled-produced")}
                 onSelect={() => onFieldSelect("distilled-produced")} width="100px" />
             </FormRow>
             
             <FormRow label="Fresh Water Consumed (MT):" labelWidth="160px">
               <VLInput id="fresh-consumed" value={formData["fresh-consumed"].value}
                 onChange={(v) => handleFieldChange("fresh-consumed", v)}
-                isSelected={isSelected("fresh-consumed")} isEdited={isEdited("fresh-consumed")} isVerified={isVerified("fresh-consumed")}
+                isSelected={isSelected("fresh-consumed")} isEdited={isEdited("fresh-consumed")} isVerified={isVerifiedField("fresh-consumed")}
                 onSelect={() => onFieldSelect("fresh-consumed")} width="100px" />
             </FormRow>
             <FormRow label="Fresh Water Produced (MT):" labelWidth="160px">
               <VLInput id="fresh-produced" value={formData["fresh-produced"].value}
                 onChange={(v) => handleFieldChange("fresh-produced", v)}
-                isSelected={isSelected("fresh-produced")} isEdited={isEdited("fresh-produced")} isVerified={isVerified("fresh-produced")}
+                isSelected={isSelected("fresh-produced")} isEdited={isEdited("fresh-produced")} isVerified={isVerifiedField("fresh-produced")}
                 onSelect={() => onFieldSelect("fresh-produced")} width="100px" />
             </FormRow>
           </div>
@@ -1106,12 +1131,12 @@ export function VesLinkForm({
               <span className="text-[13px]">First:</span>
               <VLInput id="master-first" value={formData["master-first"].value}
                 onChange={(v) => handleFieldChange("master-first", v)}
-                isSelected={isSelected("master-first")} isEdited={isEdited("master-first")} isVerified={isVerified("master-first")}
+                isSelected={isSelected("master-first")} isEdited={isEdited("master-first")} isVerified={isVerifiedField("master-first")}
                 onSelect={() => onFieldSelect("master-first")} width="120px" />
               <span className="text-[13px]">Last:</span>
               <VLInput id="master-last" value={formData["master-last"].value}
                 onChange={(v) => handleFieldChange("master-last", v)}
-                isSelected={isSelected("master-last")} isEdited={isEdited("master-last")} isVerified={isVerified("master-last")}
+                isSelected={isSelected("master-last")} isEdited={isEdited("master-last")} isVerified={isVerifiedField("master-last")}
                 onSelect={() => onFieldSelect("master-last")} width="120px" />
             </div>
           </div>
@@ -1134,5 +1159,6 @@ export function VesLinkForm({
         </div>
       </div>
     </div>
+    </StatusFilterContext.Provider>
   )
 }

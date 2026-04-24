@@ -1506,26 +1506,26 @@ function HighlightsNavBar({
       
       {/* Right side - Status toggle + Counter + navigation */}
       <div className="flex items-center gap-4">
-        {/* Status Filter Toggle */}
-        <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+        {/* Status Filter Toggle - Pending/Verified */}
+        <div className="flex items-center bg-gray-100 rounded-full p-0.5">
           <button
             onClick={() => onFilterChange("pending")}
-            className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors ${
+            className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 rounded-full transition-all ${
               activeFilter === "pending"
-                ? "bg-purple-50 text-purple-700"
-                : "text-gray-500 hover:bg-gray-50"
+                ? "bg-white text-amber-700 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
             Pending ({pendingCount})
           </button>
-          <div className="w-px h-4 bg-gray-200" />
+          <span className="text-gray-300 mx-0.5">/</span>
           <button
             onClick={() => onFilterChange("verified")}
-            className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors ${
+            className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 rounded-full transition-all ${
               activeFilter === "verified"
-                ? "bg-green-50 text-green-700"
-                : "text-gray-500 hover:bg-gray-50"
+                ? "bg-white text-green-700 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
             <Check className="w-3 h-3" />
@@ -2146,6 +2146,7 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
                 setEditedFields(prev => new Set(prev).add(fieldId))
               }}
               verifiedFields={verifiedVesLinkFields}
+              statusFilter={statusFilter}
             />
           </div>
         </div>
