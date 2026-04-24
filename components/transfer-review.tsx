@@ -163,30 +163,40 @@ interface TransferReviewProps {
   isAdminMode?: boolean
 }
 
-// Toast notification component
-function Toast({ message, type, onClose }: { message: string; type: "error" | "success" | "warning"; onClose: () => void }) {
+// Toast notification component - Dark style matching Figma
+type ToastType = "error" | "success" | "warning" | "delete" | "flag" | "save" | "submit"
+
+function Toast({ message, type, onClose }: { message: string; type: ToastType; onClose: () => void }) {
   useEffect(() => {
     const timer = setTimeout(onClose, 4000)
     return () => clearTimeout(timer)
   }, [onClose])
 
-  const colors = {
-    error: "bg-[#fef2f2] border-[#fecaca] text-[#991b1b]",
-    success: "bg-[#f0fdf4] border-[#bbf7d0] text-[#166534]",
-    warning: "bg-[#fffbeb] border-[#fcd34d] text-[#92400e]",
-  }
-
-  const icons = {
-    error: <X className="w-4 h-4" />,
-    success: <Check className="w-4 h-4" />,
-    warning: <AlertCircle className="w-4 h-4" />,
+  // Get the appropriate icon based on toast type
+  const getIcon = () => {
+    switch (type) {
+      case "delete":
+        return <Trash2 className="w-4 h-4" />
+      case "flag":
+      case "warning":
+        return <Flag className="w-4 h-4" />
+      case "save":
+      case "success":
+        return <Check className="w-4 h-4" />
+      case "submit":
+        return <Send className="w-4 h-4" />
+      case "error":
+        return <AlertCircle className="w-4 h-4" />
+      default:
+        return <Check className="w-4 h-4" />
+    }
   }
 
   return (
-    <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-3 rounded-lg border shadow-lg flex items-center gap-3 z-50 animate-in slide-in-from-bottom-4 ${colors[type]}`}>
-      {icons[type]}
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-[#1e293b] text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 animate-in slide-in-from-top-4 fade-in duration-200">
+      {getIcon()}
       <span className="text-sm font-medium">{message}</span>
-      <button onClick={onClose} className="ml-2 hover:opacity-70">
+      <button onClick={onClose} className="ml-2 hover:opacity-70 transition-opacity">
         <X className="w-4 h-4" />
       </button>
     </div>
@@ -1637,7 +1647,7 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
   const [selectedReportId, setSelectedReportId] = useState("4528")
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
-  const [toast, setToast] = useState<{ message: string; type: "error" | "success" | "warning" } | null>(null)
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
   const [pulsingFieldId, setPulsingFieldId] = useState<string | null>(null)
   const [showAdminSuite, setShowAdminSuite] = useState(false)
   const [editedFields, setEditedFields] = useState<Set<string>>(new Set())
@@ -2203,7 +2213,9 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
         <div className="px-6 py-3 flex justify-center gap-3">
           <button
             onClick={() => {
-              setToast({ message: "Draft saved successfully", type: "success" })
+              const now = new Date()
+              const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+              setToast({ message: `Draft saved at ${time}`, type: "save" })
             }}
             className="border border-gray-300 rounded-lg px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors min-w-[140px]"
           >
@@ -2240,7 +2252,7 @@ export function TransferReview({ reportId, onBack, isAdminMode = false }: Transf
           setShowFlagModal(false)
           setToast({ 
             message: `Field "${fieldToFlag?.name}" flagged for review`, 
-            type: "warning" 
+            type: "flag" 
           })
           setFieldToFlag(null)
         }}

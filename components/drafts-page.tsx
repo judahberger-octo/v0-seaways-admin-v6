@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Search, SlidersHorizontal, Download, Filter, MoreHorizontal, Eye, Pencil, Trash2 } from "lucide-react"
+import { Search, SlidersHorizontal, Download, Filter, MoreHorizontal, Eye, Pencil, Trash2, X, Check } from "lucide-react"
 import { DeleteDraftModal } from "./modals"
+import { useEffect } from "react"
 
 interface Draft {
   id: string
@@ -37,6 +38,15 @@ export function DraftsPage({ onEditDraft }: DraftsPageProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [draftToDelete, setDraftToDelete] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ message: string; id: string } | null>(null)
+  
+  // Auto-dismiss toast after 4s
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000)
+      return () => clearTimeout(timer)
+    }
+  }, [toast])
 
   const handleRowClick = (draftId: string) => {
     onEditDraft(draftId)
@@ -67,9 +77,13 @@ export function DraftsPage({ onEditDraft }: DraftsPageProps) {
   }
 
   const confirmDelete = () => {
-    // Delete logic here - would remove from list
+    const deletedId = draftToDelete
     setShowDeleteModal(false)
     setDraftToDelete(null)
+    // Show delete confirmation toast
+    if (deletedId) {
+      setToast({ message: `Report #${deletedId} deleted`, id: deletedId })
+    }
   }
 
   return (
@@ -190,6 +204,17 @@ export function DraftsPage({ onEditDraft }: DraftsPageProps) {
         }}
         onDelete={confirmDelete}
       />
+
+      {/* Delete Toast - Dark style */}
+      {toast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-[#1e293b] text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 animate-in slide-in-from-top-4 fade-in duration-200">
+          <Trash2 className="w-4 h-4" />
+          <span className="text-sm font-medium">{toast.message}</span>
+          <button onClick={() => setToast(null)} className="ml-2 hover:opacity-70 transition-opacity">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
