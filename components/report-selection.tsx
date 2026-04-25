@@ -39,7 +39,7 @@ const targetFormOptions = [
 
 export function ReportSelection({ onGenerate }: ReportSelectionProps) {
   const [selectedReports, setSelectedReports] = useState<string[]>(["1"])
-  const [selectedTargetForm, setSelectedTargetForm] = useState<string>("Noon Report — In Port")
+  const [selectedTargetForm, setSelectedTargetForm] = useState<string>("")
   const [showInfoBox, setShowInfoBox] = useState(true)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
@@ -202,7 +202,7 @@ export function ReportSelection({ onGenerate }: ReportSelectionProps) {
           {/* Target Form Dropdown */}
           <div className="bg-white border border-[#e2e8f0] rounded-xl shadow-sm p-4">
             <label className="text-sm font-medium text-[#0f172a] block mb-2">
-              Detected target form
+              Select target form
             </label>
             <div className="relative">
               <button
