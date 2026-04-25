@@ -762,7 +762,6 @@ export function VesLinkForm({
               isVerified={isVerifiedField("latitude")}
               onSelect={() => onFieldSelect("latitude")}
               width="140px"
-              isCritical={true}
               isReadOnly={isReadOnly}
             />
           </FormRow>
@@ -791,7 +790,6 @@ export function VesLinkForm({
               isVerified={isVerifiedField("longitude")}
               onSelect={() => onFieldSelect("longitude")}
               width="140px"
-              isCritical={true}
               isReadOnly={isReadOnly}
             />
           </FormRow>
