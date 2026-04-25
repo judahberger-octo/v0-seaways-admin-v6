@@ -16,6 +16,7 @@ export default function Home() {
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
   const [isAdminMode, setIsAdminMode] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(true) // Default to true when in review mode
+  const [isViewingHistory, setIsViewingHistory] = useState(false) // True when viewing submitted report from history
 
   // Mock review data - in real app this would come from the TransferReview state
   const reviewData = currentView === "review" ? {
@@ -40,10 +41,12 @@ export default function Home() {
   const handleBackToSelection = () => {
     setCurrentView("selection")
     setSelectedReportId(null)
+    setIsViewingHistory(false) // Reset read-only state
   }
 
   const handleViewHistoryReport = (reportId: string) => {
     setSelectedReportId(reportId)
+    setIsViewingHistory(true) // Mark as read-only history view
     setCurrentView("review")
   }
 
@@ -66,16 +69,22 @@ export default function Home() {
       isReviewMode={currentView === "review"}
       reviewData={reviewData}
       onBackFromReview={handleBackToSelection}
-      hasUnsavedChanges={currentView === "review" && hasUnsavedChanges}
+      hasUnsavedChanges={currentView === "review" && hasUnsavedChanges && !isViewingHistory}
       onSaveAsDraft={() => {
         setHasUnsavedChanges(false)
       }}
+      isReadOnly={isViewingHistory}
+      submittedAt="2:03 PM on January 25, 2026"
+      submittedBy="chief.officer@seaways.com"
     >
       {currentView === "review" && selectedReportId ? (
         <TransferReview 
           reportId={selectedReportId} 
           onBack={handleBackToSelection}
           isAdminMode={isAdminMode}
+          isReadOnly={isViewingHistory}
+          submittedAt="2:03 PM on January 25, 2026"
+          submittedBy="chief.officer@seaways.com"
         />
       ) : (
         <>

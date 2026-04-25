@@ -591,12 +591,34 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
             {field.label || FIELD_LABELS[field.id] || field.id}
           </span>
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Field Type Pill - Critical or Manual fill only, no pill for Standard */}
-            {(isManualFill || field.isCritical) && (
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full border flex items-center gap-1 ${getFieldTypePillColor()}`}>
-                <Star className="w-3 h-3" fill="currentColor" />
-                {isManualFill ? "Manual fill" : "Critical field"}
-              </span>
+            {/* In read-only mode: show terminal state pill (Verified/Complete/Flagged) */}
+            {/* In edit mode: show field type pill (Critical/Manual fill) */}
+            {isReadOnly ? (
+              // Terminal state pills for read-only/submitted view
+              isFlagged ? (
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full border flex items-center gap-1 bg-red-50 text-red-700 border-red-200">
+                  <Flag className="w-3 h-3" />
+                  Flagged
+                </span>
+              ) : isVerified && field.isCritical ? (
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full border flex items-center gap-1 bg-green-50 text-green-700 border-green-200">
+                  <Check className="w-3 h-3" />
+                  Verified
+                </span>
+              ) : isVerified && isManualFill ? (
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full border flex items-center gap-1 bg-green-50 text-green-700 border-green-200">
+                  <Check className="w-3 h-3" />
+                  Complete
+                </span>
+              ) : null // Standard fields: no pill
+            ) : (
+              // Edit mode: show field type pill
+              (isManualFill || field.isCritical) && (
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full border flex items-center gap-1 ${getFieldTypePillColor()}`}>
+                  <Star className="w-3 h-3" fill="currentColor" />
+                  {isManualFill ? "Manual fill" : "Critical field"}
+                </span>
+              )
             )}
           </div>
         </div>
