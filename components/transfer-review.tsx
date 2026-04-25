@@ -1765,7 +1765,14 @@ export function TransferReview({
   const [pulsingFieldId, setPulsingFieldId] = useState<string | null>(null)
   const [showAdminSuite, setShowAdminSuite] = useState(false)
   const [editedFields, setEditedFields] = useState<Set<string>>(new Set())
-  const [verifiedVesLinkFields, setVerifiedVesLinkFields] = useState<Set<string>>(new Set())
+  const [verifiedVesLinkFields, setVerifiedVesLinkFields] = useState<Set<string>>(() => {
+    // In read-only/submitted mode, ALL critical and manual-fill fields are pre-verified
+    // This makes them render with green borders from the start
+    if (isReadOnly) {
+      return new Set(CRITICAL_FIELDS_NOON_SEA)
+    }
+    return new Set()
+  })
   const [currentCriticalIndex, setCurrentCriticalIndex] = useState(0)
   const [showValidationMessage, setShowValidationMessage] = useState(true)
   
@@ -1774,6 +1781,13 @@ export function TransferReview({
   
   // Auto-select the first field (date-time) on mount so user doesn't have to click
   const hasAutoSelectedRef = useRef(false)
+  
+  // When isReadOnly changes to true (viewing submitted report), mark all fields as verified
+  useEffect(() => {
+    if (isReadOnly) {
+      setVerifiedVesLinkFields(new Set(CRITICAL_FIELDS_NOON_SEA))
+    }
+  }, [isReadOnly])
   
   // Modal states
   const [showUnsavedModal, setShowUnsavedModal] = useState(false)
