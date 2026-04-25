@@ -705,9 +705,10 @@ const noMappingScreenshot: ScreenshotData = {
 interface NavtorScreenshotProps {
   fieldId: string | null
   className?: string
+  scale?: number // Scale factor for fullscreen modal view
 }
 
-export function NavtorScreenshot({ fieldId, className = "" }: NavtorScreenshotProps) {
+export function NavtorScreenshot({ fieldId, className = "", scale = 1 }: NavtorScreenshotProps) {
   const [isVisible, setIsVisible] = useState(true)
   const [currentFieldId, setCurrentFieldId] = useState<string | null>(fieldId)
   
@@ -737,6 +738,8 @@ export function NavtorScreenshot({ fieldId, className = "" }: NavtorScreenshotPr
       style={{
         opacity: isVisible ? 1 : 0,
         transition: "opacity 200ms ease-in-out",
+        transform: scale !== 1 ? `scale(${scale})` : undefined,
+        transformOrigin: "top center",
       }}
     >
       {/* Container with NAVTOR dark navy background */}

@@ -21,7 +21,8 @@ import {
   Cog,
   Info,
   Filter,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Maximize2
 } from "lucide-react"
 import { AdminTestingSuite } from "./admin-testing-suite"
 import { VesLinkForm, CRITICAL_FIELDS_NOON_SEA, MANUAL_FILL_FIELDS } from "./veslink-form"
@@ -496,9 +497,22 @@ function SingleFieldFocusPane({
   isReadOnly?: boolean
 }) {
   const [validationExpanded, setValidationExpanded] = useState(false)
-  const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
-  
+const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
+  // Source preview carousel state - track current source tab
   const [sourcePreviewIndex, setSourcePreviewIndex] = useState(0)
+  // State for fullscreen source preview modal
+  const [showSourceModal, setShowSourceModal] = useState(false)
+  
+  // Handle Escape key to close source modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showSourceModal) {
+        setShowSourceModal(false)
+      }
+    }
+    document.addEventListener("keydown", handleEscape)
+    return () => document.removeEventListener("keydown", handleEscape)
+  }, [showSourceModal])
   const sourcePreviewCount = sourceReports.length
   
   // Check if this is a manual-fill field
@@ -747,9 +761,13 @@ function SingleFieldFocusPane({
                     <ChevronRightIcon className="w-4 h-4 text-gray-600" />
                   </button>
 
-                  {/* Expand Icon */}
-                  <button className="absolute top-2 right-2 w-7 h-7 rounded bg-white/80 backdrop-blur-sm border border-gray-200 flex items-center justify-center hover:bg-white">
-                    <ExternalLink className="w-3.5 h-3.5 text-gray-600" />
+                  {/* Expand Icon - Opens fullscreen source preview modal */}
+                  <button 
+                    onClick={() => setShowSourceModal(true)}
+                    className="absolute top-2 right-2 w-7 h-7 rounded bg-white/80 backdrop-blur-sm border border-gray-200 flex items-center justify-center hover:bg-white"
+                    title="Expand source preview"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5 text-gray-600" />
                   </button>
                 </div>
 
@@ -873,6 +891,60 @@ function SingleFieldFocusPane({
           </div>
         )}
       </div>
+
+      {/* Fullscreen Source Preview Modal */}
+      {showSourceModal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          onClick={() => setShowSourceModal(false)}
+          onKeyDown={(e) => e.key === "Escape" && setShowSourceModal(false)}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          
+          {/* Modal Card */}
+          <div 
+            className="relative w-[90vw] h-[90vh] bg-[#1a2332] rounded-xl shadow-2xl flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Bar */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+              <span className="text-sm font-semibold text-white/90 uppercase tracking-wider">
+                {field?.sourceTab || "VOYAGE REPORTING — GENERAL"}
+              </span>
+              <button
+                onClick={() => setShowSourceModal(false)}
+                className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+              >
+                <X className="w-5 h-5 text-white/80" />
+              </button>
+            </div>
+            
+            {/* Main Content Area - Full source page */}
+            <div className="flex-1 overflow-auto p-6">
+              <div className="w-full h-full flex items-start justify-center">
+                {/* Large source preview with highlighted field */}
+                <div className="relative w-full max-w-4xl">
+                  <NavtorScreenshot 
+                    fieldId={field?.id || null}
+                    scale={1.4}
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="px-6 py-3 border-t border-white/10 flex items-center justify-between">
+              <span className="text-xs text-white/50">
+                Report #{sourceReports[sourcePreviewIndex]?.replace("#", "") || "4528"} • Noon (Sea) • 15/04/2026
+              </span>
+              <span className="text-xs text-white/50">
+                {sourcePreviewIndex + 1} of {sourcePreviewCount}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
