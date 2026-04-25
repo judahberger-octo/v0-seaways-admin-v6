@@ -1646,6 +1646,9 @@ export function TransferReview({
   // Ref to get VesLink form field values
   const getVesLinkFieldValueRef = useRef<((fieldId: string) => string) | null>(null)
   
+  // Auto-select the first field (date-time) on mount so user doesn't have to click
+  const hasAutoSelectedRef = useRef(false)
+  
   // Modal states
   const [showUnsavedModal, setShowUnsavedModal] = useState(false)
   const [showDiscardModal, setShowDiscardModal] = useState(false)
@@ -1907,6 +1910,36 @@ export function TransferReview({
     // Return in priority order: critical-pending -> manualFill-pending -> flagged -> verified
     return [...criticalPending, ...manualFillPending, ...flagged, ...verified]
   }, [verifiedVesLinkFields])
+
+  // Auto-select the first field (date-time) on initial mount so user doesn't have to click
+  useEffect(() => {
+    if (hasAutoSelectedRef.current || selectedField) return
+    hasAutoSelectedRef.current = true
+    
+    // Select the first critical field (date-time)
+    const firstFieldId = "date-time"
+    const metadata = getFieldMetadata(firstFieldId)
+    const mockField: FormField = {
+      id: firstFieldId,
+      label: metadata.label,
+      value: metadata.value,
+      unit: metadata.unit,
+      confidence: 97,
+      status: "pending",
+      isCritical: true,
+      fieldType: "critical",
+      sourceAvailable: true,
+      sourceTab: metadata.sourceTab,
+      sourceField: metadata.sourceField,
+    }
+    setSelectedField(mockField)
+    setCurrentCriticalIndex(1)
+    
+    // Scroll to the date-time field on VesLink form
+    setTimeout(() => {
+      scrollToVesLinkField(firstFieldId)
+    }, 100)
+  }, [scrollToVesLinkField])
 
   // Navigate to next critical field (cycles through all critical fields in priority order)
   const navigateToNextCritical = useCallback(() => {
