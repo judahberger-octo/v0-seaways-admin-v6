@@ -722,24 +722,7 @@ export function VesLinkForm({
       {/* Form Content */}
       <div className="p-4">
         {/* Report Title */}
-        <h1 className="text-[#d9831f] text-xl font-normal mb-4">Noon Report Unav 4.0</h1>
-        
-        {/* Top Action Buttons */}
-        <div className="flex gap-2 mb-6">
-          <button disabled className="px-3 py-1 text-[12px] border border-[#999] bg-[#f5f5f5] text-[#999] cursor-not-allowed">
-            Format for Print
-          </button>
-          <button disabled className="px-3 py-1 text-[12px] border border-[#999] bg-[#f5f5f5] text-[#999] cursor-not-allowed">
-            Save Draft
-          </button>
-          <button disabled className="px-3 py-1 text-[12px] border border-[#999] bg-[#f5f5f5] text-[#999] cursor-not-allowed">
-            Save a Copy
-          </button>
-          <button disabled className="px-3 py-1 text-[12px] border border-[#999] bg-[#f5f5f5] text-[#999] cursor-not-allowed">
-            Submit
-          </button>
-        </div>
-        <p className="text-[11px] text-[#666] italic -mt-4 mb-6">Submission handled by Unframe Transfer Agent</p>
+        <h1 className="text-[#d9831f] text-xl font-normal mb-6">Noon Report Unav 4.0</h1>
         
         {/* General Information - 2 column grid */}
         <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 mb-4">
@@ -1241,22 +1224,6 @@ export function VesLinkForm({
                 onSelect={() => onFieldSelect("master-last")} width="120px" />
             </div>
           </div>
-        </div>
-        
-        {/* Bottom Action Buttons */}
-        <div className="flex justify-center gap-2 mt-6">
-          <button disabled className="px-4 py-1.5 text-[12px] border border-[#999] bg-[#f5f5f5] text-[#999] cursor-not-allowed">
-            Format for Print
-          </button>
-          <button disabled className="px-4 py-1.5 text-[12px] border border-[#999] bg-[#f5f5f5] text-[#999] cursor-not-allowed">
-            Save Draft
-          </button>
-          <button disabled className="px-4 py-1.5 text-[12px] border border-[#999] bg-[#f5f5f5] text-[#999] cursor-not-allowed">
-            Save a Copy
-          </button>
-          <button disabled className="px-4 py-1.5 text-[12px] border border-[#999] bg-[#f5f5f5] text-[#999] cursor-not-allowed">
-            Submit
-          </button>
         </div>
       </div>
     </div>
