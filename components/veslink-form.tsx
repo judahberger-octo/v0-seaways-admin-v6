@@ -235,9 +235,14 @@ function VLInput({
   const effectivelyVerified = isVerified || isManualFillComplete
   
   // Determine border color based on field state
+  // Border mapping:
+  // - Critical pending    → red 2px
+  // - Manual fill empty   → orange 2px  
+  // - Complete (any type) → green 2px
+  // - Standard / default  → 1px solid neutral-300 (light grey)
   const getBorderStyle = () => {
     if (effectivelyVerified) {
-      // Verified/Complete = green border
+      // Verified/Complete = green border (any field type)
       return isSelected 
         ? "border-2 border-[#16a34a] ring-2 ring-[#16a34a]/30 shadow-[0_0_8px_rgba(22,163,74,0.4)]" 
         : "border-2 border-[#16a34a]"
@@ -254,16 +259,10 @@ function VLInput({
         ? "border-2 border-[#dc2626] ring-2 ring-[#dc2626]/30 shadow-[0_0_8px_rgba(220,38,38,0.4)]" 
         : "border-2 border-[#dc2626]"
     }
-    if (isEdited) {
-      // Edited field = amber border
-      return isSelected 
-        ? "border-2 border-[#f59e0b] ring-2 ring-[#f59e0b]/30 shadow-[0_0_8px_rgba(245,158,11,0.4)]" 
-        : "border-2 border-[#f59e0b]"
-    }
-    // Standard/default = neutral border
+    // Standard/default = neutral grey border (no colored borders for standard fields)
     return isSelected 
       ? "border border-[#7c3aed] ring-2 ring-[#7c3aed]/30 shadow-[0_0_8px_rgba(124,58,237,0.3)]" 
-      : "border border-[#999]"
+      : "border border-[#d1d5db]"
   }
   
   return (
@@ -336,9 +335,14 @@ function VLSelect({
   const effectivelyVerified = isVerified || isManualFillComplete
   
   // Determine border color based on field state
+  // Border mapping:
+  // - Critical pending    → red 2px
+  // - Manual fill empty   → orange 2px  
+  // - Complete (any type) → green 2px
+  // - Standard / default  → 1px solid neutral-300 (light grey)
   const getBorderStyle = () => {
     if (effectivelyVerified) {
-      // Verified/Complete = green border
+      // Verified/Complete = green border (any field type)
       return isSelected 
         ? "border-2 border-[#16a34a] ring-2 ring-[#16a34a]/30 shadow-[0_0_8px_rgba(22,163,74,0.4)]" 
         : "border-2 border-[#16a34a]"
@@ -355,16 +359,10 @@ function VLSelect({
         ? "border-2 border-[#dc2626] ring-2 ring-[#dc2626]/30 shadow-[0_0_8px_rgba(220,38,38,0.4)]" 
         : "border-2 border-[#dc2626]"
     }
-    if (isEdited) {
-      // Edited field = amber border
-      return isSelected 
-        ? "border-2 border-[#f59e0b] ring-2 ring-[#f59e0b]/30 shadow-[0_0_8px_rgba(245,158,11,0.4)]" 
-        : "border-2 border-[#f59e0b]"
-    }
-    // Standard/default = neutral border
+    // Standard/default = neutral grey border (no colored borders for standard fields)
     return isSelected 
       ? "border border-[#7c3aed] ring-2 ring-[#7c3aed]/30 shadow-[0_0_8px_rgba(124,58,237,0.3)]" 
-      : "border border-[#999]"
+      : "border border-[#d1d5db]"
   }
   
   return (
