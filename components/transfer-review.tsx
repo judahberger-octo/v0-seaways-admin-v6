@@ -38,6 +38,38 @@ type FieldStatus = "verified" | "flagged" | "pending" | "not-populated" | "manua
 type FieldType = "standard" | "critical" | "manualFill"
 type ManualFillStatus = "awaiting" | "complete"
 
+// Hardcoded field labels as fallback - ensures label is always displayed
+const FIELD_LABELS: Record<string, string> = {
+  "vessel-name":       "Vessel Name",
+  "date-time":         "Date/Time",
+  "latitude":          "Latitude",
+  "longitude":         "Longitude",
+  "location":          "Location",
+  "next-port":         "Next Port",
+  "remarks":           "Remarks",
+  "voyage-number":     "Voyage Number",
+  "vessel-condition":  "Vessel Condition",
+  "eta":               "ETA",
+  "eta-date":          "ETA Date",
+  "eta-time":          "ETA Time",
+  "distance-to-go":    "Distance to Go (nm)",
+  "reported-speed":    "Reported Speed (kts)",
+  "observed-distance": "Observed Distance (nm)",
+  "ballast":           "Ballast (MT)",
+  "displacement":      "Displacement (t)",
+  "fwd-draft":         "Fwd Draft (m)",
+  "mid-draft":         "Mid Draft (m)",
+  "aft-draft":         "Aft Draft (m)",
+  "cp-ordered-speed":  "CP / Ordered Speed (kts)",
+  "engine-distance":   "Engine Distance (nm)",
+  "time-since-last-report": "Time Since Last Report (hrs)",
+  "slip":              "Slip %",
+  "sea-state":         "Sea State",
+  "swell":             "Swell",
+  "wind-direction":    "Wind Direction",
+  "wind-force":        "Wind Force",
+}
+
 interface FormField {
   id: string
   label: string
@@ -540,9 +572,9 @@ function SingleFieldFocusPane({
       <div className="flex-1 overflow-y-auto p-5">
         {/* Header Row: Display name label + Field type pill */}
         <div className="flex items-start justify-between mb-1">
-          {/* Display Name - small muted uppercase label */}
+          {/* Display Name - small muted uppercase label, with FIELD_LABELS fallback */}
           <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-            {field.label}
+            {field.label || FIELD_LABELS[field.id] || field.id}
           </span>
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Field Type Pill - Critical or Manual fill only, no pill for Standard */}
@@ -1842,7 +1874,7 @@ export function TransferReview({
       },
     }
     return metadata[fieldId] || { 
-      label: fieldId.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
+      label: FIELD_LABELS[fieldId] || fieldId.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
       sourceTab: "Operational",
       sourceField: fieldId,
       value: ""
