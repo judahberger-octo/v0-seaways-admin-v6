@@ -242,21 +242,9 @@ function VLInput({
   // - Complete (any type) → green 2px
   // - Standard / default  → 1px solid neutral-300 (light grey)
   const getBorderStyle = () => {
-    // In read-only mode (submitted view), all fields are resolved to green
-    // A submitted report passed validation, so every required field is complete
+    // TOP-LEVEL OVERRIDE: In read-only/submitted view, ALL fields get green border
+    // A submitted report passed submit-gating, so every field is resolved. No exceptions.
     if (isReadOnly) {
-      // Standard fields: green if populated, neutral grey if empty
-      if (!isCritical && !isManualFill) {
-        if (value && value.trim() !== "") {
-          return isSelected 
-            ? "border-2 border-[#16a34a] ring-2 ring-[#16a34a]/30 shadow-[0_0_8px_rgba(22,163,74,0.4)]" 
-            : "border-2 border-[#16a34a]"
-        }
-        return isSelected 
-          ? "border border-[#7c3aed] ring-2 ring-[#7c3aed]/30 shadow-[0_0_8px_rgba(124,58,237,0.3)]" 
-          : "border border-[#d1d5db]"
-      }
-      // Critical and manual-fill fields: always green in submitted view
       return isSelected 
         ? "border-2 border-[#16a34a] ring-2 ring-[#16a34a]/30 shadow-[0_0_8px_rgba(22,163,74,0.4)]" 
         : "border-2 border-[#16a34a]"
@@ -363,21 +351,9 @@ function VLSelect({
   // - Complete (any type) → green 2px
   // - Standard / default  → 1px solid neutral-300 (light grey)
   const getBorderStyle = () => {
-    // In read-only mode (submitted view), all fields are resolved to green
-    // A submitted report passed validation, so every required field is complete
+    // TOP-LEVEL OVERRIDE: In read-only/submitted view, ALL fields get green border
+    // A submitted report passed submit-gating, so every field is resolved. No exceptions.
     if (isReadOnly) {
-      // Standard fields: green if populated, neutral grey if empty
-      if (!isCritical && !isManualFill) {
-        if (value && value.trim() !== "" && value !== "Select...") {
-          return isSelected 
-            ? "border-2 border-[#16a34a] ring-2 ring-[#16a34a]/30 shadow-[0_0_8px_rgba(22,163,74,0.4)]" 
-            : "border-2 border-[#16a34a]"
-        }
-        return isSelected 
-          ? "border border-[#7c3aed] ring-2 ring-[#7c3aed]/30 shadow-[0_0_8px_rgba(124,58,237,0.3)]" 
-          : "border border-[#d1d5db]"
-      }
-      // Critical and manual-fill fields: always green in submitted view
       return isSelected 
         ? "border-2 border-[#16a34a] ring-2 ring-[#16a34a]/30 shadow-[0_0_8px_rgba(22,163,74,0.4)]" 
         : "border-2 border-[#16a34a]"

@@ -1882,13 +1882,16 @@ export function TransferReview({
   // Count definitions for floating Pending/Complete counter:
   // Pending  = critical-pending + manualFill-empty (awaiting)
   // Complete = critical-verified + manualFill-populated (auto-completes on typing)
-  const displayPendingCount = (criticalOnlyTotal - criticalOnlyVerified) + (manualFillTotal - manualFillVerified)
-  const displayCompleteCount = criticalOnlyVerified + manualFillVerified
+  // In read-only/submitted mode: all fields are resolved, so 0 pending and all complete
+  const totalRequiredFields = criticalOnlyTotal + manualFillTotal
+  const displayPendingCount = isReadOnly ? 0 : (criticalOnlyTotal - criticalOnlyVerified) + (manualFillTotal - manualFillVerified)
+  const displayCompleteCount = isReadOnly ? totalRequiredFields : criticalOnlyVerified + manualFillVerified
   
   // Submit gating: ALL critical fields verified/flagged AND ALL manualFill fields populated/flagged
+  // In read-only mode: already submitted, so canSubmit is always true
   const allCriticalDone = criticalOnlyVerified === criticalOnlyTotal
   const allManualFillDone = manualFillVerified === manualFillTotal
-  const canSubmit = allCriticalDone && allManualFillDone
+  const canSubmit = isReadOnly ? true : (allCriticalDone && allManualFillDone)
 
   const toggleSection = (sectionId: string) => {
     setSections((prev) =>
