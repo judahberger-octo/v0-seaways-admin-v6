@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Save, RotateCcw, X, ChevronDown, Check } from "lucide-react"
+import { ArrowLeft, Save, RotateCcw, X, ChevronDown, Check, Plus, Trash2 } from "lucide-react"
 import {
   fieldDefinitions,
   targetSystems,
@@ -422,10 +422,119 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
               <h2 className="mb-6 text-base font-semibold text-[#0f172a]">
                 Extraction
               </h2>
-              {/* Placeholder - will be expanded in Prompt 12 */}
-              <p className="text-sm text-[#64748b]">
-                Extraction section content coming soon...
-              </p>
+              
+              <div className="grid gap-6 lg:grid-cols-2">
+                {/* A) NAVTOR Source Paths */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-[#334155]">NAVTOR source paths</h3>
+                    <p className="mt-0.5 text-xs text-[#64748b]">
+                      Map this field to one or more NAVTOR API paths
+                    </p>
+                  </div>
+                  
+                  {/* Source paths list */}
+                  <div className="space-y-2">
+                    {(formData.navtorSourcePaths || []).map((path, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <NavtorPathPicker
+                          value={path}
+                          onChange={(newPath) => {
+                            const newPaths = [...(formData.navtorSourcePaths || [])]
+                            newPaths[index] = newPath
+                            updateFormData({ navtorSourcePaths: newPaths })
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newPaths = (formData.navtorSourcePaths || []).filter((_, i) => i !== index)
+                            updateFormData({ navtorSourcePaths: newPaths })
+                          }}
+                          className="flex-shrink-0 rounded-lg p-2 text-[#94a3b8] hover:bg-[#fee2e2] hover:text-[#ef4444]"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                    
+                    {/* Add path button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateFormData({ 
+                          navtorSourcePaths: [...(formData.navtorSourcePaths || []), ""] 
+                        })
+                      }}
+                      className="flex items-center gap-2 rounded-lg border border-dashed border-[#d1d5db] px-3 py-2 text-sm text-[#64748b] hover:border-[#7c3aed] hover:bg-[#f8fafc] hover:text-[#7c3aed]"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add source path
+                    </button>
+                  </div>
+                  
+                  {/* Aggregate toggle */}
+                  <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-[#334155]">
+                          Aggregate across source reports
+                        </p>
+                        <p className="mt-1 text-xs text-[#64748b]">
+                          {formData.aggregateAcrossReports 
+                            ? "Sum values across all selected source reports" 
+                            : "Use the value from the most recent report"}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={formData.aggregateAcrossReports || false}
+                        onClick={() => updateFormData({ aggregateAcrossReports: !formData.aggregateAcrossReports })}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#7c3aed] focus:ring-offset-2 ${
+                          formData.aggregateAcrossReports ? "bg-[#7c3aed]" : "bg-[#d1d5db]"
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            formData.aggregateAcrossReports ? "translate-x-5" : "translate-x-0"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* B) Extraction Hint */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-[#334155]">Extraction hint</h3>
+                    <p className="mt-0.5 text-xs text-[#64748b]">
+                      Describe how to extract this field (included in LLM prompt). Markdown allowed.
+                    </p>
+                  </div>
+                  
+                  <div className="relative">
+                    <textarea
+                      value={formData.extractionHint || ""}
+                      onChange={(e) => {
+                        if (e.target.value.length <= 1000) {
+                          updateFormData({ extractionHint: e.target.value })
+                        }
+                      }}
+                      placeholder="Describe how to extract this field. The hint is included in the LLM prompt. Example: 'Reported Speed in knots — found in the Distance & Speed tab. If multiple values exist, prefer the one labeled &quot;average&quot;.'"
+                      rows={8}
+                      className="w-full resize-none rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                    />
+                    <div className="absolute bottom-3 right-3 text-xs text-[#94a3b8]">
+                      <span className={(formData.extractionHint?.length || 0) > 900 ? "text-[#f97316]" : ""}>
+                        {formData.extractionHint?.length || 0}
+                      </span>
+                      /1000
+                    </div>
+                  </div>
+                </div>
+              </div>
             </section>
 
             {/* Section 3: Logic */}
@@ -564,6 +673,115 @@ function FormsMultiSelect({ selectedFormIds, onChange }: FormsMultiSelectProps) 
                 </button>
               )
             })}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// Mock NAVTOR API paths for autocomplete
+const NAVTOR_PATHS = [
+  "voyageReporting.general.reportDate",
+  "voyageReporting.general.reportTime",
+  "voyageReporting.general.voyageNumber",
+  "voyageReporting.general.portOfDeparture",
+  "voyageReporting.general.portOfDestination",
+  "voyageReporting.distanceAndSpeed.reportedSpeed",
+  "voyageReporting.distanceAndSpeed.averageSpeed",
+  "voyageReporting.distanceAndSpeed.distanceToGo",
+  "voyageReporting.distanceAndSpeed.distanceSinceLastReport",
+  "voyageReporting.distanceAndSpeed.totalDistance",
+  "voyageReporting.position.latitude",
+  "voyageReporting.position.longitude",
+  "voyageReporting.weather.windDirection",
+  "voyageReporting.weather.windSpeed",
+  "voyageReporting.weather.seaState",
+  "voyageReporting.weather.swellHeight",
+  "machinery.mainEngine.consumption.HFO",
+  "machinery.mainEngine.consumption.MGO",
+  "machinery.mainEngine.consumption.VLSFO",
+  "machinery.mainEngine.rpm",
+  "machinery.mainEngine.power",
+  "machinery.mainEngine.runningHours",
+  "machinery.auxiliaryEngine.consumption.HFO",
+  "machinery.auxiliaryEngine.consumption.MGO",
+  "machinery.auxiliaryEngine.runningHours",
+  "machinery.boiler.consumption.HFO",
+  "machinery.boiler.consumption.MGO",
+  "bunkers.rob.HFO",
+  "bunkers.rob.MGO",
+  "bunkers.rob.VLSFO",
+  "bunkers.rob.freshWater",
+  "bunkers.received.HFO",
+  "bunkers.received.MGO",
+  "cargo.totalCargo",
+  "cargo.loadedQuantity",
+  "cargo.dischargedQuantity",
+]
+
+interface NavtorPathPickerProps {
+  value: string
+  onChange: (value: string) => void
+}
+
+function NavtorPathPicker({ value, onChange }: NavtorPathPickerProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [search, setSearch] = useState(value)
+
+  const filteredPaths = NAVTOR_PATHS.filter((path) =>
+    path.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const handleSelect = (path: string) => {
+    onChange(path)
+    setSearch(path)
+    setIsOpen(false)
+  }
+
+  return (
+    <div className="relative flex-1">
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => {
+          setSearch(e.target.value)
+          setIsOpen(true)
+        }}
+        onFocus={() => setIsOpen(true)}
+        placeholder="voyageReporting.general.reportDate"
+        className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 font-mono text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+      />
+      
+      {isOpen && filteredPaths.length > 0 && (
+        <>
+          <div 
+            className="fixed inset-0 z-10" 
+            onClick={() => {
+              setIsOpen(false)
+              if (!NAVTOR_PATHS.includes(search)) {
+                onChange(search) // Allow custom paths
+              }
+            }} 
+          />
+          <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-lg border border-[#e2e8f0] bg-white py-1 shadow-lg">
+            {filteredPaths.slice(0, 10).map((path) => (
+              <button
+                key={path}
+                type="button"
+                onClick={() => handleSelect(path)}
+                className={`w-full px-3 py-2 text-left font-mono text-sm hover:bg-[#f8fafc] ${
+                  path === value ? "bg-[#f3e8ff] text-[#7c3aed]" : "text-[#334155]"
+                }`}
+              >
+                {path}
+              </button>
+            ))}
+            {filteredPaths.length > 10 && (
+              <p className="px-3 py-2 text-xs text-[#94a3b8]">
+                +{filteredPaths.length - 10} more results
+              </p>
+            )}
           </div>
         </>
       )}

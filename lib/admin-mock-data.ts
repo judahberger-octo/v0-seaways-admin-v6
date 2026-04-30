@@ -51,6 +51,7 @@ export interface FieldDefinition {
   name: string
   appearsOnFormIds: string[]
   navtorSourcePaths: string[]
+  aggregateAcrossReports?: boolean
   dataType: 'number' | 'text' | 'datetime' | 'enum' | 'latlong' | 'duration'
   unit?: string
   isCritical: boolean
