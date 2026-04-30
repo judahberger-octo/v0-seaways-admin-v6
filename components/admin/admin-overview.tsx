@@ -10,6 +10,8 @@ import {
   Cell,
   LabelList,
 } from "recharts"
+import { useState, useMemo } from "react"
+import { Search, ChevronUp, ChevronDown, X } from "lucide-react"
 import {
   getSubmissionsLast30Days,
   getAverageConfidenceLast30Days,
@@ -17,6 +19,7 @@ import {
   getDefinitionChangesLast7Days,
   getVerificationAccuracyByForm,
   getMostFlaggedFields,
+  getVesselsByAdoption,
 } from "@/lib/admin-mock-data"
 
 interface KpiCardProps {
@@ -121,10 +124,8 @@ export function AdminOverviewContent() {
         <MostFlaggedFieldsChart />
       </div>
 
-      {/* Placeholder for more charts - will be added in later prompts */}
-      <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-8 text-center">
-        <p className="text-[#64748b]">More charts coming soon...</p>
-      </div>
+      {/* Crew Adoption Chart - full width */}
+      <CrewAdoptionChart />
     </div>
   )
 }
@@ -333,6 +334,271 @@ function MostFlaggedFieldsChart() {
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// Get adoption bar color based on percentage
+function getAdoptionColor(rate: number): string {
+  if (rate === 0) return "#d1d5db" // grey
+  if (rate < 30) return "#ef4444"  // red
+  if (rate < 80) return "#eab308"  // yellow
+  return "#22c55e"                  // green
+}
+
+// Format relative time
+function formatRelativeTime(dateStr: string | null): string {
+  if (!dateStr) return "Never"
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  
+  if (diffDays === 0) return "Today"
+  if (diffDays === 1) return "Yesterday"
+  if (diffDays < 7) return `${diffDays} days ago`
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
+  return `${Math.floor(diffDays / 30)} months ago`
+}
+
+type SortKey = "vessel" | "adoption" | "submissions" | "lastActivity"
+type SortDir = "asc" | "desc"
+
+function CrewAdoptionChart() {
+  const allData = getVesselsByAdoption()
+  const [searchQuery, setSearchQuery] = useState("")
+  const [showAll, setShowAll] = useState(false)
+  const [sortKey, setSortKey] = useState<SortKey>("adoption")
+  const [sortDir, setSortDir] = useState<SortDir>("desc")
+  const [showZeroModal, setShowZeroModal] = useState(false)
+
+  // Summary stats
+  const topAdopter = allData.find(d => d.adoptionRate > 0)
+  const activeAdopters = allData.filter(d => d.adoptionRate > 0)
+  const lowestActiveAdopter = activeAdopters[activeAdopters.length - 1]
+  const zeroAdopters = allData.filter(d => d.adoptionRate === 0)
+
+  // Filter and sort data
+  const filteredData = useMemo(() => {
+    let result = allData.filter(d => 
+      d.vessel.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+
+    result.sort((a, b) => {
+      let cmp = 0
+      switch (sortKey) {
+        case "vessel":
+          cmp = a.vessel.name.localeCompare(b.vessel.name)
+          break
+        case "adoption":
+          cmp = a.adoptionRate - b.adoptionRate
+          break
+        case "submissions":
+          cmp = a.submissionCount - b.submissionCount
+          break
+        case "lastActivity":
+          const aTime = a.lastActivity ? new Date(a.lastActivity).getTime() : 0
+          const bTime = b.lastActivity ? new Date(b.lastActivity).getTime() : 0
+          cmp = aTime - bTime
+          break
+      }
+      return sortDir === "desc" ? -cmp : cmp
+    })
+
+    return result
+  }, [allData, searchQuery, sortKey, sortDir])
+
+  const displayData = showAll ? filteredData : filteredData.slice(0, 12)
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === "desc" ? "asc" : "desc")
+    } else {
+      setSortKey(key)
+      setSortDir("desc")
+    }
+  }
+
+  const SortIcon = ({ columnKey }: { columnKey: SortKey }) => {
+    if (sortKey !== columnKey) return null
+    return sortDir === "desc" 
+      ? <ChevronDown className="h-4 w-4" /> 
+      : <ChevronUp className="h-4 w-4" />
+  }
+
+  return (
+    <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
+      <div className="mb-6">
+        <h3 className="text-base font-semibold text-[#0f172a]">
+          Crew adoption by vessel
+        </h3>
+        <p className="text-sm text-[#64748b]">Last 30 days</p>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="mb-6 grid grid-cols-3 gap-4">
+        <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
+          <p className="text-sm text-[#64748b]">Top adopter</p>
+          {topAdopter && (
+            <>
+              <p className="mt-1 text-base font-semibold text-[#0f172a]">
+                {topAdopter.vessel.name}
+              </p>
+              <p className="text-2xl font-bold text-[#22c55e]">
+                {topAdopter.adoptionRate}%
+              </p>
+            </>
+          )}
+        </div>
+        <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
+          <p className="text-sm text-[#64748b]">Lowest active adopter</p>
+          {lowestActiveAdopter && (
+            <>
+              <p className="mt-1 text-base font-semibold text-[#0f172a]">
+                {lowestActiveAdopter.vessel.name}
+              </p>
+              <p className="text-2xl font-bold text-[#ef4444]">
+                {lowestActiveAdopter.adoptionRate}%
+              </p>
+            </>
+          )}
+        </div>
+        <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
+          <p className="text-sm text-[#64748b]">Vessels at 0%</p>
+          <p className="mt-1 text-2xl font-bold text-[#64748b]">
+            {zeroAdopters.length}
+          </p>
+          <button
+            onClick={() => setShowZeroModal(true)}
+            className="mt-1 text-sm font-medium text-[#7c3aed] hover:underline"
+          >
+            View list
+          </button>
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="mb-4 relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
+        <input
+          type="text"
+          placeholder="Search vessels..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full rounded-lg border border-[#e2e8f0] bg-white py-2 pl-10 pr-4 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+        />
+      </div>
+
+      {/* Table Header */}
+      <div className="grid grid-cols-[1fr_2fr_80px_100px_120px] gap-4 border-b border-[#e2e8f0] pb-2 text-sm font-medium text-[#64748b]">
+        <button 
+          onClick={() => handleSort("vessel")}
+          className="flex items-center gap-1 text-left hover:text-[#0f172a]"
+        >
+          Vessel <SortIcon columnKey="vessel" />
+        </button>
+        <button 
+          onClick={() => handleSort("adoption")}
+          className="flex items-center gap-1 text-left hover:text-[#0f172a]"
+        >
+          Adoption <SortIcon columnKey="adoption" />
+        </button>
+        <span className="text-right">%</span>
+        <button 
+          onClick={() => handleSort("submissions")}
+          className="flex items-center justify-end gap-1 hover:text-[#0f172a]"
+        >
+          Submissions <SortIcon columnKey="submissions" />
+        </button>
+        <button 
+          onClick={() => handleSort("lastActivity")}
+          className="flex items-center justify-end gap-1 hover:text-[#0f172a]"
+        >
+          Last activity <SortIcon columnKey="lastActivity" />
+        </button>
+      </div>
+
+      {/* Table Rows */}
+      <div className="divide-y divide-[#f1f5f9]">
+        {displayData.map((item) => (
+          <div
+            key={item.vessel.id}
+            className="grid grid-cols-[1fr_2fr_80px_100px_120px] gap-4 py-3 text-sm"
+          >
+            <span className="font-medium text-[#0f172a] truncate" title={item.vessel.name}>
+              {item.vessel.name}
+            </span>
+            <div className="flex items-center">
+              <div className="h-2 w-full rounded-full bg-[#f1f5f9]">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${item.adoptionRate}%`,
+                    backgroundColor: getAdoptionColor(item.adoptionRate),
+                  }}
+                />
+              </div>
+            </div>
+            <span 
+              className="text-right font-semibold"
+              style={{ color: getAdoptionColor(item.adoptionRate) }}
+            >
+              {item.adoptionRate}%
+            </span>
+            <span className="text-right text-[#64748b]">
+              {item.submissionCount}
+            </span>
+            <span className="text-right text-[#64748b]">
+              {formatRelativeTime(item.lastActivity)}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Show All Toggle */}
+      {filteredData.length > 12 && (
+        <button
+          onClick={() => setShowAll(!showAll)}
+          className="mt-4 w-full rounded-lg border border-[#e2e8f0] py-2 text-sm font-medium text-[#64748b] hover:bg-[#f8fafc] hover:text-[#0f172a]"
+        >
+          {showAll ? "Show less" : `Show all ${filteredData.length}`}
+        </button>
+      )}
+
+      {/* Zero Adopters Modal */}
+      {showZeroModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h4 className="text-lg font-semibold text-[#0f172a]">
+                Vessels at 0% adoption
+              </h4>
+              <button
+                onClick={() => setShowZeroModal(false)}
+                className="rounded-lg p-1 text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#0f172a]"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="max-h-80 overflow-y-auto">
+              {zeroAdopters.length === 0 ? (
+                <p className="text-sm text-[#64748b]">No vessels at 0% adoption.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {zeroAdopters.map((item) => (
+                    <li
+                      key={item.vessel.id}
+                      className="rounded-lg border border-[#e2e8f0] px-4 py-2 text-sm text-[#0f172a]"
+                    >
+                      {item.vessel.name}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
