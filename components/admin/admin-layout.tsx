@@ -27,13 +27,15 @@ const adminTabs: AdminTabItem[] = [
 interface AdminLayoutProps {
   activeTab: AdminTabId
   onTabChange: (tab: AdminTabId) => void
+  hideHeader?: boolean
   children: React.ReactNode
 }
 
-export function AdminLayout({ activeTab, onTabChange, children }: AdminLayoutProps) {
+export function AdminLayout({ activeTab, onTabChange, hideHeader = false, children }: AdminLayoutProps) {
   return (
     <div className="flex flex-col h-full">
-      {/* Admin Header with Sub-nav */}
+      {/* Admin Header with Sub-nav - hidden when viewing detail pages */}
+      {!hideHeader && (
       <header className="border-b border-[#e2e8f0] bg-white flex-shrink-0">
         {/* Page Title */}
         <div className="px-8 pt-6 pb-4">
@@ -63,6 +65,7 @@ export function AdminLayout({ activeTab, onTabChange, children }: AdminLayoutPro
           })}
         </div>
       </header>
+      )}
 
       {/* Content Area */}
       <main className="flex-1 overflow-auto bg-[#f8fafc]">

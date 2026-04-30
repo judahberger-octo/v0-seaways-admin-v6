@@ -57,7 +57,12 @@ interface FilterState {
   calculated: boolean | null
 }
 
-export function AdminFieldDefinitions() {
+interface AdminFieldDefinitionsProps {
+  onSelectField?: (fieldId: string) => void
+  onCreateField?: () => void
+}
+
+export function AdminFieldDefinitions({ onSelectField, onCreateField }: AdminFieldDefinitionsProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [sortKey, setSortKey] = useState<SortKey>("name")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
@@ -149,8 +154,7 @@ export function AdminFieldDefinitions() {
   }
 
   const handleRowClick = (fieldId: string) => {
-    // Navigate to field detail page
-    console.log(`Navigate to /admin/field-definitions/${fieldId}`)
+    onSelectField?.(fieldId)
   }
 
   const activeFilterCount =
@@ -181,7 +185,10 @@ export function AdminFieldDefinitions() {
           </span>
           <span className="text-sm text-[#64748b]">{filteredData.length} fields</span>
         </div>
-        <button className="flex items-center gap-2 rounded-lg bg-[#7c3aed] px-4 py-2 text-sm font-medium text-white hover:bg-[#6d28d9]">
+        <button 
+          onClick={() => onCreateField?.()}
+          className="flex items-center gap-2 rounded-lg bg-[#7c3aed] px-4 py-2 text-sm font-medium text-white hover:bg-[#6d28d9]"
+        >
           <Plus className="h-4 w-4" />
           New field definition
         </button>
