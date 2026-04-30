@@ -67,6 +67,9 @@ export function FieldFlagDrawer({ fieldId, onClose }: FieldFlagDrawerProps) {
   const [reExtractedValues, setReExtractedValues] = useState<Map<string, string>>(new Map())
   const [currentVersion, setCurrentVersion] = useState<number | null>(null)
   
+  // Animation state for removing flags
+  const [animatingOutIds, setAnimatingOutIds] = useState<Set<string>>(new Set())
+  
   // Editable extraction logic
   const [editedExtractionHint, setEditedExtractionHint] = useState("")
   const [editedSourceField, setEditedSourceField] = useState("")
@@ -102,30 +105,66 @@ export function FieldFlagDrawer({ fieldId, onClose }: FieldFlagDrawerProps) {
   }
 
   const markAsFixed = (flagId: string) => {
-    setFixedFlagIds(prev => new Set(prev).add(flagId))
+    // Start animation
+    setAnimatingOutIds(prev => new Set(prev).add(flagId))
     setSelectedFlagIds(prev => {
       const next = new Set(prev)
       next.delete(flagId)
       return next
     })
+    
+    // After animation completes, actually remove
+    setTimeout(() => {
+      setFixedFlagIds(prev => new Set(prev).add(flagId))
+      setAnimatingOutIds(prev => {
+        const next = new Set(prev)
+        next.delete(flagId)
+        return next
+      })
+    }, 300)
   }
 
   const markSelectedAsFixed = () => {
-    setFixedFlagIds(prev => {
+    // Start animation for all selected
+    setAnimatingOutIds(prev => {
       const next = new Set(prev)
       selectedFlagIds.forEach(id => next.add(id))
       return next
     })
+    
+    const idsToFix = new Set(selectedFlagIds)
     setSelectedFlagIds(new Set())
+    
+    // After animation completes, actually remove
+    setTimeout(() => {
+      setFixedFlagIds(prev => {
+        const next = new Set(prev)
+        idsToFix.forEach(id => next.add(id))
+        return next
+      })
+      setAnimatingOutIds(prev => {
+        const next = new Set(prev)
+        idsToFix.forEach(id => next.delete(id))
+        return next
+      })
+    }, 300)
   }
 
   const markAllAsFixed = () => {
-    setFixedFlagIds(prev => {
-      const next = new Set(prev)
-      openFlags.forEach(f => next.add(f.id))
-      return next
-    })
+    // Start animation for all
+    const allIds = openFlags.map(f => f.id)
+    setAnimatingOutIds(new Set(allIds))
     setSelectedFlagIds(new Set())
+    
+    // After animation completes, actually remove
+    setTimeout(() => {
+      setFixedFlagIds(prev => {
+        const next = new Set(prev)
+        allIds.forEach(id => next.add(id))
+        return next
+      })
+      setAnimatingOutIds(new Set())
+    }, 300)
   }
 
   // Open edit panel and initialize fields
@@ -449,14 +488,29 @@ export function FieldFlagDrawer({ fieldId, onClose }: FieldFlagDrawerProps) {
                   onMarkAsFixed={() => markAsFixed(flag.id)}
                   reExtractedValue={reExtractedValues.get(flag.id)}
                   isReExtracting={isReExtracting}
+                  isAnimatingOut={animatingOutIds.has(flag.id)}
                 />
               ))}
 
               {openFlags.length === 0 && (
-                <div className="rounded-lg border border-[#e2e8f0] bg-[#f0fdf4] p-8 text-center">
-                  <CheckCircle2 className="mx-auto h-8 w-8 text-[#22c55e]" />
-                  <p className="mt-2 text-sm font-medium text-[#166534]">All flags resolved</p>
-                  <p className="mt-1 text-xs text-[#64748b]">No open flags for this field</p>
+                <div className="rounded-lg border border-[#22c55e] bg-[#f0fdf4] p-8 text-center">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#22c55e]">
+                    <CheckCircle2 className="h-6 w-6 text-white" />
+                  </div>
+                  <p className="mt-3 text-base font-semibold text-[#166534]">All flags resolved</p>
+                  {fixedFlagIds.size > 0 ? (
+                    <p className="mt-1 text-sm text-[#15803d]">
+                      {fixedFlagIds.size} flag{fixedFlagIds.size === 1 ? "" : "s"} marked as fixed
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-sm text-[#64748b]">No open flags for this field</p>
+                  )}
+                  <button
+                    onClick={onClose}
+                    className="mt-4 rounded-lg bg-[#22c55e] px-4 py-2 text-sm font-medium text-white hover:bg-[#16a34a]"
+                  >
+                    Done
+                  </button>
                 </div>
               )}
             </div>
@@ -475,6 +529,7 @@ interface FlagOccurrenceRowProps {
   onMarkAsFixed: () => void
   reExtractedValue?: string
   isReExtracting?: boolean
+  isAnimatingOut?: boolean
 }
 
 function FlagOccurrenceRow({ 
@@ -484,6 +539,7 @@ function FlagOccurrenceRow({
   onMarkAsFixed,
   reExtractedValue,
   isReExtracting,
+  isAnimatingOut,
 }: FlagOccurrenceRowProps) {
   const vessel = vessels.find(v => v.id === flag.vesselId)
   const form = targetForms.find(f => f.id === flag.reportId.split("-")[0]) || targetForms[0]
@@ -492,7 +548,15 @@ function FlagOccurrenceRow({
   const newValueMatches = hasNewValue && reExtractedValue === flag.sourceValue
 
   return (
-    <div className={`rounded-lg border p-4 ${isSelected ? "border-[#7c3aed] bg-[#faf5ff]" : "border-[#e2e8f0] bg-white"}`}>
+    <div 
+      className={`rounded-lg border p-4 transition-all duration-300 ${
+        isAnimatingOut 
+          ? "scale-95 opacity-0 bg-[#dcfce7] border-[#22c55e]" 
+          : isSelected 
+            ? "border-[#7c3aed] bg-[#faf5ff]" 
+            : "border-[#e2e8f0] bg-white"
+      }`}
+    >
       {/* Top row: checkbox, vessel, report, status */}
       <div className="flex items-start gap-3">
         <button
