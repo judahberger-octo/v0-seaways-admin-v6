@@ -12,6 +12,10 @@ import {
   AlertTriangle,
   Clock,
   FileText,
+  Save,
+  RotateCcw,
+  ArrowRight,
+  Loader2,
 } from "lucide-react"
 import {
   fieldDefinitions,
@@ -55,6 +59,18 @@ export function FieldFlagDrawer({ fieldId, onClose }: FieldFlagDrawerProps) {
   const [isDefinitionExpanded, setIsDefinitionExpanded] = useState(true)
   const [selectedFlagIds, setSelectedFlagIds] = useState<Set<string>>(new Set())
   const [fixedFlagIds, setFixedFlagIds] = useState<Set<string>>(new Set())
+  
+  // Edit definition panel state
+  const [isEditPanelOpen, setIsEditPanelOpen] = useState(false)
+  const [isReExtracting, setIsReExtracting] = useState(false)
+  const [reExtractionComplete, setReExtractionComplete] = useState(false)
+  const [reExtractedValues, setReExtractedValues] = useState<Map<string, string>>(new Map())
+  const [currentVersion, setCurrentVersion] = useState<number | null>(null)
+  
+  // Editable extraction logic
+  const [editedExtractionHint, setEditedExtractionHint] = useState("")
+  const [editedSourceField, setEditedSourceField] = useState("")
+  const [editedSourcePath, setEditedSourcePath] = useState("")
 
   const field = fieldDefinitions.find(fd => fd.id === fieldId)
   const openFlags = flags
@@ -112,6 +128,48 @@ export function FieldFlagDrawer({ fieldId, onClose }: FieldFlagDrawerProps) {
     setSelectedFlagIds(new Set())
   }
 
+  // Open edit panel and initialize fields
+  const openEditPanel = () => {
+    if (field) {
+      setEditedExtractionHint(field.extractionHint || "")
+      setEditedSourceField(field.navtorSourceField || "")
+      setEditedSourcePath(field.sourcePreviewPath || "")
+      setCurrentVersion(field.version)
+    }
+    setIsEditPanelOpen(true)
+    setReExtractionComplete(false)
+    setReExtractedValues(new Map())
+  }
+
+  // Save definition and run re-extraction
+  const handleSaveAndReExtract = async () => {
+    if (!field) return
+
+    setIsReExtracting(true)
+
+    // Simulate re-extraction on each flagged report
+    const newValues = new Map<string, string>()
+    
+    for (const flag of openFlags) {
+      await new Promise(resolve => setTimeout(resolve, 150 + Math.random() * 200))
+      
+      // Simulate new extracted value - mostly matches source value now
+      const willMatch = Math.random() > 0.15
+      const newValue = willMatch 
+        ? flag.sourceValue 
+        : (flag.flaggedValue + "_v" + ((currentVersion || field.version) + 1))
+      
+      newValues.set(flag.id, newValue)
+      setReExtractedValues(new Map(newValues))
+    }
+
+    // Increment version
+    setCurrentVersion((currentVersion || field.version) + 1)
+    setIsReExtracting(false)
+    setReExtractionComplete(true)
+    setIsEditPanelOpen(false)
+  }
+
   return (
     <>
       {/* Backdrop */}
@@ -139,13 +197,14 @@ export function FieldFlagDrawer({ fieldId, onClose }: FieldFlagDrawerProps) {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Link
-                href={`/admin/field-definitions/${fieldId}`}
-                className="flex items-center gap-1.5 rounded-lg border border-[#e2e8f0] px-3 py-2 text-sm font-medium text-[#334155] hover:bg-[#f8fafc]"
+              <button
+                onClick={openEditPanel}
+                disabled={isEditPanelOpen}
+                className="flex items-center gap-1.5 rounded-lg border border-[#e2e8f0] px-3 py-2 text-sm font-medium text-[#334155] hover:bg-[#f8fafc] disabled:opacity-50"
               >
                 <Pencil className="h-4 w-4" />
                 Edit definition
-              </Link>
+              </button>
               <button
                 onClick={markAllAsFixed}
                 disabled={openFlags.length === 0}
@@ -163,6 +222,106 @@ export function FieldFlagDrawer({ fieldId, onClose }: FieldFlagDrawerProps) {
             </div>
           </div>
         </div>
+
+        {/* Re-extraction success banner */}
+        {reExtractionComplete && (
+          <div className="flex-shrink-0 border-b border-[#bbf7d0] bg-[#dcfce7] px-6 py-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#16a34a]" />
+              <div>
+                <p className="font-medium text-[#166534]">
+                  Re-extracted on {openFlags.length} reports
+                </p>
+                <p className="mt-1 text-sm text-[#15803d]">
+                  Review the new values below, then mark each flag as fixed (or reflag if still incorrect).
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Inline edit definition panel */}
+        {isEditPanelOpen && (
+          <div className="flex-shrink-0 border-b border-[#e2e8f0] bg-[#f8fafc] p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-[#0f172a]">Edit extraction logic</h3>
+              <button
+                onClick={() => setIsEditPanelOpen(false)}
+                className="text-xs text-[#64748b] hover:text-[#0f172a]"
+              >
+                Cancel
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Source field path */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-[#334155]">
+                  NAVTOR source field
+                </label>
+                <input
+                  type="text"
+                  value={editedSourceField}
+                  onChange={(e) => setEditedSourceField(e.target.value)}
+                  placeholder="e.g., report.noon.fuel.ifo_rob"
+                  className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 font-mono text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                />
+              </div>
+
+              {/* Source preview path */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-[#334155]">
+                  Source preview path (for validation)
+                </label>
+                <input
+                  type="text"
+                  value={editedSourcePath}
+                  onChange={(e) => setEditedSourcePath(e.target.value)}
+                  placeholder="e.g., page[0].table[2].row[1].col[3]"
+                  className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 font-mono text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                />
+              </div>
+
+              {/* Extraction hint */}
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-[#334155]">
+                  Extraction hint (AI prompt guidance)
+                </label>
+                <textarea
+                  value={editedExtractionHint}
+                  onChange={(e) => setEditedExtractionHint(e.target.value)}
+                  placeholder="e.g., Look for 'IFO ROB' or 'Fuel Remaining' in the fuel consumption table..."
+                  rows={3}
+                  className="w-full resize-none rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-between pt-2">
+                <p className="text-xs text-[#64748b]">
+                  Current version: v{currentVersion || field?.version} → Will create v{(currentVersion || field?.version || 0) + 1}
+                </p>
+                <button
+                  onClick={handleSaveAndReExtract}
+                  disabled={isReExtracting}
+                  className="flex items-center gap-2 rounded-lg bg-[#7c3aed] px-4 py-2 text-sm font-medium text-white hover:bg-[#6d28d9] disabled:opacity-70"
+                >
+                  {isReExtracting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Re-extracting...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Save & re-extract
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto">
@@ -288,6 +447,8 @@ export function FieldFlagDrawer({ fieldId, onClose }: FieldFlagDrawerProps) {
                   isSelected={selectedFlagIds.has(flag.id)}
                   onToggleSelect={() => toggleFlagSelection(flag.id)}
                   onMarkAsFixed={() => markAsFixed(flag.id)}
+                  reExtractedValue={reExtractedValues.get(flag.id)}
+                  isReExtracting={isReExtracting}
                 />
               ))}
 
@@ -312,12 +473,23 @@ interface FlagOccurrenceRowProps {
   isSelected: boolean
   onToggleSelect: () => void
   onMarkAsFixed: () => void
+  reExtractedValue?: string
+  isReExtracting?: boolean
 }
 
-function FlagOccurrenceRow({ flag, isSelected, onToggleSelect, onMarkAsFixed }: FlagOccurrenceRowProps) {
+function FlagOccurrenceRow({ 
+  flag, 
+  isSelected, 
+  onToggleSelect, 
+  onMarkAsFixed,
+  reExtractedValue,
+  isReExtracting,
+}: FlagOccurrenceRowProps) {
   const vessel = vessels.find(v => v.id === flag.vesselId)
   const form = targetForms.find(f => f.id === flag.reportId.split("-")[0]) || targetForms[0]
   const valuesMatch = flag.flaggedValue === flag.sourceValue
+  const hasNewValue = reExtractedValue !== undefined
+  const newValueMatches = hasNewValue && reExtractedValue === flag.sourceValue
 
   return (
     <div className={`rounded-lg border p-4 ${isSelected ? "border-[#7c3aed] bg-[#faf5ff]" : "border-[#e2e8f0] bg-white"}`}>
@@ -351,19 +523,65 @@ function FlagOccurrenceRow({ flag, isSelected, onToggleSelect, onMarkAsFixed }: 
           </div>
 
           {/* Values comparison */}
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <div className={`rounded-lg p-3 ${!valuesMatch ? "bg-[#fee2e2]" : "bg-[#f1f5f9]"}`}>
-              <p className="text-xs font-medium text-[#64748b]">Flagged value (AI extracted)</p>
-              <p className={`mt-1 font-mono text-sm ${!valuesMatch ? "font-semibold text-[#dc2626]" : "text-[#0f172a]"}`}>
-                {flag.flaggedValue || "—"}
-              </p>
+          <div className="mt-3 space-y-2">
+            <div className={`grid gap-3 ${hasNewValue ? "grid-cols-3" : "grid-cols-2"}`}>
+              {/* Original flagged value */}
+              <div className={`rounded-lg p-3 ${!valuesMatch && !hasNewValue ? "bg-[#fee2e2]" : "bg-[#f1f5f9]"}`}>
+                <p className="text-xs font-medium text-[#64748b]">
+                  {hasNewValue ? "Original (flagged)" : "Flagged value (AI extracted)"}
+                </p>
+                <p className={`mt-1 font-mono text-sm ${
+                  !valuesMatch && !hasNewValue ? "font-semibold text-[#dc2626]" : 
+                  hasNewValue ? "text-[#94a3b8] line-through" : "text-[#0f172a]"
+                }`}>
+                  {flag.flaggedValue || "—"}
+                </p>
+              </div>
+
+              {/* New extracted value (only shown after re-extraction) */}
+              {hasNewValue && (
+                <div className={`rounded-lg p-3 ${newValueMatches ? "bg-[#dcfce7] ring-2 ring-[#22c55e]" : "bg-[#fef3c7]"}`}>
+                  <p className="flex items-center gap-1.5 text-xs font-medium text-[#64748b]">
+                    <ArrowRight className="h-3 w-3 text-[#22c55e]" />
+                    <span className="text-[#22c55e]">New</span>
+                  </p>
+                  <p className={`mt-1 font-mono text-sm font-semibold ${newValueMatches ? "text-[#166534]" : "text-[#92400e]"}`}>
+                    {reExtractedValue || "—"}
+                  </p>
+                </div>
+              )}
+
+              {/* Source value (preview) */}
+              <div className="rounded-lg bg-[#f1f5f9] p-3">
+                <p className="text-xs font-medium text-[#64748b]">Source value (preview)</p>
+                <p className="mt-1 font-mono text-sm text-[#0f172a]">
+                  {flag.sourceValue || "—"}
+                </p>
+              </div>
             </div>
-            <div className="rounded-lg bg-[#f1f5f9] p-3">
-              <p className="text-xs font-medium text-[#64748b]">Source value (preview)</p>
-              <p className="mt-1 font-mono text-sm text-[#0f172a]">
-                {flag.sourceValue || "—"}
-              </p>
-            </div>
+
+            {/* Match indicator for new value */}
+            {hasNewValue && (
+              <div className={`flex items-center gap-2 rounded-lg px-3 py-2 ${
+                newValueMatches ? "bg-[#f0fdf4]" : "bg-[#fffbeb]"
+              }`}>
+                {newValueMatches ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 text-[#22c55e]" />
+                    <span className="text-xs font-medium text-[#166534]">
+                      New extraction matches source — ready to mark as fixed
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="h-4 w-4 text-[#eab308]" />
+                    <span className="text-xs font-medium text-[#92400e]">
+                      New extraction still differs from source — may need further adjustment
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Crew comment */}
