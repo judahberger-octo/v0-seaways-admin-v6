@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { 
-  ArrowLeft, 
+  ArrowLeft,
+  ArrowRight,
   Send, 
   ChevronDown, 
   ChevronRight,
@@ -208,6 +209,8 @@ interface TransferReviewProps {
   onBack: () => void
   isAdminMode?: boolean
   isReadOnly?: boolean // True when viewing submitted/history reports
+  adminReadOnlyView?: boolean // True when admin is viewing a crew report
+  vesselName?: string // Vessel name for admin header
   submittedAt?: string // Timestamp when report was submitted
   submittedBy?: string // Email of user who submitted
 }
@@ -483,6 +486,7 @@ function SingleFieldFocusPane({
   manualFillValue,
   onScrollToField,
   isReadOnly = false,
+  adminReadOnlyView = false,
   }: {
   field: FieldCardData | null
   currentIndex: number
@@ -495,7 +499,8 @@ function SingleFieldFocusPane({
   manualFillValue?: string
   onScrollToField?: () => void
   isReadOnly?: boolean
-}) {
+  adminReadOnlyView?: boolean
+  }) {
   const [validationExpanded, setValidationExpanded] = useState(false)
 const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
   // Source preview carousel state - track current source tab
@@ -807,110 +812,145 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
 
       {/* Footer Action Bar - Fixed at bottom, varies by field type */}
       <div className="border-t border-gray-200 bg-white px-5 py-4">
-        {/* CRITICAL FIELD: [Verify field] [Stepper] [Flag] - In read-only: [Stepper] [Flag] */}
-        {isCritical && !isManualFill && (
-          <div className="flex items-center gap-3">
-            {/* Verify Button - hidden in read-only mode */}
-            {!isReadOnly && (
+        {/* ADMIN READ-ONLY VIEW: Show "Edit definition" link only */}
+        {adminReadOnlyView ? (
+          <div className="flex items-center justify-between">
+            {/* Navigation Paginator */}
+            <div className="flex items-center gap-1 border border-gray-200 rounded-lg">
               <button
-                onClick={onVerify}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
-                  isVerified
-                    ? "bg-green-50 text-green-700 border-green-200"
-                    : "bg-purple-600 text-white border-purple-600 hover:bg-purple-700"
-                }`}
+                onClick={() => onNavigate("prev")}
+                className="p-2 hover:bg-gray-50 rounded-l-lg"
               >
-                <Check className="w-4 h-4" />
-                {isVerified ? "Complete" : "Verify field"}
+                <ChevronUp className="w-4 h-4 text-gray-600" />
               </button>
+              <span className="text-sm text-gray-600 font-medium px-2 min-w-[48px] text-center">
+                {currentIndex}/{totalCount}
+              </span>
+              <button
+                onClick={() => onNavigate("next")}
+                className="p-2 hover:bg-gray-50 rounded-r-lg"
+              >
+                <ChevronDown className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Edit definition link */}
+            <a
+              href={`/admin/field-definitions/${field?.id || "unknown"}`}
+              className="flex items-center gap-2 text-sm font-medium text-[#7c3aed] hover:underline"
+            >
+              Edit definition
+              <ArrowRight className="w-4 h-4" />
+            </a>
+          </div>
+        ) : (
+          <>
+            {/* CRITICAL FIELD: [Verify field] [Stepper] [Flag] - In read-only: [Stepper] [Flag] */}
+            {isCritical && !isManualFill && (
+              <div className="flex items-center gap-3">
+                {/* Verify Button - hidden in read-only mode */}
+                {!isReadOnly && (
+                  <button
+                    onClick={onVerify}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
+                      isVerified
+                        ? "bg-green-50 text-green-700 border-green-200"
+                        : "bg-purple-600 text-white border-purple-600 hover:bg-purple-700"
+                    }`}
+                  >
+                    <Check className="w-4 h-4" />
+                    {isVerified ? "Complete" : "Verify field"}
+                  </button>
+                )}
+
+                {/* Navigation Paginator */}
+                <div className="flex items-center gap-1 border border-gray-200 rounded-lg">
+                  <button
+                    onClick={() => onNavigate("prev")}
+                    className="p-2 hover:bg-gray-50 rounded-l-lg"
+                  >
+                    <ChevronUp className="w-4 h-4 text-gray-600" />
+                  </button>
+                  <span className="text-sm text-gray-600 font-medium px-2 min-w-[48px] text-center">
+                    {currentIndex}/{totalCount}
+                  </span>
+                  <button
+                    onClick={() => onNavigate("next")}
+                    className="p-2 hover:bg-gray-50 rounded-r-lg"
+                  >
+                    <ChevronDown className="w-4 h-4 text-gray-600" />
+                  </button>
+                </div>
+
+                {/* Flag Button - always available, even in read-only mode */}
+                <button
+                  onClick={onFlag}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
+                    isFlagged
+                      ? "bg-red-50 text-red-700 border-red-200"
+                      : "bg-white text-gray-700 border-gray-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200"
+                  }`}
+                >
+                  <Flag className="w-4 h-4" />
+                  Flag as Incorrect
+                </button>
+              </div>
             )}
 
-            {/* Navigation Paginator */}
-            <div className="flex items-center gap-1 border border-gray-200 rounded-lg">
-              <button
-                onClick={() => onNavigate("prev")}
-                className="p-2 hover:bg-gray-50 rounded-l-lg"
-              >
-                <ChevronUp className="w-4 h-4 text-gray-600" />
-              </button>
-              <span className="text-sm text-gray-600 font-medium px-2 min-w-[48px] text-center">
-                {currentIndex}/{totalCount}
-              </span>
-              <button
-                onClick={() => onNavigate("next")}
-                className="p-2 hover:bg-gray-50 rounded-r-lg"
-              >
-                <ChevronDown className="w-4 h-4 text-gray-600" />
-              </button>
-            </div>
+            {/* MANUAL FILL FIELD: [Stepper] [Flag] - No Verify, typing auto-completes */}
+            {isManualFill && (
+              <div className="flex items-center gap-3">
+                {/* Navigation Paginator */}
+                <div className="flex items-center gap-1 border border-gray-200 rounded-lg">
+                  <button
+                    onClick={() => onNavigate("prev")}
+                    className="p-2 hover:bg-gray-50 rounded-l-lg"
+                  >
+                    <ChevronUp className="w-4 h-4 text-gray-600" />
+                  </button>
+                  <span className="text-sm text-gray-600 font-medium px-2 min-w-[48px] text-center">
+                    {currentIndex}/{totalCount}
+                  </span>
+                  <button
+                    onClick={() => onNavigate("next")}
+                    className="p-2 hover:bg-gray-50 rounded-r-lg"
+                  >
+                    <ChevronDown className="w-4 h-4 text-gray-600" />
+                  </button>
+                </div>
 
-            {/* Flag Button - always available, even in read-only mode */}
-            <button
-              onClick={onFlag}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
-                isFlagged
-                  ? "bg-red-50 text-red-700 border-red-200"
-                  : "bg-white text-gray-700 border-gray-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200"
-              }`}
-            >
-              <Flag className="w-4 h-4" />
-              Flag as Incorrect
-            </button>
-          </div>
-        )}
+                {/* Flag Button */}
+                <button
+                  onClick={onFlag}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
+                    isFlagged
+                      ? "bg-red-50 text-red-700 border-red-200"
+                      : "bg-white text-gray-700 border-gray-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200"
+                  }`}
+                >
+                  <Flag className="w-4 h-4" />
+                  Flag as Incorrect
+                </button>
+              </div>
+            )}
 
-        {/* MANUAL FILL FIELD: [Stepper] [Flag] - No Verify, typing auto-completes */}
-        {isManualFill && (
-          <div className="flex items-center gap-3">
-            {/* Navigation Paginator */}
-            <div className="flex items-center gap-1 border border-gray-200 rounded-lg">
-              <button
-                onClick={() => onNavigate("prev")}
-                className="p-2 hover:bg-gray-50 rounded-l-lg"
-              >
-                <ChevronUp className="w-4 h-4 text-gray-600" />
-              </button>
-              <span className="text-sm text-gray-600 font-medium px-2 min-w-[48px] text-center">
-                {currentIndex}/{totalCount}
-              </span>
-              <button
-                onClick={() => onNavigate("next")}
-                className="p-2 hover:bg-gray-50 rounded-r-lg"
-              >
-                <ChevronDown className="w-4 h-4 text-gray-600" />
-              </button>
-            </div>
-
-            {/* Flag Button */}
-            <button
-              onClick={onFlag}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
-                isFlagged
-                  ? "bg-red-50 text-red-700 border-red-200"
-                  : "bg-white text-gray-700 border-gray-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200"
-              }`}
-            >
-              <Flag className="w-4 h-4" />
-              Flag as Incorrect
-            </button>
-          </div>
-        )}
-
-        {/* STANDARD FIELD: [Flag] only - centered */}
-        {!isCritical && !isManualFill && (
-          <div className="flex items-center justify-center">
-            <button
-              onClick={onFlag}
-              className={`flex items-center justify-center gap-2 py-2.5 px-8 rounded-lg font-medium transition-colors border ${
-                isFlagged
-                  ? "bg-red-50 text-red-700 border-red-200"
-                  : "bg-white text-gray-700 border-gray-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200"
-              }`}
-            >
-              <Flag className="w-4 h-4" />
-              Flag as Incorrect
-            </button>
-          </div>
+            {/* STANDARD FIELD: [Flag] only - centered */}
+            {!isCritical && !isManualFill && (
+              <div className="flex items-center justify-center">
+                <button
+                  onClick={onFlag}
+                  className={`flex items-center justify-center gap-2 py-2.5 px-8 rounded-lg font-medium transition-colors border ${
+                    isFlagged
+                      ? "bg-red-50 text-red-700 border-red-200"
+                      : "bg-white text-gray-700 border-gray-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200"
+                  }`}
+                >
+                  <Flag className="w-4 h-4" />
+                  Flag as Incorrect
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -1747,11 +1787,13 @@ function BottomActionBar({
   )
 }
 
-export function TransferReview({ 
-  reportId, 
-  onBack, 
+export function TransferReview({
+  reportId,
+  onBack,
   isAdminMode = false,
   isReadOnly = false,
+  adminReadOnlyView = false,
+  vesselName,
   submittedAt,
   submittedBy = "transfer.agent@uniframe.ai"
 }: TransferReviewProps) {
@@ -2283,7 +2325,36 @@ export function TransferReview({
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-7rem)]">
+    <div className={`flex flex-col ${adminReadOnlyView ? "h-screen" : "h-[calc(100vh-7rem)]"}`}>
+      {/* Admin Read-Only Banner */}
+      {adminReadOnlyView && (
+        <div className="flex-shrink-0 bg-[#7c3aed] px-6 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onBack}
+                className="flex items-center gap-1.5 text-white/80 hover:text-white transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="text-sm font-medium">Back</span>
+              </button>
+              <div className="h-4 w-px bg-white/30" />
+              <p className="text-sm text-white">
+                <span className="font-medium">Admin read-only view</span>
+                <span className="mx-2 text-white/60">·</span>
+                <span>Report #{reportId}</span>
+                {vesselName && (
+                  <>
+                    <span className="mx-2 text-white/60">·</span>
+                    <span>Vessel: {vesselName}</span>
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Toast */}
       {toast && (
         <Toast 
@@ -2366,6 +2437,7 @@ export function TransferReview({
             }}
             sourceReports={["#4528", "#4529", "#4530"]}
             isReadOnly={isReadOnly}
+            adminReadOnlyView={adminReadOnlyView}
           />
         </div>
 
@@ -2488,16 +2560,17 @@ export function TransferReview({
         />
       )}
 
-      {/* Sticky Bottom Action Bar - Different for read-only vs edit mode */}
-      <div className="bg-white border-t border-gray-200 flex-shrink-0">
-        {isReadOnly ? (
-          /* Read-only footer - just metadata, no action buttons */
-          <div className="px-6 py-3">
-            <p className="text-sm text-gray-500">
-              Submitted to VesLink at {submittedAt || "2:03 PM on January 25, 2026"} by {submittedBy}
-            </p>
-          </div>
-        ) : (
+      {/* Sticky Bottom Action Bar - Different for read-only vs edit mode, hidden in admin read-only view */}
+      {!adminReadOnlyView && (
+        <div className="bg-white border-t border-gray-200 flex-shrink-0">
+          {isReadOnly ? (
+            /* Read-only footer - just metadata, no action buttons */
+            <div className="px-6 py-3">
+              <p className="text-sm text-gray-500">
+                Submitted to VesLink at {submittedAt || "2:03 PM on January 25, 2026"} by {submittedBy}
+              </p>
+            </div>
+          ) : (
           /* Edit mode footer - validation message + action buttons */
           <>
             {/* Validation Message Banner */}
@@ -2543,7 +2616,8 @@ export function TransferReview({
             </div>
           </>
         )}
-      </div>
+        </div>
+      )}
 
       {/* Flag Field Modal */}
       <FlagFieldModal
