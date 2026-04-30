@@ -17,11 +17,10 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<AppView>("selection")
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
   const [isAdminMode, setIsAdminMode] = useState(false)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(true) // Default to true when in review mode
-  const [isViewingHistory, setIsViewingHistory] = useState(false) // True when viewing submitted report from history
-  const [isAdminView, setIsAdminView] = useState(false) // True when in admin view
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(true)
+  const [isViewingHistory, setIsViewingHistory] = useState(false)
+  const [isAdminView, setIsAdminView] = useState(false)
 
-  // Mock review data - in real app this would come from the TransferReview state
   const reviewData = currentView === "review" ? {
     reportId: selectedReportId || "4528",
     reportType: "Noon (Sea)",
@@ -34,7 +33,7 @@ export default function Home() {
 
   const handleGenerate = (reportIds: string[]) => {
     setSelectedReportId(reportIds[0] || "4528")
-    setCurrentView("loading") // Show loading first
+    setCurrentView("loading")
   }
 
   const handleLoadingComplete = () => {
@@ -44,16 +43,15 @@ export default function Home() {
   const handleBackToSelection = () => {
     setCurrentView("selection")
     setSelectedReportId(null)
-    setIsViewingHistory(false) // Reset read-only state
+    setIsViewingHistory(false)
   }
 
   const handleViewHistoryReport = (reportId: string) => {
     setSelectedReportId(reportId)
-    setIsViewingHistory(true) // Mark as read-only history view
+    setIsViewingHistory(true)
     setCurrentView("review")
   }
 
-  // Show loading screen outside AppShell (no sidebar during generation)
   if (currentView === "loading" && selectedReportId) {
     return (
       <UserProvider>
@@ -67,52 +65,52 @@ export default function Home() {
 
   return (
     <UserProvider>
-    <AppShell 
-      activeTab={activeTab} 
-      onTabChange={setActiveTab}
-      isAdminMode={isAdminMode}
-      onAdminModeChange={setIsAdminMode}
-      isAdminView={isAdminView}
-      onAdminViewChange={setIsAdminView}
-      isReviewMode={currentView === "review" && !isAdminView}
-      reviewData={reviewData}
-      onBackFromReview={handleBackToSelection}
-      hasUnsavedChanges={currentView === "review" && hasUnsavedChanges && !isViewingHistory}
-      onSaveAsDraft={() => {
-        setHasUnsavedChanges(false)
-      }}
-      isReadOnly={isViewingHistory}
-      submittedAt="2:03 PM on January 25, 2026"
-      submittedBy="chief.officer@seaways.com"
-    >
-      {isAdminView ? (
-        <AdminPage />
-      ) : currentView === "review" && selectedReportId ? (
-        <TransferReview 
-          reportId={selectedReportId} 
-          onBack={handleBackToSelection}
-          isAdminMode={isAdminMode}
-          isReadOnly={isViewingHistory}
-          submittedAt="2:03 PM on January 25, 2026"
-          submittedBy="chief.officer@seaways.com"
-        />
-      ) : (
-        <>
-          {activeTab === "new-transfer" && (
-            <ReportSelection onGenerate={handleGenerate} />
-          )}
-          {activeTab === "drafts" && (
-            <DraftsPage onEditDraft={(draftId) => {
-              setSelectedReportId(draftId)
-              setCurrentView("review")
-            }} />
-          )}
-          {activeTab === "history" && (
-            <HistoryPage onViewReport={handleViewHistoryReport} />
-          )}
-        </>
-      )}
-    </AppShell>
+      <AppShell 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab}
+        isAdminMode={isAdminMode}
+        onAdminModeChange={setIsAdminMode}
+        isAdminView={isAdminView}
+        onAdminViewChange={setIsAdminView}
+        isReviewMode={currentView === "review" && !isAdminView}
+        reviewData={reviewData}
+        onBackFromReview={handleBackToSelection}
+        hasUnsavedChanges={currentView === "review" && hasUnsavedChanges && !isViewingHistory}
+        onSaveAsDraft={() => {
+          setHasUnsavedChanges(false)
+        }}
+        isReadOnly={isViewingHistory}
+        submittedAt="2:03 PM on January 25, 2026"
+        submittedBy="chief.officer@seaways.com"
+      >
+        {isAdminView ? (
+          <AdminPage />
+        ) : currentView === "review" && selectedReportId ? (
+          <TransferReview 
+            reportId={selectedReportId} 
+            onBack={handleBackToSelection}
+            isAdminMode={isAdminMode}
+            isReadOnly={isViewingHistory}
+            submittedAt="2:03 PM on January 25, 2026"
+            submittedBy="chief.officer@seaways.com"
+          />
+        ) : (
+          <>
+            {activeTab === "new-transfer" && (
+              <ReportSelection onGenerate={handleGenerate} />
+            )}
+            {activeTab === "drafts" && (
+              <DraftsPage onEditDraft={(draftId) => {
+                setSelectedReportId(draftId)
+                setCurrentView("review")
+              }} />
+            )}
+            {activeTab === "history" && (
+              <HistoryPage onViewReport={handleViewHistoryReport} />
+            )}
+          </>
+        )}
+      </AppShell>
     </UserProvider>
   )
 }
