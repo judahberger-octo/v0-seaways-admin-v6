@@ -1432,12 +1432,12 @@ export function getVesselsByAdoption(): Array<{ vessel: Vessel; adoptionRate: nu
     )
     const lastSubmission = vesselSubmissions[0]
     
-    return {
-      vessel,
-      adoptionRate: vesselAdoption[vessel.id] || 0,
-      submissionCount: vesselSubmissions.length,
-      lastActivity: lastSubmission?.submittedAt || null,
-    }
+return {
+    vessel,
+    adoptionRate: Math.round((vesselAdoption[vessel.id] || 0) * 100),
+    submissionCount: vesselSubmissions.length,
+    lastActivity: lastSubmission?.submittedAt || null,
+  }
   }).sort((a, b) => b.adoptionRate - a.adoptionRate)
 }
 
