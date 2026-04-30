@@ -23,7 +23,8 @@ import {
   Info,
   Filter,
   Image as ImageIcon,
-  Maximize2
+  Maximize2,
+  Calculator
 } from "lucide-react"
 import { AdminTestingSuite } from "./admin-testing-suite"
 import { VesLinkForm, CRITICAL_FIELDS_NOON_SEA, MANUAL_FILL_FIELDS } from "./veslink-form"
@@ -111,6 +112,9 @@ interface FieldCardData {
   whereToFind?: string
   inputKind?: "text" | "select"
   options?: string[]
+  isCalculated?: boolean
+  formula?: string
+  originalCalculatedValue?: string // Store original value for "Overridden" detection
 }
 
 interface FormSection {
@@ -296,7 +300,7 @@ const createFieldCardSections = (verifiedFields: Set<string>): FieldSection[] =>
         { id: "time-since-last", fieldName: "Time Since Last Report", status: getStatus("time-since-last"), isCritical: true, mappedSource: "Time Since Last Report", sourceTab: "Operational", isPopulated: true, value: "24.0", unit: "hrs", confidence: 99 },
         { id: "ballast", fieldName: "Ballast", status: getStatus("ballast"), isCritical: false, mappedSource: "Ballast Water", sourceTab: "Operational", isPopulated: true, value: "1896", unit: "MT", confidence: 96 },
         { id: "displacement", fieldName: "Displacement", status: getStatus("displacement"), isCritical: false, mappedSource: "Displacement", sourceTab: "Operational", isPopulated: true, value: "172000", unit: "t", confidence: 94 },
-        { id: "slip", fieldName: "Slip", status: getStatus("slip"), isCritical: false, mappedSource: "Slip %", sourceTab: "Operational", isPopulated: true, value: "0.35", unit: "%", confidence: 89 },
+        { id: "slip", fieldName: "Slip", status: getStatus("slip"), isCritical: false, mappedSource: "Slip %", sourceTab: "Operational", isPopulated: true, value: "0.35", unit: "%", confidence: 89, isCalculated: true, formula: "Slip % = (Engine Distance − Observed Distance) / Engine Distance × 100", originalCalculatedValue: "0.35" },
         { id: "fwd-draft", fieldName: "Forward Draft", status: getStatus("fwd-draft"), isCritical: false, mappedSource: "Draught Forward", sourceTab: "Operational", isPopulated: true, value: "16.6", unit: "m", confidence: 98 },
         { id: "aft-draft", fieldName: "Aft Draft", status: getStatus("aft-draft"), isCritical: false, mappedSource: "Draught Aft", sourceTab: "Operational", isPopulated: true, value: "16.6", unit: "m", confidence: 98 },
       ],
@@ -328,7 +332,9 @@ const createFieldCardSections = (verifiedFields: Set<string>): FieldSection[] =>
       fields: [
         { id: "bunkers-section", fieldName: "ROB, Consumption & Used For", fieldDefinition: "Complete bunker section including ROB, consumption breakdown, and usage allocation", status: getStatus("bunkers-section"), isCritical: true, mappedSource: "Bunker ROB Table", sourceTab: "Bunker", isPopulated: true, value: "Complete", confidence: 94 },
         { id: "ifo-rob", fieldName: "IFO ROB", status: getStatus("ifo-rob"), isCritical: false, mappedSource: "IFO Total", sourceTab: "Bunker", isPopulated: true, value: "1245", unit: "MT", confidence: 94 },
+        { id: "ifo-total", fieldName: "IFO Total Consumption", status: getStatus("ifo-total"), isCritical: true, mappedSource: "IFO Consumption", sourceTab: "Bunker", isPopulated: true, value: "30.6", unit: "MT", confidence: 96, isCalculated: true, formula: "IFO Total = Main + Auxiliary", originalCalculatedValue: "30.6" },
         { id: "mgo-rob", fieldName: "MGO ROB", status: getStatus("mgo-rob"), isCritical: false, mappedSource: "MGO Total", sourceTab: "Bunker", isPopulated: true, value: "342", unit: "MT", confidence: 93 },
+        { id: "mgo-total", fieldName: "MGO Total Consumption", status: getStatus("mgo-total"), isCritical: true, mappedSource: "MGO Consumption", sourceTab: "Bunker", isPopulated: true, value: "3.2", unit: "MT", confidence: 95, isCalculated: true, formula: "MGO Total = Main + Auxiliary", originalCalculatedValue: "3.2" },
         { id: "lsmgo-rob", fieldName: "LSMGO ROB", status: getStatus("lsmgo-rob"), isCritical: false, mappedSource: "LSMGO Total", sourceTab: "Bunker", isPopulated: true, value: "587", unit: "MT", confidence: 92 },
       ],
     },
@@ -593,7 +599,7 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
         <div className="flex items-start justify-between mb-1">
           {/* Display Name - small muted uppercase label, with FIELD_LABELS fallback */}
           <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-            {field.label || FIELD_LABELS[field.id] || field.id}
+            {field.fieldName || FIELD_LABELS[field.id] || field.id}
           </span>
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* In read-only mode: show terminal state pill (Verified/Complete/Flagged) */}
@@ -629,12 +635,28 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
         </div>
 
         {/* Field Value Display - large heading */}
-        <h1 className="text-2xl font-semibold text-gray-900 mb-4">
+        <h1 className="text-2xl font-semibold text-gray-900 mb-2">
           {isManualFill 
             ? (manualFillValue && manualFillValue !== "Select..." ? manualFillValue : "—") 
             : (field.value || "—")}
           {field.unit && <span className="text-xl text-gray-500 ml-1">{field.unit}</span>}
         </h1>
+
+        {/* Calculated Field Formula Helper Line */}
+        {field.isCalculated && field.formula && (
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-1.5 text-sm text-gray-500">
+              <Calculator className="w-4 h-4 text-gray-400" />
+              <span className="italic">Calculated: {field.formula}</span>
+            </div>
+            {/* Show "Overridden" pill if value differs from original calculated value */}
+            {field.originalCalculatedValue && field.value !== field.originalCalculatedValue && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                Overridden
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Source Report Chips OR Manual Fill Caption */}
         {isManualFill ? (

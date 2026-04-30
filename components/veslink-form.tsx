@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useCallback, useEffect } from "react"
-import { Check } from "lucide-react"
+import { Check, Calculator } from "lucide-react"
 
 // EXACT Critical fields for Noon-Sea reports per Avinash's list (16 fields + 3 manual-fill)
 // Order matches the form flow for navigation: top to bottom
@@ -33,6 +33,30 @@ export const MANUAL_FILL_FIELDS = [
   "engine-distance",
   "sea-state"
 ]
+
+// Calculated fields config - fields derived from formulas
+export const CALCULATED_FIELDS: Record<string, { formula: string; originalValue: string }> = {
+  "slip": { 
+    formula: "Slip % = (Engine Distance − Observed Distance) / Engine Distance × 100",
+    originalValue: "0.35"
+  },
+  "ifo-total": {
+    formula: "IFO Total = Main + Auxiliary",
+    originalValue: "30.6"
+  },
+  "mgo-total": {
+    formula: "MGO Total = Main + Auxiliary",
+    originalValue: "3.2"
+  },
+  "lsf-total": {
+    formula: "LSF Total = Main + Auxiliary",
+    originalValue: "0"
+  },
+  "lsmgo-total": {
+    formula: "LSMGO Total = Main + Auxiliary",
+    originalValue: "0.8"
+  }
+}
 
 interface VesLinkFormProps {
   selectedFieldId: string | null
@@ -211,7 +235,10 @@ function VLInput({
   isCritical = false,
   isManualFill = false,
   validate,
-  isReadOnly = false
+  isReadOnly = false,
+  isCalculated = false,
+  formula,
+  originalCalculatedValue
 }: { 
   id: string
   value: string
@@ -226,6 +253,9 @@ function VLInput({
   isManualFill?: boolean
   validate?: ValidationFn
   isReadOnly?: boolean
+  isCalculated?: boolean
+  formula?: string
+  originalCalculatedValue?: string
 }) {
   // Compute validation warning
   const validationWarning = validate && value ? validate(value) : null
@@ -301,6 +331,21 @@ function VLInput({
         <span className="text-[10px] text-amber-600 mt-0.5 leading-tight whitespace-nowrap">
           {validationWarning}
         </span>
+      )}
+      {/* Calculated field formula helper line */}
+      {isCalculated && formula && (
+        <div className="flex items-center gap-1.5 mt-1">
+          <div className="flex items-center gap-1 text-[10px] text-gray-500">
+            <Calculator className="w-3 h-3 text-gray-400 flex-shrink-0" />
+            <span className="italic leading-tight">{formula}</span>
+          </div>
+          {/* Show "Overridden" pill if value differs from original */}
+          {originalCalculatedValue && value !== originalCalculatedValue && (
+            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 whitespace-nowrap">
+              Overridden
+            </span>
+          )}
+        </div>
       )}
     </div>
   )
@@ -654,7 +699,10 @@ function BunkerFuelRow({
           <VLInput id={`${prefix}-total`} value={formData[`${prefix}-total`]?.value || ""}
             onChange={(v) => handleFieldChange(`${prefix}-total`, v)}
             isSelected={isSelected(`${prefix}-total`)} isEdited={isEdited(`${prefix}-total`)} isVerified={isVerified(`${prefix}-total`)}
-            onSelect={() => onFieldSelect(`${prefix}-total`)} width="40px" />
+            onSelect={() => onFieldSelect(`${prefix}-total`)} width="40px"
+            isCalculated={!!CALCULATED_FIELDS[`${prefix}-total`]}
+            formula={CALCULATED_FIELDS[`${prefix}-total`]?.formula}
+            originalCalculatedValue={CALCULATED_FIELDS[`${prefix}-total`]?.originalValue} />
         </td>
         <td className="border border-[#999] px-0.5 py-0.5" colSpan={5}>
           <div className="flex gap-1">
@@ -991,12 +1039,15 @@ export function VesLinkForm({
                 onSelect={() => onFieldSelect("displacement")} width="100px" />
             </FormRow>
             
-            <FormRow label="Slip %:" labelWidth="150px">
+<FormRow label="Slip %:" labelWidth="150px">
               <VLInput id="slip" value={formData["slip"].value}
                 onChange={(v) => handleFieldChange("slip", v)}
                 isSelected={isSelected("slip")} isEdited={isEdited("slip")} isVerified={isVerifiedField("slip")}
-                onSelect={() => onFieldSelect("slip")} width="100px" />
-            </FormRow>
+                onSelect={() => onFieldSelect("slip")} width="100px"
+                isCalculated={true}
+                formula={CALCULATED_FIELDS["slip"]?.formula}
+                originalCalculatedValue={CALCULATED_FIELDS["slip"]?.originalValue} />
+              </FormRow>
             <FormRow label="Fwd Draft (m):" labelWidth="150px">
               <VLInput id="fwd-draft" value={formData["fwd-draft"].value}
                 onChange={(v) => handleFieldChange("fwd-draft", v)}
