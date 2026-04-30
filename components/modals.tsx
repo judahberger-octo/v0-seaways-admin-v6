@@ -212,7 +212,15 @@ const FLAG_REASONS = [
   "Ambiguous source mapping",
   "Conflicts with other reports",
   "Missing data",
+  "Should be marked critical",
+  "Should be mandatory manual fill",
   "Other"
+]
+
+// Reasons that trigger admin review helper text
+const ADMIN_REVIEW_REASONS = [
+  "Should be marked critical",
+  "Should be mandatory manual fill"
 ]
 
 export function FlagFieldModal({ 
@@ -314,6 +322,13 @@ export function FlagFieldModal({
                 </div>
               )}
             </div>
+            
+            {/* Admin review helper text - shown for critical/mandatory reasons */}
+            {ADMIN_REVIEW_REASONS.includes(reason) && (
+              <p className="mt-2 text-xs italic text-[#64748b]">
+                Flagging a field as critical or mandatory will route this to admin review. If approved, the field will become part of every crew member&apos;s mandatory verification process on future reports.
+              </p>
+            )}
           </div>
 
           {/* Comment textarea */}
