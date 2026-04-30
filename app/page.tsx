@@ -8,6 +8,7 @@ import { DraftsPage } from "@/components/drafts-page"
 import { HistoryPage } from "@/components/history-page"
 import { GenerationLoading } from "@/components/generation-loading"
 import { AdminPage } from "@/components/admin/admin-page"
+import { UserProvider } from "@/lib/user-context"
 
 type AppView = "selection" | "loading" | "review"
 
@@ -55,14 +56,17 @@ export default function Home() {
   // Show loading screen outside AppShell (no sidebar during generation)
   if (currentView === "loading" && selectedReportId) {
     return (
-      <GenerationLoading 
-        reportId={selectedReportId} 
-        onComplete={handleLoadingComplete} 
-      />
+      <UserProvider>
+        <GenerationLoading 
+          reportId={selectedReportId} 
+          onComplete={handleLoadingComplete} 
+        />
+      </UserProvider>
     )
   }
 
   return (
+    <UserProvider>
     <AppShell 
       activeTab={activeTab} 
       onTabChange={setActiveTab}
@@ -109,5 +113,6 @@ export default function Home() {
         </>
       )}
     </AppShell>
+    </UserProvider>
   )
 }

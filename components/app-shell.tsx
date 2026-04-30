@@ -12,25 +12,12 @@ import {
   FileText,
   Pencil,
   X,
-  ShieldCheck
+  ShieldCheck,
+  ChevronDown,
+  Check,
+  User
 } from "lucide-react"
-
-// Mock current user - in real app this would come from auth context
-export interface CurrentUser {
-  id: string
-  name: string
-  email: string
-  role: 'crew' | 'admin'
-  initials: string
-}
-
-export const mockCurrentUser: CurrentUser = {
-  id: 'user-admin-1',
-  name: 'Emily Martinez',
-  email: 'emily.martinez@uniframe.ai',
-  role: 'admin', // Change to 'crew' to test crew view
-  initials: 'EM'
-}
+import { useUser } from "@/lib/user-context"
 import { UnsavedReportModal, DiscardReportModal } from "./modals"
 
 interface AppShellProps {
@@ -86,6 +73,8 @@ export function AppShell({
   submittedAt,
   submittedBy = "transfer.agent@uniframe.ai"
 }: AppShellProps) {
+  const { currentUser, setRole } = useUser()
+  
   // Modal states for close flow
   const [showUnsavedModal, setShowUnsavedModal] = useState(false)
   const [showDiscardModal, setShowDiscardModal] = useState(false)
@@ -93,6 +82,9 @@ export function AppShell({
   // Nav icon overlay states
   const [showSearchOverlay, setShowSearchOverlay] = useState(false)
   const [showCommentsPane, setShowCommentsPane] = useState(false)
+  
+  // User menu state
+  const [showUserMenu, setShowUserMenu] = useState(false)
   
   // Handle Layers click - navigate to Report management
   const handleLayersClick = () => {
@@ -221,7 +213,7 @@ export function AppShell({
             <Waves className="w-5 h-5" />
           </button>
           {/* Admin - Only visible to admin users */}
-          {mockCurrentUser.role === 'admin' && (
+          {currentUser.role === 'admin' && (
             <button 
               onClick={() => onAdminViewChange?.(!isAdminView)}
               className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
@@ -239,15 +231,99 @@ export function AppShell({
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Bottom Section - Settings gear + Avatar */}
+        {/* Bottom Section - Settings gear + Avatar with User Menu */}
         <div className="pb-4 flex flex-col items-center gap-4">
           {/* Settings - never selected, just hover state */}
           <button className="w-10 h-10 flex items-center justify-center rounded-lg text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155] transition-colors">
             <Settings className="w-5 h-5" />
           </button>
-          {/* User Avatar - 32px purple circle with initials */}
-          <div className="w-8 h-8 rounded-full bg-[#7c3aed] flex items-center justify-center text-white text-xs font-semibold cursor-pointer hover:bg-[#6d28d9] transition-colors">
-            EM
+          {/* User Avatar - 32px purple circle with initials, opens menu */}
+          <div className="relative">
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="w-8 h-8 rounded-full bg-[#7c3aed] flex items-center justify-center text-white text-xs font-semibold hover:bg-[#6d28d9] transition-colors"
+            >
+              {currentUser.initials}
+            </button>
+            
+            {/* User Menu Dropdown */}
+            {showUserMenu && (
+              <>
+                {/* Backdrop to close menu */}
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setShowUserMenu(false)} 
+                />
+                <div className="absolute bottom-full left-12 mb-2 w-64 bg-white rounded-xl shadow-xl border border-[#e2e8f0] z-50 overflow-hidden">
+                  {/* User Info */}
+                  <div className="px-4 py-3 border-b border-[#e2e8f0]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[#7c3aed] flex items-center justify-center text-white text-sm font-semibold">
+                        {currentUser.initials}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-[#0f172a]">{currentUser.name}</p>
+                        <p className="text-xs text-[#64748b]">{currentUser.email}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Role Switcher */}
+                  <div className="px-4 py-3">
+                    <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-2">
+                      Switch Role (Dev Only)
+                    </p>
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => {
+                          setRole('admin')
+                          setShowUserMenu(false)
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+                          currentUser.role === 'admin' 
+                            ? 'bg-[#f3e8ff] text-[#7c3aed]' 
+                            : 'hover:bg-[#f1f5f9] text-[#334155]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4" />
+                          <span>Admin</span>
+                        </div>
+                        {currentUser.role === 'admin' && <Check className="w-4 h-4" />}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setRole('crew')
+                          setShowUserMenu(false)
+                          // If currently in admin view, exit it
+                          if (isAdminView) {
+                            onAdminViewChange?.(false)
+                          }
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+                          currentUser.role === 'crew' 
+                            ? 'bg-[#f3e8ff] text-[#7c3aed]' 
+                            : 'hover:bg-[#f1f5f9] text-[#334155]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4" />
+                          <span>Crew</span>
+                        </div>
+                        {currentUser.role === 'crew' && <Check className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Current Role Indicator */}
+                  <div className="px-4 py-2 bg-[#f8fafc] border-t border-[#e2e8f0]">
+                    <p className="text-xs text-[#64748b]">
+                      Currently viewing as: <span className="font-medium text-[#0f172a] capitalize">{currentUser.role}</span>
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </aside>
