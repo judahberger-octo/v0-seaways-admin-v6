@@ -7,7 +7,7 @@ import { TransferReview } from "@/components/transfer-review"
 import { DraftsPage } from "@/components/drafts-page"
 import { HistoryPage } from "@/components/history-page"
 import { GenerationLoading } from "@/components/generation-loading"
-import { AdminOverview } from "@/components/admin/admin-overview"
+import { AdminPage } from "@/components/admin/admin-page"
 
 type AppView = "selection" | "loading" | "review"
 
@@ -82,7 +82,7 @@ export default function Home() {
       submittedBy="chief.officer@seaways.com"
     >
       {isAdminView ? (
-        <AdminOverview />
+        <AdminPage />
       ) : currentView === "review" && selectedReportId ? (
         <TransferReview 
           reportId={selectedReportId} 
