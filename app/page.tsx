@@ -7,6 +7,7 @@ import { TransferReview } from "@/components/transfer-review"
 import { DraftsPage } from "@/components/drafts-page"
 import { HistoryPage } from "@/components/history-page"
 import { GenerationLoading } from "@/components/generation-loading"
+import { AdminOverview } from "@/components/admin/admin-overview"
 
 type AppView = "selection" | "loading" | "review"
 
@@ -17,6 +18,7 @@ export default function Home() {
   const [isAdminMode, setIsAdminMode] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(true) // Default to true when in review mode
   const [isViewingHistory, setIsViewingHistory] = useState(false) // True when viewing submitted report from history
+  const [isAdminView, setIsAdminView] = useState(false) // True when in admin view
 
   // Mock review data - in real app this would come from the TransferReview state
   const reviewData = currentView === "review" ? {
@@ -66,7 +68,9 @@ export default function Home() {
       onTabChange={setActiveTab}
       isAdminMode={isAdminMode}
       onAdminModeChange={setIsAdminMode}
-      isReviewMode={currentView === "review"}
+      isAdminView={isAdminView}
+      onAdminViewChange={setIsAdminView}
+      isReviewMode={currentView === "review" && !isAdminView}
       reviewData={reviewData}
       onBackFromReview={handleBackToSelection}
       hasUnsavedChanges={currentView === "review" && hasUnsavedChanges && !isViewingHistory}
@@ -77,7 +81,9 @@ export default function Home() {
       submittedAt="2:03 PM on January 25, 2026"
       submittedBy="chief.officer@seaways.com"
     >
-      {currentView === "review" && selectedReportId ? (
+      {isAdminView ? (
+        <AdminOverview />
+      ) : currentView === "review" && selectedReportId ? (
         <TransferReview 
           reportId={selectedReportId} 
           onBack={handleBackToSelection}

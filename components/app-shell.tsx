@@ -11,8 +11,26 @@ import {
   Calendar,
   FileText,
   Pencil,
-  X
+  X,
+  ShieldCheck
 } from "lucide-react"
+
+// Mock current user - in real app this would come from auth context
+export interface CurrentUser {
+  id: string
+  name: string
+  email: string
+  role: 'crew' | 'admin'
+  initials: string
+}
+
+export const mockCurrentUser: CurrentUser = {
+  id: 'user-admin-1',
+  name: 'Emily Martinez',
+  email: 'emily.martinez@uniframe.ai',
+  role: 'admin', // Change to 'crew' to test crew view
+  initials: 'EM'
+}
 import { UnsavedReportModal, DiscardReportModal } from "./modals"
 
 interface AppShellProps {
@@ -20,6 +38,9 @@ interface AppShellProps {
   onTabChange: (tab: "new-transfer" | "drafts" | "history") => void
   isAdminMode?: boolean
   onAdminModeChange?: (enabled: boolean) => void
+  // Admin view state - when true, shows admin dashboard instead of crew UI
+  isAdminView?: boolean
+  onAdminViewChange?: (enabled: boolean) => void
   children: React.ReactNode
   // Tab counts
   newTransferCount?: number
@@ -50,6 +71,8 @@ export function AppShell({
   onTabChange, 
   isAdminMode = false, 
   onAdminModeChange, 
+  isAdminView = false,
+  onAdminViewChange,
   children,
   newTransferCount = 8,
   draftsCount = 2,
@@ -166,11 +189,11 @@ export function AppShell({
           >
             <MessageSquare className="w-5 h-5" />
           </button>
-          {/* Sparkles/AI - Selected when in review mode */}
+          {/* Sparkles/AI - Selected when in review mode (not in admin view) */}
           <button 
             onClick={handleSparklesClick}
             className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
-              isReviewMode && !showSearchOverlay && !showCommentsPane
+              isReviewMode && !isAdminView && !showSearchOverlay && !showCommentsPane
                 ? "bg-[#f3e8ff] text-[#7c3aed]" 
                 : "text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155]"
             }`}
@@ -178,11 +201,11 @@ export function AppShell({
           >
             <Sparkles className="w-5 h-5" />
           </button>
-          {/* Layers/Stack - Selected when on Report management */}
+          {/* Layers/Stack - Selected when on Report management (not in admin view) */}
           <button 
             onClick={handleLayersClick}
             className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
-              !isReviewMode && !showSearchOverlay && !showCommentsPane
+              !isReviewMode && !isAdminView && !showSearchOverlay && !showCommentsPane
                 ? "bg-[#f3e8ff] text-[#7c3aed]" 
                 : "text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155]"
             }`}
@@ -197,6 +220,20 @@ export function AppShell({
           >
             <Waves className="w-5 h-5" />
           </button>
+          {/* Admin - Only visible to admin users */}
+          {mockCurrentUser.role === 'admin' && (
+            <button 
+              onClick={() => onAdminViewChange?.(!isAdminView)}
+              className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
+                isAdminView && !showSearchOverlay && !showCommentsPane
+                  ? "bg-[#f3e8ff] text-[#7c3aed]" 
+                  : "text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155]"
+              }`}
+              title="Admin"
+            >
+              <ShieldCheck className="w-5 h-5" />
+            </button>
+          )}
         </nav>
 
         {/* Spacer */}
@@ -283,6 +320,9 @@ export function AppShell({
               </button>
             </div>
           </header>
+        ) : isAdminView ? (
+          // Admin view has no header here - content handles its own header
+          null
         ) : (
           // Standard Page Header with Tabs
           <header className="border-b border-[#e2e8f0] bg-white flex-shrink-0">
