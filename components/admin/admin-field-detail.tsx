@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Save, RotateCcw } from "lucide-react"
+import { ArrowLeft, Save, RotateCcw, X, ChevronDown, Check } from "lucide-react"
 import {
   fieldDefinitions,
   targetSystems,
+  targetForms,
   type FieldDefinition,
 } from "@/lib/admin-mock-data"
 
@@ -236,10 +237,181 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
               <h2 className="mb-6 text-base font-semibold text-[#0f172a]">
                 Identity & metadata
               </h2>
-              {/* Placeholder - will be expanded in Prompt 11 */}
-              <p className="text-sm text-[#64748b]">
-                Identity section content coming soon...
-              </p>
+              
+              <div className="space-y-5">
+                {/* Logical field name */}
+                <div>
+                  <label 
+                    htmlFor="logicalName" 
+                    className="mb-1.5 block text-sm font-medium text-[#334155]"
+                  >
+                    Logical field name
+                  </label>
+                  <input
+                    id="logicalName"
+                    type="text"
+                    value={formData.logicalName || ""}
+                    onChange={(e) => updateFormData({ logicalName: e.target.value, name: e.target.value })}
+                    placeholder="e.g., IFO ROB"
+                    className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                  />
+                </div>
+
+                {/* Target system (read-only) */}
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+                    Target system
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center rounded-full bg-[#f3e8ff] px-3 py-1.5 text-sm font-medium text-[#7c3aed]">
+                      {activeSystem.name}
+                    </span>
+                    <span className="text-xs text-[#94a3b8]">Read-only in v0</span>
+                  </div>
+                </div>
+
+                {/* Appears on forms (multi-select chips) */}
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+                    Appears on forms
+                  </label>
+                  <FormsMultiSelect
+                    selectedFormIds={formData.appearsOnFormIds || []}
+                    onChange={(formIds) => updateFormData({ appearsOnFormIds: formIds })}
+                  />
+                </div>
+
+                {/* Data type dropdown */}
+                <div>
+                  <label 
+                    htmlFor="dataType" 
+                    className="mb-1.5 block text-sm font-medium text-[#334155]"
+                  >
+                    Data type
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="dataType"
+                      value={formData.dataType || "text"}
+                      onChange={(e) => {
+                        const newType = e.target.value as FieldDefinition["dataType"]
+                        updateFormData({ 
+                          dataType: newType,
+                          // Clear unit if not applicable
+                          unit: (newType === "number" || newType === "duration") ? formData.unit : undefined
+                        })
+                      }}
+                      className="w-full appearance-none rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 pr-10 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                    >
+                      <option value="number">Number</option>
+                      <option value="text">Text</option>
+                      <option value="datetime">Datetime</option>
+                      <option value="enum">Enum</option>
+                      <option value="latlong">Lat/Long</option>
+                      <option value="duration">Duration</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748b]" />
+                  </div>
+                </div>
+
+                {/* Unit (only for number/duration) */}
+                {(formData.dataType === "number" || formData.dataType === "duration") && (
+                  <div>
+                    <label 
+                      htmlFor="unit" 
+                      className="mb-1.5 block text-sm font-medium text-[#334155]"
+                    >
+                      Unit
+                    </label>
+                    <input
+                      id="unit"
+                      type="text"
+                      value={formData.unit || ""}
+                      onChange={(e) => updateFormData({ unit: e.target.value || undefined })}
+                      placeholder="e.g., kts, nm, MT, hrs"
+                      className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                    />
+                  </div>
+                )}
+
+                {/* Toggles section */}
+                <div className="space-y-4 pt-2">
+                  {/* Criticality toggle */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-[#334155]">Critical field</p>
+                      <p className="text-xs text-[#64748b]">
+                        Critical fields must be manually verified by crew before submitting.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={formData.isCritical}
+                      onClick={() => updateFormData({ isCritical: !formData.isCritical })}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#7c3aed] focus:ring-offset-2 ${
+                        formData.isCritical ? "bg-[#7c3aed]" : "bg-[#d1d5db]"
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          formData.isCritical ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Mandatory toggle */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-[#334155]">Mandatory field</p>
+                      <p className="text-xs text-[#64748b]">
+                        Mandatory fields must have a value before the form can be submitted.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={formData.isMandatory}
+                      onClick={() => updateFormData({ isMandatory: !formData.isMandatory })}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#7c3aed] focus:ring-offset-2 ${
+                        formData.isMandatory ? "bg-[#7c3aed]" : "bg-[#d1d5db]"
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          formData.isMandatory ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Read-only toggle */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-[#334155]">Read-only in target</p>
+                      <p className="text-xs text-[#64748b]">
+                        Field cannot be edited in the target form. Read-only display only.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={formData.isReadOnlyInTarget || false}
+                      onClick={() => updateFormData({ isReadOnlyInTarget: !formData.isReadOnlyInTarget })}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#7c3aed] focus:ring-offset-2 ${
+                        formData.isReadOnlyInTarget ? "bg-[#7c3aed]" : "bg-[#d1d5db]"
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          formData.isReadOnlyInTarget ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </section>
 
             {/* Section 2: Extraction */}
@@ -300,6 +472,101 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
           </div>
         </main>
       </div>
+    </div>
+  )
+}
+
+// Multi-select component for forms
+interface FormsMultiSelectProps {
+  selectedFormIds: string[]
+  onChange: (formIds: string[]) => void
+}
+
+function FormsMultiSelect({ selectedFormIds, onChange }: FormsMultiSelectProps) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  const toggleForm = (formId: string) => {
+    if (selectedFormIds.includes(formId)) {
+      onChange(selectedFormIds.filter((id) => id !== formId))
+    } else {
+      onChange([...selectedFormIds, formId])
+    }
+  }
+
+  const removeForm = (formId: string) => {
+    onChange(selectedFormIds.filter((id) => id !== formId))
+  }
+
+  const selectedForms = targetForms.filter((f) => selectedFormIds.includes(f.id))
+
+  return (
+    <div className="relative">
+      {/* Selected chips and input trigger */}
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className="min-h-[42px] w-full cursor-pointer rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 focus-within:border-[#7c3aed] focus-within:ring-1 focus-within:ring-[#7c3aed]"
+      >
+        {selectedForms.length === 0 ? (
+          <span className="text-sm text-[#94a3b8]">Select forms...</span>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {selectedForms.map((form) => (
+              <span
+                key={form.id}
+                className="inline-flex items-center gap-1 rounded-full bg-[#f3e8ff] px-2.5 py-1 text-xs font-medium text-[#7c3aed]"
+              >
+                {form.name}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    removeForm(form.id)
+                  }}
+                  className="rounded-full p-0.5 hover:bg-[#e9d5ff]"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Dropdown */}
+      {isOpen && (
+        <>
+          <div 
+            className="fixed inset-0 z-10" 
+            onClick={() => setIsOpen(false)} 
+          />
+          <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-lg border border-[#e2e8f0] bg-white py-1 shadow-lg">
+            {targetForms.map((form) => {
+              const isSelected = selectedFormIds.includes(form.id)
+              return (
+                <button
+                  key={form.id}
+                  type="button"
+                  onClick={() => toggleForm(form.id)}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[#f8fafc]"
+                >
+                  <div
+                    className={`flex h-4 w-4 items-center justify-center rounded border ${
+                      isSelected
+                        ? "border-[#7c3aed] bg-[#7c3aed]"
+                        : "border-[#d1d5db]"
+                    }`}
+                  >
+                    {isSelected && <Check className="h-3 w-3 text-white" />}
+                  </div>
+                  <span className={isSelected ? "text-[#0f172a] font-medium" : "text-[#334155]"}>
+                    {form.name}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
     </div>
   )
 }

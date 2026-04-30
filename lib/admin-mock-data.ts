@@ -48,6 +48,7 @@ export interface FieldDefinition {
   id: string
   targetSystemId: string
   logicalName: string
+  name: string
   appearsOnFormIds: string[]
   navtorSourcePaths: string[]
   dataType: 'number' | 'text' | 'datetime' | 'enum' | 'latlong' | 'duration'
@@ -55,8 +56,10 @@ export interface FieldDefinition {
   isCritical: boolean
   isMandatory: boolean
   isCalculated: boolean
+  isReadOnlyInTarget?: boolean
   formula?: string
   extractionHint: string
+  navtorSourcePath?: string
   validationRules: ValidationRule[]
   version: number
   updatedAt: string
@@ -1052,6 +1055,7 @@ export const fieldDefinitions: FieldDefinition[] = fieldDefinitionData.map((fd) 
   id: `fd-${String(fieldDefIdCounter++).padStart(4, '0')}`,
   targetSystemId: 'veslink',
   logicalName: fd.logicalName,
+  name: fd.logicalName,
   appearsOnFormIds: fd.appearsOnForms,
   navtorSourcePaths: fd.navtorPaths,
   dataType: fd.dataType,
