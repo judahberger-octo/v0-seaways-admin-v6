@@ -1201,21 +1201,19 @@ lowFlagFields.forEach(fd => {
 export const submissions: Submission[] = []
 let submissionIdCounter = 1
 
-// Create adoption distribution: some vessels at 95%, some at 0%, skewed distribution
+// Create adoption distribution: vessels range from 100% to 60%
 const vesselAdoption: Record<string, number> = {}
 vessels.forEach((vessel, index) => {
-  if (index < 10) {
-    vesselAdoption[vessel.id] = 0.95 // Top performers
-  } else if (index < 25) {
-    vesselAdoption[vessel.id] = 0.8 + Math.random() * 0.15 // High adopters
-  } else if (index < 50) {
-    vesselAdoption[vessel.id] = 0.5 + Math.random() * 0.3 // Medium adopters
+  if (index < 15) {
+    vesselAdoption[vessel.id] = 1.0 // Perfect adoption
+  } else if (index < 35) {
+    vesselAdoption[vessel.id] = 0.9 + Math.random() * 0.1 // 90-100%
+  } else if (index < 55) {
+    vesselAdoption[vessel.id] = 0.8 + Math.random() * 0.1 // 80-90%
   } else if (index < 70) {
-    vesselAdoption[vessel.id] = 0.2 + Math.random() * 0.3 // Low adopters
-  } else if (index < 78) {
-    vesselAdoption[vessel.id] = 0.05 + Math.random() * 0.15 // Very low
+    vesselAdoption[vessel.id] = 0.7 + Math.random() * 0.1 // 70-80%
   } else {
-    vesselAdoption[vessel.id] = 0 // Zero adoption
+    vesselAdoption[vessel.id] = 0.6 + Math.random() * 0.1 // 60-70%
   }
 })
 
