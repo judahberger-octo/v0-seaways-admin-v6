@@ -118,6 +118,24 @@ export interface Submission {
   fieldsFlagged: number
 }
 
+export interface TestReportExpectedValue {
+  fieldId: string
+  expectedValue: string
+  lastTestScore?: number
+  lastTestVersion?: number
+  lastTestRunAt?: string
+}
+
+export interface TestReport {
+  id: string
+  vesselId: string
+  vesselName: string
+  reportDate: string
+  reportType: string
+  addedAt: string
+  expectedValues: TestReportExpectedValue[]
+}
+
 // ----------------------------------------------------------------------------
 // Target Systems
 // ----------------------------------------------------------------------------
@@ -1523,4 +1541,129 @@ export function getMostFlaggedFields(limit: number = 10): MostFlaggedField[] {
     .slice(0, limit)
   
   return sorted
+}
+
+// ----------------------------------------------------------------------------
+// Test Reports Library (curated reports with known-correct values)
+// ----------------------------------------------------------------------------
+
+// Generate expected values for a test report using a subset of field definitions
+function generateExpectedValues(vesselId: string, seed: number): TestReportExpectedValue[] {
+  const selectedFields = fieldDefinitions
+    .filter((_, index) => (index + seed) % 3 === 0) // Select ~1/3 of fields
+    .slice(0, 15) // Max 15 fields per report
+  
+  return selectedFields.map((fd, idx) => {
+    const hasTestResult = (idx + seed) % 2 === 0
+    const score = hasTestResult ? 6 + Math.floor(Math.random() * 5) : undefined
+    
+    let expectedValue: string
+    switch (fd.dataType) {
+      case 'number':
+        expectedValue = (Math.random() * 1000).toFixed(2)
+        break
+      case 'datetime':
+        expectedValue = new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
+        break
+      case 'latlong':
+        expectedValue = `${(Math.random() * 180 - 90).toFixed(4)},${(Math.random() * 360 - 180).toFixed(4)}`
+        break
+      case 'duration':
+        expectedValue = `${Math.floor(Math.random() * 48)}`
+        break
+      default:
+        expectedValue = `Value_${fd.logicalName.replace(/\s/g, '_')}_${idx}`
+    }
+    
+    return {
+      fieldId: fd.id,
+      expectedValue,
+      lastTestScore: score,
+      lastTestVersion: hasTestResult ? fd.version : undefined,
+      lastTestRunAt: hasTestResult ? new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString() : undefined,
+    }
+  })
+}
+
+export const testReports: TestReport[] = [
+  {
+    id: 'TR-2024-001',
+    vesselId: 'vessel-001',
+    vesselName: 'SEAWAYS SKOPELOS',
+    reportDate: '2024-01-15',
+    reportType: 'Noon (Sea)',
+    addedAt: '2024-01-20T10:30:00Z',
+    expectedValues: generateExpectedValues('vessel-001', 1),
+  },
+  {
+    id: 'TR-2024-002',
+    vesselId: 'vessel-002',
+    vesselName: 'SEAWAYS ANDROMEDA',
+    reportDate: '2024-01-14',
+    reportType: 'Arrival',
+    addedAt: '2024-01-18T14:00:00Z',
+    expectedValues: generateExpectedValues('vessel-002', 2),
+  },
+  {
+    id: 'TR-2024-003',
+    vesselId: 'vessel-003',
+    vesselName: 'SEAWAYS ZENITH',
+    reportDate: '2024-01-13',
+    reportType: 'Departure',
+    addedAt: '2024-01-16T09:15:00Z',
+    expectedValues: generateExpectedValues('vessel-003', 3),
+  },
+  {
+    id: 'TR-2024-004',
+    vesselId: 'vessel-004',
+    vesselName: 'SEAWAYS ORION',
+    reportDate: '2024-01-12',
+    reportType: 'Noon (Sea)',
+    addedAt: '2024-01-15T11:45:00Z',
+    expectedValues: generateExpectedValues('vessel-004', 4),
+  },
+  {
+    id: 'TR-2024-005',
+    vesselId: 'vessel-005',
+    vesselName: 'SEAWAYS PERSEUS',
+    reportDate: '2024-01-11',
+    reportType: 'Bunkering',
+    addedAt: '2024-01-14T16:30:00Z',
+    expectedValues: generateExpectedValues('vessel-005', 5),
+  },
+  {
+    id: 'TR-2024-006',
+    vesselId: 'vessel-006',
+    vesselName: 'SEAWAYS ATLAS',
+    reportDate: '2024-01-10',
+    reportType: 'SOF',
+    addedAt: '2024-01-13T08:00:00Z',
+    expectedValues: generateExpectedValues('vessel-006', 6),
+  },
+  {
+    id: 'TR-2024-007',
+    vesselId: 'vessel-001',
+    vesselName: 'SEAWAYS SKOPELOS',
+    reportDate: '2024-01-08',
+    reportType: 'Noon (Port)',
+    addedAt: '2024-01-12T13:20:00Z',
+    expectedValues: generateExpectedValues('vessel-001', 7),
+  },
+  {
+    id: 'TR-2024-008',
+    vesselId: 'vessel-007',
+    vesselName: 'SEAWAYS TITAN',
+    reportDate: '2024-01-05',
+    reportType: 'Cargo Handling',
+    addedAt: '2024-01-10T10:00:00Z',
+    expectedValues: generateExpectedValues('vessel-007', 8),
+  },
+]
+
+export function getTestReports(): TestReport[] {
+  return testReports
+}
+
+export function getTestReportById(id: string): TestReport | undefined {
+  return testReports.find(r => r.id === id)
 }

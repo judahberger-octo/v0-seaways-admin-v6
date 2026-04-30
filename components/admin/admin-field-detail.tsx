@@ -8,6 +8,7 @@ import {
   targetForms,
   vessels,
   getTestRunsForField,
+  testReports,
   type FieldDefinition,
   type ValidationRule,
   type TestRun,
@@ -1552,6 +1553,14 @@ function FieldTestPanel({ fieldId, dataType, definitionVersion }: FieldTestPanel
   } | null>(null)
   const [showHistory, setShowHistory] = useState(false)
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null)
+  const [showFullSetModal, setShowFullSetModal] = useState(false)
+  const [isRunningFullSet, setIsRunningFullSet] = useState(false)
+  const [fullSetResults, setFullSetResults] = useState<Array<{
+    reportId: string
+    vesselName: string
+    score: number
+    passed: boolean
+  }>>([])
 
   // Get test history for this field
   const testHistory = fieldId ? getTestRunsForField(fieldId) : []
@@ -1626,6 +1635,38 @@ function FieldTestPanel({ fieldId, dataType, definitionVersion }: FieldTestPanel
     })
   }
 
+  // Run against full test set
+  const handleRunFullSet = async () => {
+    setShowFullSetModal(true)
+    setIsRunningFullSet(true)
+    setFullSetResults([])
+
+    // Get test reports that have this field
+    const relevantReports = testReports.filter(r => 
+      r.expectedValues.some(ev => ev.fieldId === fieldId)
+    )
+
+    const results: typeof fullSetResults = []
+
+    for (const report of relevantReports) {
+      await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300))
+      
+      // Simulate test score
+      const score = Math.random() > 0.15 ? 8 + Math.floor(Math.random() * 3) : 4 + Math.floor(Math.random() * 4)
+      
+      results.push({
+        reportId: report.id,
+        vesselName: report.vesselName,
+        score,
+        passed: score >= 8,
+      })
+      
+      setFullSetResults([...results])
+    }
+
+    setIsRunningFullSet(false)
+  }
+
   return (
     <div className="space-y-6">
       {/* Instructional text */}
@@ -1661,17 +1702,107 @@ function FieldTestPanel({ fieldId, dataType, definitionVersion }: FieldTestPanel
           />
         </div>
 
-        {/* Run button */}
-        <button
-          type="button"
-          onClick={handleRunTest}
-          disabled={!selectedReport || !expectedValue || isRunning}
-          className="flex items-center gap-2 rounded-lg bg-[#7c3aed] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#6d28d9] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Play className="h-4 w-4" />
-          Run x10
-        </button>
+        {/* Buttons */}
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={handleRunTest}
+            disabled={!selectedReport || !expectedValue || isRunning}
+            className="flex items-center gap-2 rounded-lg bg-[#7c3aed] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#6d28d9] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Play className="h-4 w-4" />
+            Run x10
+          </button>
+          <button
+            type="button"
+            onClick={handleRunFullSet}
+            disabled={isRunning || isRunningFullSet}
+            className="flex items-center gap-2 rounded-lg border border-[#e2e8f0] px-4 py-2.5 text-sm font-medium text-[#334155] hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Run against full set
+          </button>
+        </div>
       </div>
+
+      {/* Full Set Results Modal */}
+      {showFullSetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-[#e2e8f0] px-6 py-4">
+              <div>
+                <h3 className="text-lg font-semibold text-[#0f172a]">Full set test results</h3>
+                <p className="text-sm text-[#64748b]">Definition v{definitionVersion}</p>
+              </div>
+              <button
+                onClick={() => setShowFullSetModal(false)}
+                disabled={isRunningFullSet}
+                className="rounded-lg p-1 text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#0f172a] disabled:opacity-50"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {/* Summary */}
+              {fullSetResults.length > 0 && (
+                <div className={`mb-4 rounded-lg p-4 ${
+                  fullSetResults.filter(r => r.passed).length === fullSetResults.length 
+                    ? "bg-[#f0fdf4]" 
+                    : "bg-[#fef9c3]"
+                }`}>
+                  <p className="text-lg font-bold text-[#0f172a]">
+                    Passed {fullSetResults.filter(r => r.passed).length}/{fullSetResults.length} reports
+                  </p>
+                  <p className="text-sm text-[#64748b]">
+                    {isRunningFullSet ? "Running tests..." : "All tests complete"}
+                  </p>
+                </div>
+              )}
+
+              {/* Results list */}
+              <div className="max-h-64 space-y-2 overflow-y-auto">
+                {fullSetResults.map((result, idx) => (
+                  <div
+                    key={result.reportId}
+                    className="flex items-center justify-between rounded-lg border border-[#e2e8f0] px-4 py-3"
+                  >
+                    <div>
+                      <p className="font-mono text-sm font-medium text-[#334155]">
+                        {result.reportId}
+                      </p>
+                      <p className="text-xs text-[#64748b]">{result.vesselName}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`font-semibold ${getScoreColor(result.score)}`}>
+                        {result.score}/10
+                      </span>
+                      {result.passed ? (
+                        <CheckCircle2 className="h-5 w-5 text-[#22c55e]" />
+                      ) : (
+                        <X className="h-5 w-5 text-[#ef4444]" />
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {isRunningFullSet && fullSetResults.length === 0 && (
+                  <p className="py-8 text-center text-sm text-[#64748b]">Starting tests...</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end border-t border-[#e2e8f0] px-6 py-4">
+              <button
+                onClick={() => setShowFullSetModal(false)}
+                disabled={isRunningFullSet}
+                className="rounded-lg bg-[#7c3aed] px-4 py-2 text-sm font-medium text-white hover:bg-[#6d28d9] disabled:opacity-50"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Progress indicator */}
       {(isRunning || runProgress.length > 0) && (
