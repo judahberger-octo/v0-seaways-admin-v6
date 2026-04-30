@@ -1472,3 +1472,48 @@ export function getVerificationAccuracyByForm(): VerificationAccuracyByForm[] {
     }
   })
 }
+
+export interface MostFlaggedField {
+  fieldId: string
+  fieldName: string
+  formNames: string[]
+  flagCount: number
+}
+
+export function getMostFlaggedFields(limit: number = 10): MostFlaggedField[] {
+  // Get flag counts from the flags array, grouped by field
+  const fieldFlagCounts = new Map<string, { fieldName: string; formIds: Set<string>; count: number }>()
+  
+  flags.forEach(flag => {
+    const field = fieldDefinitions.find(f => f.id === flag.fieldId)
+    if (!field) return
+    
+    const existing = fieldFlagCounts.get(flag.fieldId)
+    if (existing) {
+      existing.count++
+      existing.formIds.add(flag.formId)
+    } else {
+      fieldFlagCounts.set(flag.fieldId, {
+        fieldName: field.name,
+        formIds: new Set([flag.formId]),
+        count: 1,
+      })
+    }
+  })
+  
+  // Convert to array and sort by flag count descending
+  const sorted = Array.from(fieldFlagCounts.entries())
+    .map(([fieldId, data]) => ({
+      fieldId,
+      fieldName: data.fieldName,
+      formNames: Array.from(data.formIds).map(formId => {
+        const form = targetForms.find(f => f.id === formId)
+        return form?.name || formId
+      }),
+      flagCount: data.count,
+    }))
+    .sort((a, b) => b.flagCount - a.flagCount)
+    .slice(0, limit)
+  
+  return sorted
+}
