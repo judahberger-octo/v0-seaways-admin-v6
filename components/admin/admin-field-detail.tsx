@@ -1,13 +1,16 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Save, RotateCcw, X, ChevronDown, Check, Plus, Trash2, AlertCircle, HelpCircle, CheckCircle2 } from "lucide-react"
+import { ArrowLeft, Save, RotateCcw, X, ChevronDown, Check, Plus, Trash2, AlertCircle, HelpCircle, CheckCircle2, Play, Clock, ChevronRight } from "lucide-react"
 import {
   fieldDefinitions,
   targetSystems,
   targetForms,
+  vessels,
+  getTestRunsForField,
   type FieldDefinition,
   type ValidationRule,
+  type TestRun,
 } from "@/lib/admin-mock-data"
 
 // Section IDs for navigation
@@ -682,10 +685,12 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
               <h2 className="mb-6 text-base font-semibold text-[#0f172a]">
                 Test suite
               </h2>
-              {/* Placeholder - will be expanded in Prompt 14 */}
-              <p className="text-sm text-[#64748b]">
-                Test suite section content coming soon...
-              </p>
+              
+              <FieldTestPanel 
+                fieldId={fieldId || ""} 
+                dataType={formData.dataType || "text"}
+                definitionVersion={formData.version || 1}
+              />
             </section>
 
             {/* Section 5: Version History */}
@@ -1516,4 +1521,473 @@ function AdvancedExpressionEditor({
       )}
     </div>
   )
+}
+
+// Mock NAVTOR reports for test picker
+const MOCK_REPORTS = [
+  { id: "RPT-2024-001", vesselId: "vessel-001", vesselName: "SEAWAYS SKOPELOS", date: "2024-01-15", type: "Noon (Sea)" },
+  { id: "RPT-2024-002", vesselId: "vessel-002", vesselName: "SEAWAYS ANDROMEDA", date: "2024-01-15", type: "Arrival" },
+  { id: "RPT-2024-003", vesselId: "vessel-003", vesselName: "SEAWAYS ZENITH", date: "2024-01-14", type: "Departure" },
+  { id: "RPT-2024-004", vesselId: "vessel-001", vesselName: "SEAWAYS SKOPELOS", date: "2024-01-14", type: "Noon (Sea)" },
+  { id: "RPT-2024-005", vesselId: "vessel-004", vesselName: "SEAWAYS ORION", date: "2024-01-13", type: "Bunkering" },
+  { id: "RPT-2024-006", vesselId: "vessel-005", vesselName: "SEAWAYS PERSEUS", date: "2024-01-13", type: "Noon (Port)" },
+  { id: "RPT-2024-007", vesselId: "vessel-002", vesselName: "SEAWAYS ANDROMEDA", date: "2024-01-12", type: "Noon (Sea)" },
+  { id: "RPT-2024-008", vesselId: "vessel-006", vesselName: "SEAWAYS ATLAS", date: "2024-01-12", type: "SOF" },
+]
+
+interface FieldTestPanelProps {
+  fieldId: string
+  dataType: FieldDefinition["dataType"]
+  definitionVersion: number
+}
+
+function FieldTestPanel({ fieldId, dataType, definitionVersion }: FieldTestPanelProps) {
+  const [selectedReport, setSelectedReport] = useState<string>("")
+  const [expectedValue, setExpectedValue] = useState<string>("")
+  const [isRunning, setIsRunning] = useState(false)
+  const [runProgress, setRunProgress] = useState<Array<"pending" | "success" | "fail">>([])
+  const [testResult, setTestResult] = useState<{
+    correctCount: number
+    outputs: Array<{ value: string; correct: boolean }>
+  } | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
+  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null)
+
+  // Get test history for this field
+  const testHistory = fieldId ? getTestRunsForField(fieldId) : []
+
+  const handleRunTest = async () => {
+    if (!selectedReport || !expectedValue) return
+
+    setIsRunning(true)
+    setTestResult(null)
+    setRunProgress(Array(10).fill("pending"))
+
+    // Simulate 10 test runs with delays
+    const outputs: Array<{ value: string; correct: boolean }> = []
+    
+    for (let i = 0; i < 10; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300))
+      
+      // Simulate extraction result - mostly correct with some variance
+      const variance = Math.random()
+      let extractedValue: string
+      let isCorrect: boolean
+      
+      if (dataType === "number") {
+        const expected = parseFloat(expectedValue)
+        if (variance > 0.15) {
+          extractedValue = expectedValue
+          isCorrect = true
+        } else {
+          // Introduce small variance for numeric fields
+          const offset = (Math.random() - 0.5) * expected * 0.1
+          extractedValue = (expected + offset).toFixed(2)
+          isCorrect = false
+        }
+      } else {
+        isCorrect = variance > 0.1
+        extractedValue = isCorrect ? expectedValue : `${expectedValue}_variant`
+      }
+      
+      outputs.push({ value: extractedValue, correct: isCorrect })
+      
+      setRunProgress((prev) => {
+        const newProgress = [...prev]
+        newProgress[i] = isCorrect ? "success" : "fail"
+        return newProgress
+      })
+    }
+
+    const correctCount = outputs.filter((o) => o.correct).length
+    setTestResult({ correctCount, outputs })
+    setIsRunning(false)
+  }
+
+  const getScoreColor = (score: number) => {
+    if (score >= 9) return "text-[#22c55e]"
+    if (score >= 6) return "text-[#eab308]"
+    return "text-[#ef4444]"
+  }
+
+  const getScoreBgColor = (score: number) => {
+    if (score >= 9) return "bg-[#f0fdf4]"
+    if (score >= 6) return "bg-[#fef9c3]"
+    return "bg-[#fef2f2]"
+  }
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Instructional text */}
+      <div className="rounded-lg bg-[#f8fafc] px-4 py-3">
+        <p className="text-sm text-[#64748b]">
+          Run the field&apos;s extraction logic against a source report 10 times and compare to the expected value. 
+          Use this to verify consistency before deploying changes.
+        </p>
+      </div>
+
+      {/* Test inputs */}
+      <div className="space-y-4">
+        {/* Source report picker */}
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+            Source report
+          </label>
+          <ReportPicker
+            selectedReportId={selectedReport}
+            onChange={setSelectedReport}
+          />
+        </div>
+
+        {/* Expected value input - data-type-aware */}
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+            Expected value
+          </label>
+          <ExpectedValueInput
+            dataType={dataType}
+            value={expectedValue}
+            onChange={setExpectedValue}
+          />
+        </div>
+
+        {/* Run button */}
+        <button
+          type="button"
+          onClick={handleRunTest}
+          disabled={!selectedReport || !expectedValue || isRunning}
+          className="flex items-center gap-2 rounded-lg bg-[#7c3aed] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#6d28d9] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Play className="h-4 w-4" />
+          Run x10
+        </button>
+      </div>
+
+      {/* Progress indicator */}
+      {(isRunning || runProgress.length > 0) && (
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-[#334155]">Progress</p>
+          <div className="flex gap-1.5">
+            {runProgress.map((status, index) => (
+              <div
+                key={index}
+                className={`h-8 w-8 rounded-lg transition-colors ${
+                  status === "pending"
+                    ? "bg-[#e2e8f0]"
+                    : status === "success"
+                      ? "bg-[#22c55e]"
+                      : "bg-[#ef4444]"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Results card */}
+      {testResult && (
+        <div className={`rounded-xl border p-5 ${getScoreBgColor(testResult.correctCount)}`}>
+          {/* Big score stat */}
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className={`text-4xl font-bold ${getScoreColor(testResult.correctCount)}`}>
+                {testResult.correctCount}/10
+              </p>
+              <p className="text-sm text-[#64748b]">correct extractions</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-[#94a3b8]">Definition version</p>
+              <p className="text-sm font-medium text-[#64748b]">v{definitionVersion}</p>
+            </div>
+          </div>
+
+          {/* Expected value pinned at top */}
+          <div className="mb-3 rounded-lg bg-white px-3 py-2 border border-[#e2e8f0]">
+            <p className="text-xs text-[#64748b]">Expected value</p>
+            <p className="font-mono text-sm font-semibold text-[#0f172a]">{expectedValue}</p>
+          </div>
+
+          {/* List of outputs */}
+          <div className="space-y-1">
+            {testResult.outputs.map((output, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between rounded-lg bg-white px-3 py-2"
+              >
+                <span className="text-sm text-[#64748b]">Run {index + 1}</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm text-[#0f172a]">{output.value}</span>
+                  {output.correct ? (
+                    <CheckCircle2 className="h-4 w-4 text-[#22c55e]" />
+                  ) : (
+                    <X className="h-4 w-4 text-[#ef4444]" />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Test history */}
+      <div className="border-t border-[#e2e8f0] pt-6">
+        <button
+          type="button"
+          onClick={() => setShowHistory(!showHistory)}
+          className="flex w-full items-center justify-between text-left"
+        >
+          <h3 className="text-sm font-medium text-[#334155]">
+            Test history
+            <span className="ml-2 text-[#64748b]">({testHistory.length})</span>
+          </h3>
+          <ChevronRight
+            className={`h-4 w-4 text-[#64748b] transition-transform ${showHistory ? "rotate-90" : ""}`}
+          />
+        </button>
+
+        {showHistory && testHistory.length > 0 && (
+          <div className="mt-4 space-y-2">
+            {testHistory.map((run) => {
+              const report = MOCK_REPORTS.find((r) => r.id === run.reportId)
+              const isExpanded = expandedHistoryId === run.id
+
+              return (
+                <div key={run.id} className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc]">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedHistoryId(isExpanded ? null : run.id)}
+                    className="flex w-full items-center justify-between px-4 py-3 text-left"
+                  >
+                    <div className="flex items-center gap-4">
+                      <span className="font-mono text-sm text-[#334155]">{run.reportId}</span>
+                      <span className="text-sm text-[#64748b]">{run.expectedValue}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className={`font-semibold ${getScoreColor(run.correctCount)}`}>
+                        {run.correctCount}/10
+                      </span>
+                      <span className="text-xs text-[#94a3b8]">v{run.definitionVersion}</span>
+                      <span className="text-xs text-[#94a3b8]">{formatDate(run.ranAt)}</span>
+                      <ChevronRight
+                        className={`h-4 w-4 text-[#64748b] transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                      />
+                    </div>
+                  </button>
+
+                  {isExpanded && (
+                    <div className="border-t border-[#e2e8f0] px-4 py-3">
+                      <div className="mb-2 rounded-lg bg-white px-3 py-2 border border-[#e2e8f0]">
+                        <p className="text-xs text-[#64748b]">Expected value</p>
+                        <p className="font-mono text-sm font-semibold text-[#0f172a]">
+                          {run.expectedValue}
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-5 gap-1">
+                        {run.runs.map((isCorrect, idx) => (
+                          <div
+                            key={idx}
+                            className={`flex h-8 items-center justify-center rounded text-xs font-medium ${
+                              isCorrect
+                                ? "bg-[#dcfce7] text-[#166534]"
+                                : "bg-[#fee2e2] text-[#991b1b]"
+                            }`}
+                          >
+                            {isCorrect ? "Pass" : "Fail"}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {showHistory && testHistory.length === 0 && (
+          <p className="mt-4 text-sm text-[#64748b]">No test runs yet for this field.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Report picker with typeahead
+interface ReportPickerProps {
+  selectedReportId: string
+  onChange: (reportId: string) => void
+}
+
+function ReportPicker({ selectedReportId, onChange }: ReportPickerProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [search, setSearch] = useState("")
+
+  const filteredReports = MOCK_REPORTS.filter(
+    (r) =>
+      r.id.toLowerCase().includes(search.toLowerCase()) ||
+      r.vesselName.toLowerCase().includes(search.toLowerCase()) ||
+      r.date.includes(search)
+  )
+
+  const selectedReport = MOCK_REPORTS.find((r) => r.id === selectedReportId)
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-left text-sm focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+      >
+        {selectedReport ? (
+          <span className="text-[#0f172a]">
+            {selectedReport.id} - {selectedReport.vesselName} ({selectedReport.date})
+          </span>
+        ) : (
+          <span className="text-[#94a3b8]">Search by report ID, vessel, or date...</span>
+        )}
+      </button>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
+          <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-lg border border-[#e2e8f0] bg-white shadow-lg">
+            <div className="border-b border-[#e2e8f0] p-2">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search reports..."
+                autoFocus
+                className="w-full rounded border border-[#e2e8f0] px-3 py-1.5 text-sm focus:border-[#7c3aed] focus:outline-none"
+              />
+            </div>
+            <div className="max-h-64 overflow-y-auto py-1">
+              {filteredReports.map((report) => (
+                <button
+                  key={report.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(report.id)
+                    setIsOpen(false)
+                    setSearch("")
+                  }}
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-[#f8fafc] ${
+                    report.id === selectedReportId ? "bg-[#f3e8ff]" : ""
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[#334155]">{report.id}</span>
+                    <span className="text-xs text-[#94a3b8]">{report.type}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-[#64748b]">
+                    <span>{report.vesselName}</span>
+                    <span>•</span>
+                    <span>{report.date}</span>
+                  </div>
+                </button>
+              ))}
+              {filteredReports.length === 0 && (
+                <p className="px-3 py-2 text-sm text-[#64748b]">No reports found</p>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// Data-type-aware expected value input
+interface ExpectedValueInputProps {
+  dataType: FieldDefinition["dataType"]
+  value: string
+  onChange: (value: string) => void
+}
+
+function ExpectedValueInput({ dataType, value, onChange }: ExpectedValueInputProps) {
+  switch (dataType) {
+    case "number":
+      return (
+        <input
+          type="number"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Enter expected numeric value"
+          step="any"
+          className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+        />
+      )
+
+    case "datetime":
+      return (
+        <input
+          type="datetime-local"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+        />
+      )
+
+    case "latlong":
+      return (
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={value.split(",")[0] || ""}
+            onChange={(e) => {
+              const parts = value.split(",")
+              onChange(`${e.target.value},${parts[1] || ""}`)
+            }}
+            placeholder="Latitude"
+            className="flex-1 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+          />
+          <input
+            type="text"
+            value={value.split(",")[1] || ""}
+            onChange={(e) => {
+              const parts = value.split(",")
+              onChange(`${parts[0] || ""},${e.target.value}`)
+            }}
+            placeholder="Longitude"
+            className="flex-1 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+          />
+        </div>
+      )
+
+    case "duration":
+      return (
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Duration"
+            min="0"
+            className="flex-1 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+          />
+          <span className="text-sm text-[#64748b]">hours</span>
+        </div>
+      )
+
+    default:
+      return (
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Enter expected value"
+          className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+        />
+      )
+  }
 }
