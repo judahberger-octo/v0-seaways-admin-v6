@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Save, RotateCcw, X, ChevronDown, Check, Plus, Trash2 } from "lucide-react"
+import { ArrowLeft, Save, RotateCcw, X, ChevronDown, Check, Plus, Trash2, AlertCircle, HelpCircle, CheckCircle2 } from "lucide-react"
 import {
   fieldDefinitions,
   targetSystems,
   targetForms,
   type FieldDefinition,
+  type ValidationRule,
 } from "@/lib/admin-mock-data"
 
 // Section IDs for navigation
@@ -545,10 +546,65 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
               <h2 className="mb-6 text-base font-semibold text-[#0f172a]">
                 Logic
               </h2>
-              {/* Placeholder - will be expanded in Prompt 13 */}
-              <p className="text-sm text-[#64748b]">
-                Logic section content coming soon...
-              </p>
+              
+              <div className="space-y-8">
+                {/* A) Validation Rules */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-[#334155]">Validation rules</h3>
+                    <p className="mt-0.5 text-xs text-[#64748b]">
+                      Define rules to validate this field before submission
+                    </p>
+                  </div>
+                  
+                  {/* Rules list */}
+                  <div className="space-y-3">
+                    {(formData.validationRules || []).map((rule, index) => (
+                      <ValidationRuleRow
+                        key={rule.id}
+                        rule={rule}
+                        onChange={(updatedRule) => {
+                          const newRules = [...(formData.validationRules || [])]
+                          newRules[index] = updatedRule
+                          updateFormData({ validationRules: newRules })
+                        }}
+                        onDelete={() => {
+                          const newRules = (formData.validationRules || []).filter((_, i) => i !== index)
+                          updateFormData({ validationRules: newRules })
+                        }}
+                      />
+                    ))}
+                    
+                    {/* Add rule button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newRule: ValidationRule = {
+                          id: `rule-${Date.now()}`,
+                          kind: 'between',
+                          config: { min: 0, max: 100 },
+                          severity: 'warn',
+                        }
+                        updateFormData({ 
+                          validationRules: [...(formData.validationRules || []), newRule] 
+                        })
+                      }}
+                      className="flex items-center gap-2 rounded-lg border border-dashed border-[#d1d5db] px-3 py-2 text-sm text-[#64748b] hover:border-[#7c3aed] hover:bg-[#f8fafc] hover:text-[#7c3aed]"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add rule
+                    </button>
+                  </div>
+                </div>
+
+                {/* B) Advanced Expression */}
+                <AdvancedExpressionEditor
+                  expression={formData.advancedExpression || ""}
+                  severity={formData.advancedExpressionSeverity || "warn"}
+                  onExpressionChange={(expr) => updateFormData({ advancedExpression: expr })}
+                  onSeverityChange={(sev) => updateFormData({ advancedExpressionSeverity: sev })}
+                />
+              </div>
             </section>
 
             {/* Section 4: Test Suite */}
@@ -784,6 +840,562 @@ function NavtorPathPicker({ value, onChange }: NavtorPathPickerProps) {
             )}
           </div>
         </>
+      )}
+    </div>
+  )
+}
+
+// Rule kinds configuration
+const RULE_KINDS: { value: ValidationRule['kind']; label: string }[] = [
+  { value: 'sum_equals', label: 'Sum equals' },
+  { value: 'between', label: 'Between' },
+  { value: 'regex', label: 'Regex' },
+  { value: 'enum', label: 'Enum' },
+  { value: 'cross_field_equals', label: 'Cross-field equals' },
+]
+
+// Generate description from rule
+function getRuleDescription(rule: ValidationRule): string {
+  switch (rule.kind) {
+    case 'sum_equals':
+      const sumFields = (rule.config.sourceFields as string[] || []).join(' + ')
+      const target = rule.config.targetField as string || 'target'
+      return sumFields ? `${sumFields} must equal ${target}` : 'Configure sum fields'
+    case 'between':
+      return `Value must be between ${rule.config.min ?? '?'} and ${rule.config.max ?? '?'}`
+    case 'regex':
+      return rule.config.pattern ? `Must match pattern: ${rule.config.pattern}` : 'Configure regex pattern'
+    case 'enum':
+      const values = rule.config.allowedValues as string[] || []
+      return values.length > 0 ? `Must be one of: ${values.join(', ')}` : 'Configure allowed values'
+    case 'cross_field_equals':
+      return rule.config.otherField ? `Must equal ${rule.config.otherField}` : 'Configure field reference'
+    default:
+      return 'Configure rule'
+  }
+}
+
+interface ValidationRuleRowProps {
+  rule: ValidationRule
+  onChange: (rule: ValidationRule) => void
+  onDelete: () => void
+}
+
+function ValidationRuleRow({ rule, onChange, onDelete }: ValidationRuleRowProps) {
+  const [isExpanded, setIsExpanded] = useState(true)
+
+  return (
+    <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
+      {/* Rule header */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 space-y-3">
+          {/* Kind dropdown */}
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <select
+                value={rule.kind}
+                onChange={(e) => {
+                  const newKind = e.target.value as ValidationRule['kind']
+                  onChange({ 
+                    ...rule, 
+                    kind: newKind,
+                    config: getDefaultConfig(newKind)
+                  })
+                }}
+                className="appearance-none rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 pr-8 text-sm font-medium text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+              >
+                {RULE_KINDS.map((kind) => (
+                  <option key={kind.value} value={kind.value}>
+                    {kind.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748b]" />
+            </div>
+            
+            {/* Severity toggle */}
+            <div className="flex items-center gap-2 rounded-lg border border-[#e2e8f0] bg-white p-1">
+              <button
+                type="button"
+                onClick={() => onChange({ ...rule, severity: 'block' })}
+                className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                  rule.severity === 'block'
+                    ? 'bg-[#fef2f2] text-[#dc2626]'
+                    : 'text-[#64748b] hover:bg-[#f1f5f9]'
+                }`}
+              >
+                Block
+              </button>
+              <button
+                type="button"
+                onClick={() => onChange({ ...rule, severity: 'warn' })}
+                className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                  rule.severity === 'warn'
+                    ? 'bg-[#fef9c3] text-[#a16207]'
+                    : 'text-[#64748b] hover:bg-[#f1f5f9]'
+                }`}
+              >
+                Warn
+              </button>
+            </div>
+          </div>
+          
+          {/* Description preview */}
+          <p className="text-sm text-[#64748b]">
+            {getRuleDescription(rule)}
+          </p>
+          
+          {/* Configuration fields */}
+          {isExpanded && (
+            <div className="pt-2">
+              <RuleConfigEditor rule={rule} onChange={onChange} />
+            </div>
+          )}
+        </div>
+        
+        {/* Delete button */}
+        <button
+          type="button"
+          onClick={onDelete}
+          className="flex-shrink-0 rounded-lg p-2 text-[#94a3b8] hover:bg-[#fee2e2] hover:text-[#ef4444]"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function getDefaultConfig(kind: ValidationRule['kind']): Record<string, unknown> {
+  switch (kind) {
+    case 'sum_equals':
+      return { sourceFields: [], targetField: '' }
+    case 'between':
+      return { min: 0, max: 100 }
+    case 'regex':
+      return { pattern: '' }
+    case 'enum':
+      return { allowedValues: [] }
+    case 'cross_field_equals':
+      return { otherField: '' }
+    default:
+      return {}
+  }
+}
+
+interface RuleConfigEditorProps {
+  rule: ValidationRule
+  onChange: (rule: ValidationRule) => void
+}
+
+function RuleConfigEditor({ rule, onChange }: RuleConfigEditorProps) {
+  const updateConfig = (updates: Record<string, unknown>) => {
+    onChange({ ...rule, config: { ...rule.config, ...updates } })
+  }
+
+  switch (rule.kind) {
+    case 'between':
+      return (
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            value={rule.config.min as number ?? ''}
+            onChange={(e) => updateConfig({ min: e.target.value ? Number(e.target.value) : undefined })}
+            placeholder="Min"
+            className="w-24 rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+          />
+          <span className="text-sm text-[#64748b]">to</span>
+          <input
+            type="number"
+            value={rule.config.max as number ?? ''}
+            onChange={(e) => updateConfig({ max: e.target.value ? Number(e.target.value) : undefined })}
+            placeholder="Max"
+            className="w-24 rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+          />
+        </div>
+      )
+
+    case 'regex':
+      return (
+        <input
+          type="text"
+          value={rule.config.pattern as string ?? ''}
+          onChange={(e) => updateConfig({ pattern: e.target.value })}
+          placeholder="^[A-Z]{3}[0-9]{4}$"
+          className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 font-mono text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+        />
+      )
+
+    case 'enum':
+      return (
+        <EnumValuesEditor
+          values={rule.config.allowedValues as string[] || []}
+          onChange={(values) => updateConfig({ allowedValues: values })}
+        />
+      )
+
+    case 'sum_equals':
+      return (
+        <div className="space-y-2">
+          <FieldReferencePicker
+            label="Source fields (to sum)"
+            values={rule.config.sourceFields as string[] || []}
+            onChange={(fields) => updateConfig({ sourceFields: fields })}
+            multiple
+          />
+          <FieldReferencePicker
+            label="Target field (equals)"
+            values={rule.config.targetField ? [rule.config.targetField as string] : []}
+            onChange={(fields) => updateConfig({ targetField: fields[0] || '' })}
+          />
+        </div>
+      )
+
+    case 'cross_field_equals':
+      return (
+        <FieldReferencePicker
+          label="Must equal field"
+          values={rule.config.otherField ? [rule.config.otherField as string] : []}
+          onChange={(fields) => updateConfig({ otherField: fields[0] || '' })}
+        />
+      )
+
+    default:
+      return null
+  }
+}
+
+interface EnumValuesEditorProps {
+  values: string[]
+  onChange: (values: string[]) => void
+}
+
+function EnumValuesEditor({ values, onChange }: EnumValuesEditorProps) {
+  const [inputValue, setInputValue] = useState('')
+
+  const addValue = () => {
+    if (inputValue.trim() && !values.includes(inputValue.trim())) {
+      onChange([...values, inputValue.trim()])
+      setInputValue('')
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1.5">
+        {values.map((val) => (
+          <span
+            key={val}
+            className="inline-flex items-center gap-1 rounded-full bg-[#e0e7ff] px-2.5 py-1 text-xs font-medium text-[#4338ca]"
+          >
+            {val}
+            <button
+              type="button"
+              onClick={() => onChange(values.filter((v) => v !== val))}
+              className="rounded-full p-0.5 hover:bg-[#c7d2fe]"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              addValue()
+            }
+          }}
+          placeholder="Add allowed value..."
+          className="flex-1 rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+        />
+        <button
+          type="button"
+          onClick={addValue}
+          className="rounded-lg bg-[#7c3aed] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#6d28d9]"
+        >
+          Add
+        </button>
+      </div>
+    </div>
+  )
+}
+
+interface FieldReferencePickerProps {
+  label: string
+  values: string[]
+  onChange: (values: string[]) => void
+  multiple?: boolean
+}
+
+function FieldReferencePicker({ label, values, onChange, multiple = false }: FieldReferencePickerProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [search, setSearch] = useState('')
+
+  const filteredFields = fieldDefinitions.filter((fd) =>
+    fd.logicalName.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const toggleField = (fieldId: string) => {
+    if (multiple) {
+      if (values.includes(fieldId)) {
+        onChange(values.filter((v) => v !== fieldId))
+      } else {
+        onChange([...values, fieldId])
+      }
+    } else {
+      onChange([fieldId])
+      setIsOpen(false)
+    }
+  }
+
+  const selectedNames = values
+    .map((id) => fieldDefinitions.find((fd) => fd.id === id)?.logicalName || id)
+    .join(', ')
+
+  return (
+    <div className="space-y-1">
+      <label className="text-xs text-[#64748b]">{label}</label>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 text-left text-sm focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+        >
+          {selectedNames || <span className="text-[#94a3b8]">Select field(s)...</span>}
+        </button>
+        
+        {isOpen && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
+            <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-lg border border-[#e2e8f0] bg-white shadow-lg">
+              <div className="border-b border-[#e2e8f0] p-2">
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search fields..."
+                  className="w-full rounded border border-[#e2e8f0] px-2 py-1 text-sm focus:border-[#7c3aed] focus:outline-none"
+                />
+              </div>
+              <div className="max-h-48 overflow-y-auto py-1">
+                {filteredFields.slice(0, 20).map((fd) => {
+                  const isSelected = values.includes(fd.id)
+                  return (
+                    <button
+                      key={fd.id}
+                      type="button"
+                      onClick={() => toggleField(fd.id)}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[#f8fafc]"
+                    >
+                      {multiple && (
+                        <div
+                          className={`flex h-4 w-4 items-center justify-center rounded border ${
+                            isSelected ? 'border-[#7c3aed] bg-[#7c3aed]' : 'border-[#d1d5db]'
+                          }`}
+                        >
+                          {isSelected && <Check className="h-3 w-3 text-white" />}
+                        </div>
+                      )}
+                      <span className={isSelected ? 'font-medium text-[#7c3aed]' : 'text-[#334155]'}>
+                        {fd.logicalName}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Advanced Expression Editor
+interface AdvancedExpressionEditorProps {
+  expression: string
+  severity: 'block' | 'warn'
+  onExpressionChange: (expr: string) => void
+  onSeverityChange: (sev: 'block' | 'warn') => void
+}
+
+function AdvancedExpressionEditor({ 
+  expression, 
+  severity, 
+  onExpressionChange, 
+  onSeverityChange 
+}: AdvancedExpressionEditorProps) {
+  const [showHelp, setShowHelp] = useState(false)
+  const [validationResult, setValidationResult] = useState<{ valid: boolean; message: string } | null>(null)
+
+  const validateExpression = () => {
+    if (!expression.trim()) {
+      setValidationResult({ valid: false, message: 'Expression is empty' })
+      return
+    }
+    
+    // Simple validation - check for balanced parentheses and valid syntax
+    const parenCount = (expression.match(/\(/g) || []).length - (expression.match(/\)/g) || []).length
+    if (parenCount !== 0) {
+      setValidationResult({ valid: false, message: 'Unbalanced parentheses' })
+      return
+    }
+    
+    // Check for field references
+    const fieldRefs = expression.match(/\$\{[^}]+\}/g) || []
+    const invalidRefs = fieldRefs.filter((ref) => {
+      const fieldId = ref.slice(2, -1)
+      return !fieldDefinitions.some((fd) => fd.id === fieldId || fd.logicalName === fieldId)
+    })
+    
+    if (invalidRefs.length > 0) {
+      setValidationResult({ valid: false, message: `Unknown field reference: ${invalidRefs[0]}` })
+      return
+    }
+    
+    setValidationResult({ valid: true, message: 'Expression is valid' })
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-medium text-[#334155]">Advanced expression</h3>
+          <p className="mt-0.5 text-xs text-[#64748b]">
+            Write custom validation logic the rule builder can&apos;t express
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowHelp(true)}
+          className="flex items-center gap-1 text-sm text-[#7c3aed] hover:underline"
+        >
+          <HelpCircle className="h-4 w-4" />
+          Expression reference
+        </button>
+      </div>
+      
+      {/* Code editor */}
+      <div className="relative">
+        <textarea
+          value={expression}
+          onChange={(e) => {
+            onExpressionChange(e.target.value)
+            setValidationResult(null)
+          }}
+          placeholder="${field.IFO_ROB} + ${field.MGO_ROB} >= 100 AND ${field.Speed} <= 25"
+          rows={4}
+          className="w-full resize-none rounded-lg border border-[#e2e8f0] bg-[#1e1e1e] px-4 py-3 font-mono text-sm text-[#d4d4d4] placeholder:text-[#6b6b6b] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+        />
+      </div>
+      
+      {/* Validation result */}
+      {validationResult && (
+        <div
+          className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${
+            validationResult.valid
+              ? 'bg-[#f0fdf4] text-[#166534]'
+              : 'bg-[#fef2f2] text-[#dc2626]'
+          }`}
+        >
+          {validationResult.valid ? (
+            <CheckCircle2 className="h-4 w-4" />
+          ) : (
+            <AlertCircle className="h-4 w-4" />
+          )}
+          {validationResult.message}
+        </div>
+      )}
+      
+      {/* Controls */}
+      <div className="flex items-center justify-between">
+        {/* Severity toggle */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-[#64748b]">Severity:</span>
+          <div className="flex items-center gap-2 rounded-lg border border-[#e2e8f0] bg-white p-1">
+            <button
+              type="button"
+              onClick={() => onSeverityChange('block')}
+              className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                severity === 'block'
+                  ? 'bg-[#fef2f2] text-[#dc2626]'
+                  : 'text-[#64748b] hover:bg-[#f1f5f9]'
+              }`}
+            >
+              Block
+            </button>
+            <button
+              type="button"
+              onClick={() => onSeverityChange('warn')}
+              className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                severity === 'warn'
+                  ? 'bg-[#fef9c3] text-[#a16207]'
+                  : 'text-[#64748b] hover:bg-[#f1f5f9]'
+              }`}
+            >
+              Warn
+            </button>
+          </div>
+        </div>
+        
+        {/* Validate button */}
+        <button
+          type="button"
+          onClick={validateExpression}
+          className="rounded-lg border border-[#e2e8f0] px-4 py-2 text-sm font-medium text-[#334155] hover:bg-[#f8fafc]"
+        >
+          Validate expression
+        </button>
+      </div>
+
+      {/* Help Modal */}
+      {showHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h4 className="text-lg font-semibold text-[#0f172a]">Expression Reference</h4>
+              <button
+                type="button"
+                onClick={() => setShowHelp(false)}
+                className="rounded-lg p-1 text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#0f172a]"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4 text-sm">
+              <div>
+                <h5 className="font-medium text-[#334155]">Field References</h5>
+                <p className="text-[#64748b]">Use <code className="rounded bg-[#f1f5f9] px-1 py-0.5 font-mono text-xs">{`\${field.ID}`}</code> or <code className="rounded bg-[#f1f5f9] px-1 py-0.5 font-mono text-xs">{`\${field.LogicalName}`}</code></p>
+              </div>
+              
+              <div>
+                <h5 className="font-medium text-[#334155]">Arithmetic Operators</h5>
+                <p className="text-[#64748b]"><code className="font-mono">+</code> <code className="font-mono">-</code> <code className="font-mono">*</code> <code className="font-mono">/</code> <code className="font-mono">()</code></p>
+              </div>
+              
+              <div>
+                <h5 className="font-medium text-[#334155]">Comparison Operators</h5>
+                <p className="text-[#64748b]"><code className="font-mono">==</code> <code className="font-mono">!=</code> <code className="font-mono">&lt;</code> <code className="font-mono">&gt;</code> <code className="font-mono">&lt;=</code> <code className="font-mono">&gt;=</code></p>
+              </div>
+              
+              <div>
+                <h5 className="font-medium text-[#334155]">Logical Operators</h5>
+                <p className="text-[#64748b]"><code className="font-mono">AND</code> <code className="font-mono">OR</code> <code className="font-mono">NOT</code></p>
+              </div>
+              
+              <div className="rounded-lg bg-[#f8fafc] p-3">
+                <h5 className="font-medium text-[#334155]">Example</h5>
+                <code className="text-xs text-[#64748b]">{`\${field.IFO_ROB} + \${field.MGO_ROB} >= 100 AND \${field.Speed} <= 25`}</code>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

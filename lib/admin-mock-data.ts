@@ -62,6 +62,8 @@ export interface FieldDefinition {
   extractionHint: string
   navtorSourcePath?: string
   validationRules: ValidationRule[]
+  advancedExpression?: string
+  advancedExpressionSeverity?: 'block' | 'warn'
   version: number
   updatedAt: string
   updatedBy: string
