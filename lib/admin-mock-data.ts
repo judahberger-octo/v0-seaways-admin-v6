@@ -19,7 +19,8 @@ export interface TargetForm {
   id: string
   targetSystemId: string
   name: string
-}
+  shortName?: string
+  }
 
 export interface Vessel {
   id: string
@@ -149,14 +150,14 @@ export const targetSystems: TargetSystem[] = [
 // ----------------------------------------------------------------------------
 
 export const targetForms: TargetForm[] = [
-  { id: 'noon-sea', targetSystemId: 'veslink', name: 'Noon (Sea)' },
-  { id: 'noon-port', targetSystemId: 'veslink', name: 'Noon (Port)' },
-  { id: 'arrival', targetSystemId: 'veslink', name: 'Arrival' },
-  { id: 'departure', targetSystemId: 'veslink', name: 'Departure' },
-  { id: 'bunkering', targetSystemId: 'veslink', name: 'Bunkering' },
-  { id: 'cargo-handling', targetSystemId: 'veslink', name: 'Cargo Handling' },
-  { id: 'sof', targetSystemId: 'veslink', name: 'Statement of Facts' },
-]
+  { id: 'noon-sea', targetSystemId: 'veslink', name: 'Noon (Sea)', shortName: 'Sea' },
+  { id: 'noon-port', targetSystemId: 'veslink', name: 'Noon (Port)', shortName: 'Port' },
+  { id: 'arrival', targetSystemId: 'veslink', name: 'Arrival', shortName: 'Arr' },
+  { id: 'departure', targetSystemId: 'veslink', name: 'Departure', shortName: 'Dep' },
+  { id: 'bunkering', targetSystemId: 'veslink', name: 'Bunkering', shortName: 'Bnk' },
+  { id: 'cargo-handling', targetSystemId: 'veslink', name: 'Cargo Handling', shortName: 'Cargo' },
+  { id: 'sof', targetSystemId: 'veslink', name: 'Statement of Facts', shortName: 'SOF' },
+  ]
 
 // ----------------------------------------------------------------------------
 // Vessels (84 tankers with realistic names and IMO numbers)
