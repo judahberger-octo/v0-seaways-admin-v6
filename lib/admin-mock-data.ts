@@ -1416,3 +1416,59 @@ export function getVesselsByAdoption(): Array<{ vessel: Vessel; adoptionRate: nu
     }
   }).sort((a, b) => b.adoptionRate - a.adoptionRate)
 }
+
+export interface VerificationAccuracyByForm {
+  formId: string
+  formName: string
+  verified: number        // crew confirmed correct
+  autoAccepted: number   // no flag, submitted as-prefilled
+  flagged: number        // crew marked incorrect
+  total: number          // total field events
+  verifiedPct: number
+  autoAcceptedPct: number
+  flaggedPct: number
+}
+
+export function getVerificationAccuracyByForm(): VerificationAccuracyByForm[] {
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  const recentSubmissions = submissions.filter(s => new Date(s.submittedAt) >= thirtyDaysAgo)
+  
+  return targetForms.map(form => {
+    const formSubmissions = recentSubmissions.filter(s => s.formId === form.id)
+    
+    // Calculate totals from submission data
+    let totalVerified = 0
+    let totalFlagged = 0
+    let totalFields = 0
+    
+    formSubmissions.forEach(s => {
+      totalVerified += s.fieldsVerified
+      totalFlagged += s.fieldsFlagged
+      // Estimate total fields per submission (verified + flagged + auto-accepted)
+      totalFields += s.fieldsVerified + s.fieldsFlagged
+    })
+    
+    // Auto-accepted = total verified but not explicitly flagged (estimate as ~60% of verified)
+    const autoAccepted = Math.round(totalVerified * 0.6)
+    const verified = totalVerified - autoAccepted
+    const flagged = totalFlagged
+    const total = verified + autoAccepted + flagged
+    
+    // Calculate percentages
+    const verifiedPct = total > 0 ? Math.round((verified / total) * 100) : 0
+    const autoAcceptedPct = total > 0 ? Math.round((autoAccepted / total) * 100) : 0
+    const flaggedPct = total > 0 ? Math.round((flagged / total) * 100) : 0
+    
+    return {
+      formId: form.id,
+      formName: form.name,
+      verified,
+      autoAccepted,
+      flagged,
+      total,
+      verifiedPct,
+      autoAcceptedPct,
+      flaggedPct,
+    }
+  })
+}

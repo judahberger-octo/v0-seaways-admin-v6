@@ -2,10 +2,20 @@
 
 import { TrendingUp, TrendingDown } from "lucide-react"
 import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Cell,
+  LabelList,
+} from "recharts"
+import {
   getSubmissionsLast30Days,
   getAverageConfidenceLast30Days,
   getOpenFlagCount,
   getDefinitionChangesLast7Days,
+  getVerificationAccuracyByForm,
 } from "@/lib/admin-mock-data"
 
 interface KpiCardProps {
@@ -101,9 +111,149 @@ export function AdminOverviewContent() {
         ))}
       </div>
 
-      {/* Placeholder for charts - will be added in later prompts */}
-      <div className="mt-8 rounded-xl border border-[#e2e8f0] bg-white p-8 text-center">
-        <p className="text-[#64748b]">Charts coming soon...</p>
+      {/* Verification Accuracy Chart */}
+      <VerificationAccuracyChart />
+
+      {/* Placeholder for more charts - will be added in later prompts */}
+      <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-8 text-center">
+        <p className="text-[#64748b]">More charts coming soon...</p>
+      </div>
+    </div>
+  )
+}
+
+// Colors for the stacked bar chart segments
+const COLORS = {
+  verified: "#22c55e",      // green - crew confirmed correct
+  autoAccepted: "#86efac",  // light green - no flag, submitted as-prefilled
+  flagged: "#f97316",       // orange - crew marked incorrect
+}
+
+function VerificationAccuracyChart() {
+  const data = getVerificationAccuracyByForm()
+
+  // Transform data for stacked bar chart
+  const chartData = data.map(item => ({
+    formName: item.formName,
+    formId: item.formId,
+    verified: item.verifiedPct,
+    autoAccepted: item.autoAcceptedPct,
+    flagged: item.flaggedPct,
+    total: item.total,
+  }))
+
+  const handleBarClick = (formId: string) => {
+    // In the future, this will navigate to Review Queue filtered by form type
+    console.log(`Navigate to Review Queue for form: ${formId}`)
+  }
+
+  return (
+    <div className="mt-8 rounded-xl border border-[#e2e8f0] bg-white p-6">
+      <div className="mb-6">
+        <h3 className="text-base font-semibold text-[#0f172a]">
+          Verification accuracy by form type
+        </h3>
+        <p className="text-sm text-[#64748b]">Last 30 days</p>
+      </div>
+
+      {/* Legend */}
+      <div className="mb-4 flex items-center gap-6">
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: COLORS.verified }} />
+          <span className="text-sm text-[#64748b]">Verified</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: COLORS.autoAccepted }} />
+          <span className="text-sm text-[#64748b]">Auto-accepted</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: COLORS.flagged }} />
+          <span className="text-sm text-[#64748b]">Flagged</span>
+        </div>
+      </div>
+
+      {/* Chart */}
+      <div className="h-[320px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartData}
+            layout="vertical"
+            margin={{ top: 0, right: 80, left: 120, bottom: 0 }}
+            barCategoryGap="20%"
+          >
+            <XAxis 
+              type="number" 
+              domain={[0, 100]} 
+              hide 
+            />
+            <YAxis 
+              type="category" 
+              dataKey="formName" 
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 13, fill: "#334155" }}
+              width={110}
+            />
+            <Bar 
+              dataKey="verified" 
+              stackId="stack" 
+              fill={COLORS.verified}
+              radius={[4, 0, 0, 4]}
+              onClick={(data) => handleBarClick(data.formId)}
+              className="cursor-pointer"
+            >
+              <LabelList 
+                dataKey="verified" 
+                position="center" 
+                fill="#fff" 
+                fontSize={11}
+                fontWeight={500}
+                formatter={(value: number) => value > 8 ? `${value}%` : ''}
+              />
+            </Bar>
+            <Bar 
+              dataKey="autoAccepted" 
+              stackId="stack" 
+              fill={COLORS.autoAccepted}
+              onClick={(data) => handleBarClick(data.formId)}
+              className="cursor-pointer"
+            >
+              <LabelList 
+                dataKey="autoAccepted" 
+                position="center" 
+                fill="#166534" 
+                fontSize={11}
+                fontWeight={500}
+                formatter={(value: number) => value > 8 ? `${value}%` : ''}
+              />
+            </Bar>
+            <Bar 
+              dataKey="flagged" 
+              stackId="stack" 
+              fill={COLORS.flagged}
+              radius={[0, 4, 4, 0]}
+              onClick={(data) => handleBarClick(data.formId)}
+              className="cursor-pointer"
+            >
+              <LabelList 
+                dataKey="flagged" 
+                position="center" 
+                fill="#fff" 
+                fontSize={11}
+                fontWeight={500}
+                formatter={(value: number) => value > 5 ? `${value}%` : ''}
+              />
+              {/* Total field events shown after the bar */}
+              <LabelList 
+                dataKey="total" 
+                position="right" 
+                fill="#94a3b8" 
+                fontSize={12}
+                formatter={(value: number) => `${value.toLocaleString()} fields`}
+              />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   )
