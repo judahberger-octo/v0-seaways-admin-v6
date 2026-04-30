@@ -63,6 +63,9 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
   // Active section for sidebar highlighting
   const [activeSection, setActiveSection] = useState<SectionId>("identity")
 
+  // Formula help modal
+  const [showFormulaHelp, setShowFormulaHelp] = useState(false)
+
   // Track scroll to update active section
   useEffect(() => {
     const handleScroll = () => {
@@ -411,6 +414,70 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                       />
                     </button>
                   </div>
+
+                  {/* Calculated field toggle */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-[#334155]">Calculated field</p>
+                      <p className="text-xs text-[#64748b]">
+                        Value is computed from a formula. Crew can verify or override.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={formData.isCalculated || false}
+                      onClick={() => updateFormData({ 
+                        isCalculated: !formData.isCalculated,
+                        formula: formData.isCalculated ? undefined : (formData.formula || "")
+                      })}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#7c3aed] focus:ring-offset-2 ${
+                        formData.isCalculated ? "bg-[#7c3aed]" : "bg-[#d1d5db]"
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          formData.isCalculated ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Formula editor - shown when calculated is enabled */}
+                  {formData.isCalculated && (
+                    <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-[#334155]">Formula</p>
+                          <p className="text-xs text-[#64748b]">
+                            Define how this field&apos;s value is calculated
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowFormulaHelp(true)}
+                          className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline"
+                        >
+                          <HelpCircle className="h-3.5 w-3.5" />
+                          Help
+                        </button>
+                      </div>
+                      
+                      <textarea
+                        value={formData.formula || ""}
+                        onChange={(e) => updateFormData({ formula: e.target.value })}
+                        placeholder="${field.IFO_Consumed} + ${field.MGO_Consumed}"
+                        rows={3}
+                        className="w-full resize-none rounded-lg border border-[#e2e8f0] bg-[#1e1e1e] px-4 py-3 font-mono text-sm text-[#d4d4d4] placeholder:text-[#6b6b6b] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                      />
+                      
+                      <div className="rounded-lg bg-[#fef3c7] px-3 py-2">
+                        <p className="text-xs text-[#92400e]">
+                          Calculated fields appear to crew as normal verifiable fields. The formula is shown as helper text on the field, but the value remains editable so crew can override.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </section>
@@ -637,6 +704,56 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
           </div>
         </main>
       </div>
+
+      {/* Formula Help Modal */}
+      {showFormulaHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h4 className="text-lg font-semibold text-[#0f172a]">Formula Reference</h4>
+              <button
+                type="button"
+                onClick={() => setShowFormulaHelp(false)}
+                className="rounded-lg p-1 text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#0f172a]"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4 text-sm">
+              <div>
+                <h5 className="font-medium text-[#334155]">Field References</h5>
+                <p className="text-[#64748b]">Use <code className="rounded bg-[#f1f5f9] px-1 py-0.5 font-mono text-xs">{`\${field.LogicalName}`}</code> to reference other fields</p>
+              </div>
+              
+              <div>
+                <h5 className="font-medium text-[#334155]">Arithmetic Operators</h5>
+                <p className="text-[#64748b]"><code className="font-mono">+</code> <code className="font-mono">-</code> <code className="font-mono">*</code> <code className="font-mono">/</code> <code className="font-mono">()</code></p>
+              </div>
+              
+              <div>
+                <h5 className="font-medium text-[#334155]">Functions</h5>
+                <p className="text-[#64748b]">
+                  <code className="font-mono">SUM(...)</code>, 
+                  <code className="font-mono"> AVG(...)</code>, 
+                  <code className="font-mono"> MIN(...)</code>, 
+                  <code className="font-mono"> MAX(...)</code>, 
+                  <code className="font-mono"> ROUND(x, decimals)</code>
+                </p>
+              </div>
+              
+              <div className="rounded-lg bg-[#f8fafc] p-3">
+                <h5 className="font-medium text-[#334155]">Examples</h5>
+                <div className="mt-2 space-y-1">
+                  <code className="block text-xs text-[#64748b]">{`\${field.IFO_Consumed} + \${field.MGO_Consumed}`}</code>
+                  <code className="block text-xs text-[#64748b]">{`ROUND(\${field.Distance} / \${field.Time}, 2)`}</code>
+                  <code className="block text-xs text-[#64748b]">{`SUM(\${field.IFO_ROB}, \${field.MGO_ROB}, \${field.VLSFO_ROB})`}</code>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
