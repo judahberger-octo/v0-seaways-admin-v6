@@ -18,7 +18,6 @@ import {
   getOpenFlagCount,
   getDefinitionChangesLast7Days,
   getVerificationAccuracyByForm,
-  getMostFlaggedFields,
   getVesselsByAdoption,
 } from "@/lib/admin-mock-data"
 
@@ -115,13 +114,9 @@ export function AdminOverviewContent() {
         ))}
       </div>
 
-      {/* Charts Row */}
-      <div className="mt-8 grid grid-cols-2 gap-6">
-        {/* Verification Accuracy Chart */}
+      {/* Verification Accuracy Chart - full width */}
+      <div className="mt-8">
         <VerificationAccuracyChart />
-
-        {/* Most Flagged Fields Chart */}
-        <MostFlaggedFieldsChart />
       </div>
 
       {/* Crew Adoption Chart - full width */}
@@ -262,77 +257,6 @@ function VerificationAccuracyChart() {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-      </div>
-    </div>
-  )
-}
-
-function MostFlaggedFieldsChart() {
-  const data = getMostFlaggedFields(10)
-  const maxFlagCount = Math.max(...data.map(d => d.flagCount))
-
-  const handleRowClick = (fieldId: string) => {
-    // In the future, this will navigate to Review Queue with field-flag detail panel open
-    console.log(`Navigate to Review Queue for field: ${fieldId}`)
-  }
-
-  return (
-    <div className="rounded-xl border border-[#e2e8f0] bg-white p-6">
-      <div className="mb-6">
-        <h3 className="text-base font-semibold text-[#0f172a]">
-          Most-flagged fields
-        </h3>
-        <p className="text-sm text-[#64748b]">Last 30 days</p>
-      </div>
-
-      {/* Field rows */}
-      <div className="space-y-3">
-        {data.map((field) => {
-          const barWidth = (field.flagCount / maxFlagCount) * 100
-
-          return (
-            <button
-              key={field.fieldId}
-              onClick={() => handleRowClick(field.fieldId)}
-              className="group flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-[#f8fafc]"
-            >
-              {/* Field name and form chips */}
-              <div className="w-36 flex-shrink-0">
-                <p className="text-sm font-medium text-[#0f172a] group-hover:text-[#7c3aed]">
-                  {field.fieldName}
-                </p>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {field.formNames.slice(0, 2).map((formName) => (
-                    <span
-                      key={formName}
-                      className="inline-flex items-center rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-medium text-[#64748b]"
-                    >
-                      {formName.length > 12 ? formName.slice(0, 12) + '...' : formName}
-                    </span>
-                  ))}
-                  {field.formNames.length > 2 && (
-                    <span className="inline-flex items-center rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-medium text-[#64748b]">
-                      +{field.formNames.length - 2}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Bar */}
-              <div className="flex flex-1 items-center gap-3">
-                <div className="h-6 flex-1 rounded-full bg-[#fef2f2]">
-                  <div
-                    className="h-full rounded-full bg-[#f97316] transition-all"
-                    style={{ width: `${barWidth}%` }}
-                  />
-                </div>
-                <span className="w-10 text-right text-sm font-medium text-[#0f172a]">
-                  {field.flagCount}
-                </span>
-              </div>
-            </button>
-          )
-        })}
       </div>
     </div>
   )
