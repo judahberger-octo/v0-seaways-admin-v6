@@ -435,48 +435,6 @@ function CrewAdoptionChart() {
         <p className="text-sm text-[#64748b]">Last 30 days</p>
       </div>
 
-      {/* Summary Cards */}
-      <div className="mb-6 grid grid-cols-3 gap-4">
-        <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
-          <p className="text-sm text-[#64748b]">Top adopter</p>
-          {topAdopter && (
-            <>
-              <p className="mt-1 text-base font-semibold text-[#0f172a]">
-                {topAdopter.vessel.name}
-              </p>
-              <p className="text-2xl font-bold text-[#22c55e]">
-                {topAdopter.adoptionRate}%
-              </p>
-            </>
-          )}
-        </div>
-        <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
-          <p className="text-sm text-[#64748b]">Lowest active adopter</p>
-          {lowestActiveAdopter && (
-            <>
-              <p className="mt-1 text-base font-semibold text-[#0f172a]">
-                {lowestActiveAdopter.vessel.name}
-              </p>
-              <p className="text-2xl font-bold text-[#ef4444]">
-                {lowestActiveAdopter.adoptionRate}%
-              </p>
-            </>
-          )}
-        </div>
-        <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
-          <p className="text-sm text-[#64748b]">Vessels at 0%</p>
-          <p className="mt-1 text-2xl font-bold text-[#64748b]">
-            {zeroAdopters.length}
-          </p>
-          <button
-            onClick={() => setShowZeroModal(true)}
-            className="mt-1 text-sm font-medium text-[#7c3aed] hover:underline"
-          >
-            View list
-          </button>
-        </div>
-      </div>
-
       {/* Search */}
       <div className="mb-4 relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
