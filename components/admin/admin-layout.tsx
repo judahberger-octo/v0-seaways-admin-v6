@@ -19,7 +19,7 @@ const adminTabs: AdminTabItem[] = [
   { id: "overview", label: "Overview", slug: "overview" },
   { id: "field-definitions", label: "Field Definitions", slug: "field-definitions" },
   { id: "review-queue", label: "Review Queue", slug: "review-queue" },
-  { id: "test-suite", label: "Test Suite", slug: "test-suite" },
+  { id: "test-suite", label: "Test Suite - Optional", slug: "test-suite" },
   { id: "vessels", label: "Vessels", slug: "vessels" },
   { id: "audit-log", label: "Audit Log", slug: "audit-log" },
 ]
