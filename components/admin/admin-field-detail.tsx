@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { ArrowLeft, Save, RotateCcw, X, ChevronDown, Check, Plus, Trash2, AlertCircle, HelpCircle, CheckCircle2, Play, Clock, ChevronRight } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { ArrowLeft, Save, RotateCcw, X, ChevronDown, Check, Plus, Trash2, AlertCircle, HelpCircle, CheckCircle2, Play, Clock, ChevronRight, Search } from "lucide-react"
 import {
   fieldDefinitions,
   targetSystems,
@@ -116,6 +116,35 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
     }
     setHasUnsavedChanges(true)
     setShowTransformChangeConfirm(null)
+  }
+
+  // Direct transform configuration state
+  interface DirectTransformConfig {
+    sourceForm: string
+    sourceField: string
+  }
+  const [sharedDirectConfig, setSharedDirectConfig] = useState<DirectTransformConfig>({ sourceForm: '', sourceField: '' })
+  const [perFormDirectConfig, setPerFormDirectConfig] = useState<Record<string, DirectTransformConfig>>({})
+
+  // Get current direct config for active context
+  const getCurrentDirectConfig = (): DirectTransformConfig => {
+    if (sameLogicForAllForms) {
+      return sharedDirectConfig
+    }
+    return activeFormTab ? perFormDirectConfig[activeFormTab] || { sourceForm: '', sourceField: '' } : { sourceForm: '', sourceField: '' }
+  }
+
+  // Update direct config
+  const updateDirectConfig = (updates: Partial<DirectTransformConfig>) => {
+    if (sameLogicForAllForms) {
+      setSharedDirectConfig((prev) => ({ ...prev, ...updates }))
+    } else if (activeFormTab) {
+      setPerFormDirectConfig((prev) => ({
+        ...prev,
+        [activeFormTab]: { ...(prev[activeFormTab] || { sourceForm: '', sourceField: '' }), ...updates }
+      }))
+    }
+    setHasUnsavedChanges(true)
   }
 
   // Get sorted selected forms for tabs
@@ -554,10 +583,35 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                 )}
 
                 {getCurrentTransformType() === 'direct' && (
-                  <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
-                    <p className="text-sm text-[#64748b]">
-                      Direct transform configuration will be added in Prompt 10.
-                    </p>
+                  <div className="space-y-4">
+                    {/* Source form dropdown */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+                        Source form <span className="text-[#ef4444]">*</span>
+                      </label>
+                      <SourceFormDropdown
+                        value={getCurrentDirectConfig().sourceForm}
+                        onChange={(value) => updateDirectConfig({ sourceForm: value })}
+                      />
+                      <p className="mt-1 text-xs text-[#64748b]">
+                        Select which NAVTOR report type to read from.
+                      </p>
+                    </div>
+
+                    {/* Source field autocomplete */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+                        Source field <span className="text-[#ef4444]">*</span>
+                      </label>
+                      <SourceFieldAutocomplete
+                        value={getCurrentDirectConfig().sourceField}
+                        onChange={(value) => updateDirectConfig({ sourceField: value })}
+                        placeholder="Search for a source field..."
+                      />
+                      <p className="mt-1 text-xs text-[#64748b]">
+                        Select one NAVTOR field path to map directly to this field.
+                      </p>
+                    </div>
                   </div>
                 )}
 
@@ -1071,45 +1125,233 @@ function FormsMultiSelect({ selectedFormIds, onChange }: FormsMultiSelectProps) 
   )
 }
 
-// Mock NAVTOR API paths for autocomplete
-const NAVTOR_PATHS = [
-  "voyageReporting.general.reportDate",
-  "voyageReporting.general.reportTime",
-  "voyageReporting.general.voyageNumber",
-  "voyageReporting.general.portOfDeparture",
-  "voyageReporting.general.portOfDestination",
-  "voyageReporting.distanceAndSpeed.reportedSpeed",
-  "voyageReporting.distanceAndSpeed.averageSpeed",
-  "voyageReporting.distanceAndSpeed.distanceToGo",
-  "voyageReporting.distanceAndSpeed.distanceSinceLastReport",
-  "voyageReporting.distanceAndSpeed.totalDistance",
-  "voyageReporting.position.latitude",
-  "voyageReporting.position.longitude",
-  "voyageReporting.weather.windDirection",
-  "voyageReporting.weather.windSpeed",
-  "voyageReporting.weather.seaState",
-  "voyageReporting.weather.swellHeight",
-  "machinery.mainEngine.consumption.HFO",
-  "machinery.mainEngine.consumption.MGO",
-  "machinery.mainEngine.consumption.VLSFO",
-  "machinery.mainEngine.rpm",
-  "machinery.mainEngine.power",
-  "machinery.mainEngine.runningHours",
-  "machinery.auxiliaryEngine.consumption.HFO",
-  "machinery.auxiliaryEngine.consumption.MGO",
-  "machinery.auxiliaryEngine.runningHours",
-  "machinery.boiler.consumption.HFO",
-  "machinery.boiler.consumption.MGO",
-  "bunkers.rob.HFO",
-  "bunkers.rob.MGO",
-  "bunkers.rob.VLSFO",
-  "bunkers.rob.freshWater",
-  "bunkers.received.HFO",
-  "bunkers.received.MGO",
-  "cargo.totalCargo",
-  "cargo.loadedQuantity",
-  "cargo.dischargedQuantity",
+// NAVTOR source forms (report types)
+const NAVTOR_SOURCE_FORMS = [
+  { id: 'sea-report', name: 'NAVTOR Sea Report' },
+  { id: 'port-report', name: 'NAVTOR Port Report' },
+  { id: 'arrival-report', name: 'NAVTOR Arrival Report' },
+  { id: 'departure-report', name: 'NAVTOR Departure Report' },
+  { id: 'bunker-report', name: 'NAVTOR Bunker Report' },
+  { id: 'noon-report', name: 'NAVTOR Noon Report' },
 ]
+
+// NAVTOR source fields with full path display, grouped by section
+interface NavtorFieldOption {
+  path: string
+  displayPath: string // Human-readable full path
+  section: string
+}
+
+const NAVTOR_SOURCE_FIELDS: NavtorFieldOption[] = [
+  // General section
+  { path: 'voyageReporting.general.reportDate', displayPath: 'General → Report Date', section: 'General' },
+  { path: 'voyageReporting.general.reportTime', displayPath: 'General → Report Time', section: 'General' },
+  { path: 'voyageReporting.general.voyageNumber', displayPath: 'General → Voyage Number', section: 'General' },
+  { path: 'voyageReporting.general.vesselCondition', displayPath: 'General → Vessel Condition', section: 'General' },
+  { path: 'voyageReporting.general.portOfDeparture', displayPath: 'General → Port of Departure', section: 'General' },
+  { path: 'voyageReporting.general.portOfDestination', displayPath: 'General → Port of Destination', section: 'General' },
+  { path: 'voyageReporting.general.nextPort', displayPath: 'General → Next Port', section: 'General' },
+  { path: 'voyageReporting.general.eta', displayPath: 'General → ETA', section: 'General' },
+  
+  // Position section
+  { path: 'voyageReporting.position.latitude', displayPath: 'Position → Latitude', section: 'Position' },
+  { path: 'voyageReporting.position.longitude', displayPath: 'Position → Longitude', section: 'Position' },
+  
+  // Distance & Speed section
+  { path: 'voyageReporting.distanceAndSpeed.reportedSpeed', displayPath: 'Distance & Speed → Reported Speed', section: 'Distance & Speed' },
+  { path: 'voyageReporting.distanceAndSpeed.averageSpeed', displayPath: 'Distance & Speed → Average Speed', section: 'Distance & Speed' },
+  { path: 'voyageReporting.distanceAndSpeed.orderedSpeed', displayPath: 'Distance & Speed → Ordered Speed', section: 'Distance & Speed' },
+  { path: 'voyageReporting.distanceAndSpeed.distanceToGo', displayPath: 'Distance & Speed → Distance To Go', section: 'Distance & Speed' },
+  { path: 'voyageReporting.distanceAndSpeed.distanceSinceLastReport', displayPath: 'Distance & Speed → Distance Since Last Report', section: 'Distance & Speed' },
+  { path: 'voyageReporting.distanceAndSpeed.totalDistance', displayPath: 'Distance & Speed → Total Distance', section: 'Distance & Speed' },
+  { path: 'voyageReporting.distanceAndSpeed.timeSinceLastReport', displayPath: 'Distance & Speed → Time Since Last Report', section: 'Distance & Speed' },
+  
+  // Weather section
+  { path: 'voyageReporting.weather.beaufort', displayPath: 'Weather → Beaufort Scale', section: 'Weather' },
+  { path: 'voyageReporting.weather.windDirection', displayPath: 'Weather → Wind Direction', section: 'Weather' },
+  { path: 'voyageReporting.weather.windSpeed', displayPath: 'Weather → Wind Speed', section: 'Weather' },
+  { path: 'voyageReporting.weather.seaState', displayPath: 'Weather → Sea State', section: 'Weather' },
+  { path: 'voyageReporting.weather.seaHeight', displayPath: 'Weather → Sea Height', section: 'Weather' },
+  { path: 'voyageReporting.weather.seaTemperature', displayPath: 'Weather → Sea Temperature', section: 'Weather' },
+  { path: 'voyageReporting.weather.swellHeight', displayPath: 'Weather → Swell Height', section: 'Weather' },
+  
+  // Main Engine section
+  { path: 'machinery.mainEngine.rpm', displayPath: 'Power → Main Engine → RPM', section: 'Power' },
+  { path: 'machinery.mainEngine.power', displayPath: 'Power → Main Engine → Power', section: 'Power' },
+  { path: 'machinery.mainEngine.runningHours', displayPath: 'Power → Main Engine → Running Hours', section: 'Power' },
+  { path: 'machinery.mainEngine.consumption.HFO', displayPath: 'Power → Main Engine → HFO Consumption', section: 'Power' },
+  { path: 'machinery.mainEngine.consumption.MGO', displayPath: 'Power → Main Engine → MGO Consumption', section: 'Power' },
+  { path: 'machinery.mainEngine.consumption.VLSFO', displayPath: 'Power → Main Engine → VLSFO Consumption', section: 'Power' },
+  
+  // Auxiliary Engine section
+  { path: 'machinery.auxiliaryEngine.consumption.HFO', displayPath: 'Power → Auxiliary Engine → HFO Consumption', section: 'Power' },
+  { path: 'machinery.auxiliaryEngine.consumption.MGO', displayPath: 'Power → Auxiliary Engine → MGO Consumption', section: 'Power' },
+  { path: 'machinery.auxiliaryEngine.runningHours', displayPath: 'Power → Auxiliary Engine → Running Hours', section: 'Power' },
+  
+  // Generators section
+  { path: 'machinery.generators.gen1.hours', displayPath: 'Power → Generator 1 → Running Hours', section: 'Power' },
+  { path: 'machinery.generators.gen2.hours', displayPath: 'Power → Generator 2 → Running Hours', section: 'Power' },
+  { path: 'machinery.generators.gen3.hours', displayPath: 'Power → Generator 3 → Running Hours', section: 'Power' },
+  
+  // Boiler section
+  { path: 'machinery.boiler.hours', displayPath: 'Power → Boiler → Running Hours', section: 'Power' },
+  { path: 'machinery.boiler.consumption.HFO', displayPath: 'Power → Boiler → HFO Consumption', section: 'Power' },
+  { path: 'machinery.boiler.consumption.MGO', displayPath: 'Power → Boiler → MGO Consumption', section: 'Power' },
+  
+  // Bunkers ROB section
+  { path: 'bunkers.ifo.rob', displayPath: 'Bunkers → IFO → ROB', section: 'Bunkers' },
+  { path: 'bunkers.mgo.rob', displayPath: 'Bunkers → MGO → ROB', section: 'Bunkers' },
+  { path: 'bunkers.lsfo.rob', displayPath: 'Bunkers → LSFO → ROB', section: 'Bunkers' },
+  { path: 'bunkers.lsmgo.rob', displayPath: 'Bunkers → LSMGO → ROB', section: 'Bunkers' },
+  { path: 'bunkers.vlsfo.rob', displayPath: 'Bunkers → VLSFO → ROB', section: 'Bunkers' },
+  { path: 'bunkers.freshWater.rob', displayPath: 'Bunkers → Fresh Water → ROB', section: 'Bunkers' },
+  
+  // Bunkers Consumption section
+  { path: 'bunkers.ifo.consumption.total', displayPath: 'Bunkers → IFO → Consumption Total', section: 'Bunkers' },
+  { path: 'bunkers.ifo.consumption.mainEngine', displayPath: 'Bunkers → IFO → Consumption Main Engine', section: 'Bunkers' },
+  { path: 'bunkers.ifo.consumption.auxiliary', displayPath: 'Bunkers → IFO → Consumption Auxiliary', section: 'Bunkers' },
+  { path: 'bunkers.mgo.consumption.total', displayPath: 'Bunkers → MGO → Consumption Total', section: 'Bunkers' },
+  
+  // Bunkers Received section
+  { path: 'bunkers.received.HFO', displayPath: 'Bunkers → Received → HFO', section: 'Bunkers' },
+  { path: 'bunkers.received.MGO', displayPath: 'Bunkers → Received → MGO', section: 'Bunkers' },
+  
+  // Cargo section
+  { path: 'cargo.totalCargo', displayPath: 'Cargo → Total Cargo', section: 'Cargo' },
+  { path: 'cargo.loadedQuantity', displayPath: 'Cargo → Loaded Quantity', section: 'Cargo' },
+  { path: 'cargo.dischargedQuantity', displayPath: 'Cargo → Discharged Quantity', section: 'Cargo' },
+]
+
+// Legacy flat paths for backward compatibility
+const NAVTOR_PATHS = NAVTOR_SOURCE_FIELDS.map(f => f.path)
+
+// Source Form Dropdown component
+interface SourceFormDropdownProps {
+  value: string
+  onChange: (value: string) => void
+}
+
+function SourceFormDropdown({ value, onChange }: SourceFormDropdownProps) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full appearance-none rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 pr-10 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+      >
+        <option value="">Select source form...</option>
+        {NAVTOR_SOURCE_FORMS.map((form) => (
+          <option key={form.id} value={form.id}>
+            {form.name}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748b]" />
+    </div>
+  )
+}
+
+// Source Field Autocomplete component with grouped sections
+interface SourceFieldAutocompleteProps {
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+}
+
+function SourceFieldAutocomplete({ value, onChange, placeholder }: SourceFieldAutocompleteProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  
+  // Find the display path for current value
+  const selectedField = NAVTOR_SOURCE_FIELDS.find(f => f.path === value)
+  const displayValue = selectedField?.displayPath || value
+  
+  // Filter fields based on search (searches both path and displayPath)
+  const filteredFields = NAVTOR_SOURCE_FIELDS.filter((field) => {
+    const searchLower = search.toLowerCase()
+    return (
+      field.path.toLowerCase().includes(searchLower) ||
+      field.displayPath.toLowerCase().includes(searchLower)
+    )
+  })
+  
+  // Group filtered fields by section
+  const groupedFields = filteredFields.reduce((acc, field) => {
+    if (!acc[field.section]) {
+      acc[field.section] = []
+    }
+    acc[field.section].push(field)
+    return acc
+  }, {} as Record<string, NavtorFieldOption[]>)
+  
+  const handleSelect = (field: NavtorFieldOption) => {
+    onChange(field.path)
+    setSearch('')
+    setIsOpen(false)
+  }
+  
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
+        <input
+          type="text"
+          value={isOpen ? search : displayValue}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            if (!isOpen) setIsOpen(true)
+          }}
+          onFocus={() => {
+            setIsOpen(true)
+            setSearch('')
+          }}
+          placeholder={placeholder || "Search source fields..."}
+          className="w-full rounded-lg border border-[#e2e8f0] bg-white py-2.5 pl-10 pr-3 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+        />
+      </div>
+      
+      {isOpen && (
+        <>
+          <div 
+            className="fixed inset-0 z-10" 
+            onClick={() => {
+              setIsOpen(false)
+              setSearch('')
+            }} 
+          />
+          <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-lg border border-[#e2e8f0] bg-white py-1 shadow-lg">
+            {Object.keys(groupedFields).length === 0 ? (
+              <p className="px-3 py-4 text-center text-sm text-[#94a3b8]">
+                No fields found
+              </p>
+            ) : (
+              Object.entries(groupedFields).map(([section, fields]) => (
+                <div key={section}>
+                  <div className="sticky top-0 bg-[#f8fafc] px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-[#64748b]">
+                    {section}
+                  </div>
+                  {fields.map((field) => (
+                    <button
+                      key={field.path}
+                      type="button"
+                      onClick={() => handleSelect(field)}
+                      className={`w-full px-3 py-2 text-left text-sm hover:bg-[#f8fafc] ${
+                        field.path === value ? "bg-[#f3e8ff] text-[#7c3aed]" : "text-[#334155]"
+                      }`}
+                    >
+                      {field.displayPath}
+                    </button>
+                  ))}
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 
 interface NavtorPathPickerProps {
   value: string
