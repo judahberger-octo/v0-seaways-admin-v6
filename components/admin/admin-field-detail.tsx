@@ -581,6 +581,75 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
     }
   }
 
+  // Activity feed filter state
+  type ActivityFilter = 'all' | 'definition_changes' | 'crew_flags'
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all')
+
+  // Mock activity data for the field
+  interface ActivityEntry {
+    id: string
+    type: 'definition_change' | 'crew_flag'
+    timestamp: string
+    // Definition change fields
+    author?: string
+    summary?: string
+    // Crew flag fields
+    vessel?: string
+    reportId?: string
+    crewComment?: string
+    flagReason?: string
+  }
+
+  const mockActivityData: ActivityEntry[] = [
+    {
+      id: 'act-001',
+      type: 'crew_flag',
+      timestamp: '2024-03-15T14:32:00Z',
+      vessel: 'MV Pacific Star',
+      reportId: 'RPT-2024-0342',
+      crewComment: 'Value looks incorrect based on our sensor reading',
+      flagReason: 'Incorrect value',
+    },
+    {
+      id: 'act-002',
+      type: 'definition_change',
+      timestamp: '2024-03-14T09:15:00Z',
+      author: 'admin@seaways.com',
+      summary: 'Changed Mapping transform from Direct to Formula',
+    },
+    {
+      id: 'act-003',
+      type: 'definition_change',
+      timestamp: '2024-03-12T16:45:00Z',
+      author: 'sarah.ops@seaways.com',
+      summary: 'Added validation rule: Value must be between 0 and 100',
+    },
+    {
+      id: 'act-004',
+      type: 'crew_flag',
+      timestamp: '2024-03-10T11:20:00Z',
+      vessel: 'MV Atlantic Voyager',
+      reportId: 'RPT-2024-0298',
+      crewComment: 'Unable to extract from source report',
+      flagReason: 'Missing data',
+    },
+    {
+      id: 'act-005',
+      type: 'definition_change',
+      timestamp: '2024-03-08T08:00:00Z',
+      author: 'admin@seaways.com',
+      summary: 'Created field definition',
+    },
+  ]
+
+  // Filter activity based on selected filter
+  const filteredActivity = mockActivityData.filter((entry) => {
+    if (activityFilter === 'all') return true
+    if (activityFilter === 'definition_changes') return entry.type === 'definition_change'
+    if (activityFilter === 'crew_flags') return entry.type === 'crew_flag'
+    return true
+  })
+
   // Get sorted selected forms for tabs
   const selectedForms = (formData.appearsOnFormIds || [])
     .map((id) => targetForms.find((f) => f.id === id))
@@ -2010,12 +2079,127 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
               id="section-activity"
               className="rounded-xl border border-[#e2e8f0] bg-white p-6"
             >
-              <h2 className="mb-6 text-base font-semibold text-[#0f172a]">
+              <h2 className="mb-4 text-base font-semibold text-[#0f172a]">
                 Activity
               </h2>
-              <p className="text-sm text-[#64748b]">
-                View the audit log and activity history for this field.
-              </p>
+
+              {/* Filter chips */}
+              <div className="mb-6 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActivityFilter('all')}
+                  className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                    activityFilter === 'all'
+                      ? 'bg-[#7c3aed] text-white'
+                      : 'bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0]'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivityFilter('definition_changes')}
+                  className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                    activityFilter === 'definition_changes'
+                      ? 'bg-[#7c3aed] text-white'
+                      : 'bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0]'
+                  }`}
+                >
+                  Definition changes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivityFilter('crew_flags')}
+                  className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                    activityFilter === 'crew_flags'
+                      ? 'bg-[#7c3aed] text-white'
+                      : 'bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0]'
+                  }`}
+                >
+                  Crew flags
+                </button>
+              </div>
+
+              {/* Activity feed */}
+              {filteredActivity.length === 0 ? (
+                <p className="py-8 text-center text-sm text-[#64748b]">
+                  No activity to display.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {filteredActivity.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="relative border-l-2 border-[#e2e8f0] pl-4"
+                    >
+                      {/* Timeline dot */}
+                      <div className={`absolute -left-[5px] top-1 h-2 w-2 rounded-full ${
+                        entry.type === 'definition_change' ? 'bg-[#7c3aed]' : 'bg-[#f59e0b]'
+                      }`} />
+
+                      {entry.type === 'definition_change' ? (
+                        /* Definition change entry */
+                        <div>
+                          <p className="text-sm text-[#0f172a]">
+                            <span className="font-medium">{entry.author}</span>{' '}
+                            <span className="text-[#64748b]">{entry.summary}</span>
+                          </p>
+                          <p className="mt-1 text-xs text-[#94a3b8]">
+                            {new Date(entry.timestamp).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </p>
+                        </div>
+                      ) : (
+                        /* Crew flag entry */
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Flag className="h-4 w-4 text-[#f59e0b]" />
+                            <span className="text-sm font-medium text-[#0f172a]">
+                              Crew flagged this field
+                            </span>
+                            <span className="rounded-full bg-[#fef3c7] px-2 py-0.5 text-xs font-medium text-[#92400e]">
+                              {entry.flagReason}
+                            </span>
+                          </div>
+                          <div className="mt-2 rounded-lg bg-[#f8fafc] p-3">
+                            <div className="flex items-center gap-4 text-xs text-[#64748b]">
+                              <span>{entry.vessel}</span>
+                              <span className="font-mono">{entry.reportId}</span>
+                            </div>
+                            {entry.crewComment && (
+                              <p className="mt-2 text-sm text-[#334155]">
+                                &ldquo;{entry.crewComment}&rdquo;
+                              </p>
+                            )}
+                          </div>
+                          <div className="mt-2 flex items-center justify-between">
+                            <p className="text-xs text-[#94a3b8]">
+                              {new Date(entry.timestamp).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                            <button
+                              type="button"
+                              className="text-xs font-medium text-[#7c3aed] hover:underline"
+                            >
+                              View report
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
           </div>
         </main>
