@@ -1103,6 +1103,9 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                       <p className="mt-1 text-xs text-[#64748b]">
                         Select a lookup table to map source values to target values.
                       </p>
+                      <p className="mt-2 rounded-lg border border-[#fef3c7] bg-[#fffbeb] px-3 py-2 text-xs text-[#92400e]">
+                        If a value in the source data doesn&apos;t match any row in the table, the field will be left unmapped and the crew will be warned.
+                      </p>
                     </div>
 
                     {/* Lookup table preview */}
