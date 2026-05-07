@@ -1044,14 +1044,19 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
               </div>
             </section>
 
+            {/* Top-level form tab strip (only when Same logic is OFF) */}
+            {!sameLogicForAllForms && selectedForms.length > 0 && (
+              <TopLevelFormTabStrip
+                forms={selectedForms}
+                activeFormId={activeFormTab}
+                onTabChange={setActiveFormTab}
+              />
+            )}
+
             {/* Section 2: Mapping */}
-            <TabbedSection
+            <SectionCard
               id="mapping"
               title="Mapping"
-              isTabbedMode={!sameLogicForAllForms}
-              forms={selectedForms}
-              activeFormId={activeFormTab}
-              onTabChange={setActiveFormTab}
             >
               <div className="space-y-6">
                 {/* Transform type picker */}
@@ -1598,16 +1603,12 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                   </div>
                 )}
               </div>
-            </TabbedSection>
+            </SectionCard>
 
             {/* Section 3: Conditions */}
-            <TabbedSection
+            <SectionCard
               id="conditions"
               title="Conditions"
-              isTabbedMode={!sameLogicForAllForms}
-              forms={selectedForms}
-              activeFormId={activeFormTab}
-              onTabChange={setActiveFormTab}
             >
               <div className="space-y-8">
                 {/* WHERE conditions - when the mapping applies */}
@@ -1793,16 +1794,12 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                   onSeverityChange={(sev) => updateFormData({ advancedExpressionSeverity: sev })}
                 />
               </div>
-            </TabbedSection>
+            </SectionCard>
 
             {/* Section 4: Notes */}
-            <TabbedSection
+            <SectionCard
               id="notes"
               title="Notes"
-              isTabbedMode={!sameLogicForAllForms}
-              forms={selectedForms}
-              activeFormId={activeFormTab}
-              onTabChange={setActiveFormTab}
             >
               <div className="space-y-3">
                 <div>
@@ -1824,16 +1821,12 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                   Notes are visible to all admins; not surfaced to crew anywhere.
                 </p>
               </div>
-            </TabbedSection>
+            </SectionCard>
 
             {/* Section 5: Check */}
-            <TabbedSection
+            <SectionCard
               id="check"
               title="Check"
-              isTabbedMode={!sameLogicForAllForms}
-              forms={selectedForms}
-              activeFormId={activeFormTab}
-              onTabChange={setActiveFormTab}
             >
               <div className="space-y-6">
                 {/* Section description */}
@@ -2048,16 +2041,12 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                   </p>
                 </div>
               </div>
-            </TabbedSection>
+            </SectionCard>
 
             {/* Section 6: Test */}
-            <TabbedSection
+            <SectionCard
               id="test"
               title="Test"
-              isTabbedMode={!sameLogicForAllForms}
-              forms={selectedForms}
-              activeFormId={activeFormTab}
-              onTabChange={setActiveFormTab}
             >
               <FieldTestPanel 
                 fieldId={fieldId || ""} 
@@ -2069,7 +2058,7 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                   : undefined
                 }
               />
-            </TabbedSection>
+            </SectionCard>
 
             {/* Section 7: Activity - NOT tabbed, unified timeline */}
             <section
@@ -2436,85 +2425,62 @@ function FormScopeChipPicker({ selectedFormIds, onChange }: FormScopeChipPickerP
   )
 }
 
-// Form tabs component for tabbed mode (per-form configuration)
-interface FormTabsProps {
-  forms: typeof targetForms
-  activeFormId: string | null
-  onTabChange: (formId: string) => void
-}
-
-function FormTabs({ forms, activeFormId, onTabChange }: FormTabsProps) {
-  if (forms.length === 0) return null
-
-  return (
-    <div className="flex gap-1 border-b border-[#e2e8f0]">
-      {forms.map((form) => {
-        const isActive = form.id === activeFormId
-        return (
-          <button
-            key={form.id}
-            type="button"
-            onClick={() => onTabChange(form.id)}
-            className={`relative px-4 py-2 text-sm font-medium transition-colors ${
-              isActive
-                ? "text-[#7c3aed]"
-                : "text-[#64748b] hover:text-[#334155]"
-            }`}
-          >
-            {form.name}
-            {isActive && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#7c3aed]" />
-            )}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-// Wrapper component for tabbed sections
-interface TabbedSectionProps {
+// Wrapper component for sections (tabs removed - now handled at top level)
+interface SectionCardProps {
   id: string
   title: string
-  isTabbedMode: boolean
-  forms: typeof targetForms
-  activeFormId: string | null
-  onTabChange: (formId: string) => void
   children: React.ReactNode
 }
 
-function TabbedSection({
+function SectionCard({
   id,
   title,
-  isTabbedMode,
-  forms,
-  activeFormId,
-  onTabChange,
   children,
-}: TabbedSectionProps) {
+}: SectionCardProps) {
   return (
     <section
       id={`section-${id}`}
       className="rounded-xl border border-[#e2e8f0] bg-white"
     >
-      {/* Header with optional tabs */}
-      <div className={isTabbedMode ? "border-b border-[#e2e8f0]" : ""}>
-        <div className="flex items-center justify-between p-6 pb-0">
-          <h2 className="text-base font-semibold text-[#0f172a]">{title}</h2>
-        </div>
-        {isTabbedMode && forms.length > 0 && (
-          <div className="px-6 pt-4">
-            <FormTabs
-              forms={forms}
-              activeFormId={activeFormId}
-              onTabChange={onTabChange}
-            />
-          </div>
-        )}
+      {/* Header */}
+      <div className="flex items-center justify-between p-6 pb-0">
+        <h2 className="text-base font-semibold text-[#0f172a]">{title}</h2>
       </div>
       {/* Content */}
       <div className="p-6 pt-6">{children}</div>
     </section>
+  )
+}
+
+// Top-level form tab strip (shown when "Same logic for all" is OFF)
+interface TopLevelFormTabStripProps {
+  forms: typeof targetForms
+  activeFormId: string | null
+  onTabChange: (formId: string) => void
+}
+
+function TopLevelFormTabStrip({ forms, activeFormId, onTabChange }: TopLevelFormTabStripProps) {
+  if (forms.length === 0) return null
+  
+  return (
+    <div className="rounded-xl border border-[#e2e8f0] bg-white p-4">
+      <div className="flex items-center gap-1 overflow-x-auto">
+        {forms.map((form) => (
+          <button
+            key={form.id}
+            type="button"
+            onClick={() => onTabChange(form.id)}
+            className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              activeFormId === form.id
+                ? "bg-[#7c3aed] text-white"
+                : "text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155]"
+            }`}
+          >
+            {form.name}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 
