@@ -5,6 +5,7 @@ import { AdminLayout, type AdminTabId } from "./admin-layout"
 import { AdminOverviewContent } from "./admin-overview"
 import { AdminFieldDefinitions } from "./admin-field-definitions"
 import { AdminFieldDetail } from "./admin-field-detail"
+import { AdminLookupTables } from "./admin-lookup-tables"
 import { AdminReviewQueue } from "./admin-review-queue"
 import { AdminVessels } from "./admin-vessels"
 
@@ -44,6 +45,7 @@ export function AdminPage() {
           />
         )
       )}
+      {activeTab === "lookup-tables" && <AdminLookupTables />}
       {activeTab === "review-queue" && <AdminReviewQueue />}
       {activeTab === "vessels" && <AdminVessels />}
     </AdminLayout>
