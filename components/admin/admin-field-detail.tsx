@@ -9,9 +9,11 @@ import {
   vessels,
   getTestRunsForField,
   testReports,
+  lookupTables,
   type FieldDefinition,
   type ValidationRule,
   type TestRun,
+  type LookupTable,
 } from "@/lib/admin-mock-data"
 
 // Section IDs for navigation
@@ -142,6 +144,36 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
       setPerFormDirectConfig((prev) => ({
         ...prev,
         [activeFormTab]: { ...(prev[activeFormTab] || { sourceForm: '', sourceField: '' }), ...updates }
+      }))
+    }
+    setHasUnsavedChanges(true)
+  }
+
+  // Lookup transform configuration state
+  interface LookupTransformConfig {
+    sourceForm: string
+    sourceField: string
+    lookupTableId: string
+  }
+  const [sharedLookupConfig, setSharedLookupConfig] = useState<LookupTransformConfig>({ sourceForm: '', sourceField: '', lookupTableId: '' })
+  const [perFormLookupConfig, setPerFormLookupConfig] = useState<Record<string, LookupTransformConfig>>({})
+
+  // Get current lookup config for active context
+  const getCurrentLookupConfig = (): LookupTransformConfig => {
+    if (sameLogicForAllForms) {
+      return sharedLookupConfig
+    }
+    return activeFormTab ? perFormLookupConfig[activeFormTab] || { sourceForm: '', sourceField: '', lookupTableId: '' } : { sourceForm: '', sourceField: '', lookupTableId: '' }
+  }
+
+  // Update lookup config
+  const updateLookupConfig = (updates: Partial<LookupTransformConfig>) => {
+    if (sameLogicForAllForms) {
+      setSharedLookupConfig((prev) => ({ ...prev, ...updates }))
+    } else if (activeFormTab) {
+      setPerFormLookupConfig((prev) => ({
+        ...prev,
+        [activeFormTab]: { ...(prev[activeFormTab] || { sourceForm: '', sourceField: '', lookupTableId: '' }), ...updates }
       }))
     }
     setHasUnsavedChanges(true)
@@ -616,10 +648,67 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                 )}
 
                 {getCurrentTransformType() === 'lookup' && (
-                  <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
-                    <p className="text-sm text-[#64748b]">
-                      Lookup transform configuration will be added in Prompt 11.
-                    </p>
+                  <div className="space-y-4">
+                    {/* Source form dropdown */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+                        Source form <span className="text-[#ef4444]">*</span>
+                      </label>
+                      <SourceFormDropdown
+                        value={getCurrentLookupConfig().sourceForm}
+                        onChange={(value) => updateLookupConfig({ sourceForm: value })}
+                      />
+                      <p className="mt-1 text-xs text-[#64748b]">
+                        Select which NAVTOR report type to read from.
+                      </p>
+                    </div>
+
+                    {/* Source field autocomplete */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+                        Source field <span className="text-[#ef4444]">*</span>
+                      </label>
+                      <SourceFieldAutocomplete
+                        value={getCurrentLookupConfig().sourceField}
+                        onChange={(value) => updateLookupConfig({ sourceField: value })}
+                        placeholder="Search for a source field..."
+                      />
+                      <p className="mt-1 text-xs text-[#64748b]">
+                        Select the source field whose value will be looked up.
+                      </p>
+                    </div>
+
+                    {/* Lookup table dropdown */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+                        Lookup table <span className="text-[#ef4444]">*</span>
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={getCurrentLookupConfig().lookupTableId}
+                          onChange={(e) => updateLookupConfig({ lookupTableId: e.target.value })}
+                          className="w-full appearance-none rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 pr-10 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                        >
+                          <option value="">Select lookup table...</option>
+                          {lookupTables.map((table) => (
+                            <option key={table.id} value={table.id}>
+                              {table.name}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748b]" />
+                      </div>
+                      <p className="mt-1 text-xs text-[#64748b]">
+                        Select a lookup table to map source values to target values.
+                      </p>
+                    </div>
+
+                    {/* Lookup table preview */}
+                    {getCurrentLookupConfig().lookupTableId && (
+                      <LookupTablePreview 
+                        tableId={getCurrentLookupConfig().lookupTableId} 
+                      />
+                    )}
                   </div>
                 )}
 
@@ -905,6 +994,78 @@ function TransformTypePicker({ value, onChange }: TransformTypePickerProps) {
           </button>
         )
       })}
+    </div>
+  )
+}
+
+// Lookup table preview component - shows first 5 rows of a lookup table
+interface LookupTablePreviewProps {
+  tableId: string
+}
+
+function LookupTablePreview({ tableId }: LookupTablePreviewProps) {
+  const table = lookupTables.find((t) => t.id === tableId)
+  
+  if (!table) {
+    return (
+      <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4 text-center">
+        <p className="text-sm text-[#94a3b8]">Lookup table not found</p>
+      </div>
+    )
+  }
+
+  const previewRows = table.rows.slice(0, 5)
+  const hasMoreRows = table.rows.length > 5
+
+  return (
+    <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h4 className="text-sm font-medium text-[#334155]">{table.name}</h4>
+          {table.description && (
+            <p className="mt-0.5 text-xs text-[#64748b]">{table.description}</p>
+          )}
+        </div>
+        <a
+          href={`/admin?tab=lookup-tables&id=${table.id}`}
+          className="text-xs font-medium text-[#7c3aed] hover:underline"
+        >
+          View full table
+        </a>
+      </div>
+      
+      {/* Preview table */}
+      <div className="overflow-hidden rounded-lg border border-[#e2e8f0] bg-white">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-[#e2e8f0] bg-[#f8fafc]">
+              <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[#64748b]">
+                Source Value
+              </th>
+              <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[#64748b]">
+                Target Value
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {previewRows.map((row, index) => (
+              <tr 
+                key={index} 
+                className={index < previewRows.length - 1 ? "border-b border-[#e2e8f0]" : ""}
+              >
+                <td className="px-3 py-2 text-sm text-[#334155]">{row.sourceValue}</td>
+                <td className="px-3 py-2 text-sm font-medium text-[#0f172a]">{row.targetValue}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      
+      {hasMoreRows && (
+        <p className="mt-2 text-center text-xs text-[#94a3b8]">
+          + {table.rows.length - 5} more rows
+        </p>
+      )}
     </div>
   )
 }

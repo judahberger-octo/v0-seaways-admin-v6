@@ -1702,3 +1702,103 @@ export function getTestReports(): TestReport[] {
 export function getTestReportById(id: string): TestReport | undefined {
   return testReports.find(r => r.id === id)
 }
+
+// ============================================================
+// LOOKUP TABLES
+// ============================================================
+
+export interface LookupTableRow {
+  sourceValue: string
+  targetValue: string
+}
+
+export interface LookupTable {
+  id: string
+  name: string
+  description?: string
+  rows: LookupTableRow[]
+  createdAt: string
+  updatedAt: string
+  createdBy: string
+}
+
+export const lookupTables: LookupTable[] = [
+  {
+    id: 'lt-001',
+    name: 'Vessel Condition Codes',
+    description: 'Maps NAVTOR vessel condition codes to VesLink codes',
+    rows: [
+      { sourceValue: 'LADEN', targetValue: 'L' },
+      { sourceValue: 'BALLAST', targetValue: 'B' },
+      { sourceValue: 'PART_LADEN', targetValue: 'PL' },
+      { sourceValue: 'LOADING', targetValue: 'LDG' },
+      { sourceValue: 'DISCHARGING', targetValue: 'DCH' },
+      { sourceValue: 'ANCHORED', targetValue: 'ANC' },
+      { sourceValue: 'DRIFTING', targetValue: 'DFT' },
+      { sourceValue: 'BUNKERING', targetValue: 'BNK' },
+    ],
+    createdAt: '2024-01-15T10:00:00Z',
+    updatedAt: '2024-03-20T14:30:00Z',
+    createdBy: 'admin@seaways.com',
+  },
+  {
+    id: 'lt-002',
+    name: 'Port Codes',
+    description: 'Maps port names to UN/LOCODE',
+    rows: [
+      { sourceValue: 'Singapore', targetValue: 'SGSIN' },
+      { sourceValue: 'Rotterdam', targetValue: 'NLRTM' },
+      { sourceValue: 'Shanghai', targetValue: 'CNSHA' },
+      { sourceValue: 'Hong Kong', targetValue: 'HKHKG' },
+      { sourceValue: 'Busan', targetValue: 'KRPUS' },
+      { sourceValue: 'Los Angeles', targetValue: 'USLAX' },
+      { sourceValue: 'Hamburg', targetValue: 'DEHAM' },
+      { sourceValue: 'Antwerp', targetValue: 'BEANR' },
+      { sourceValue: 'Dubai', targetValue: 'AEJEA' },
+      { sourceValue: 'Tokyo', targetValue: 'JPTYO' },
+    ],
+    createdAt: '2024-02-01T09:00:00Z',
+    updatedAt: '2024-04-15T11:00:00Z',
+    createdBy: 'admin@seaways.com',
+  },
+  {
+    id: 'lt-003',
+    name: 'Fuel Type Codes',
+    description: 'Maps NAVTOR fuel type names to VesLink fuel codes',
+    rows: [
+      { sourceValue: 'Heavy Fuel Oil', targetValue: 'HFO' },
+      { sourceValue: 'Marine Gas Oil', targetValue: 'MGO' },
+      { sourceValue: 'Very Low Sulphur Fuel Oil', targetValue: 'VLSFO' },
+      { sourceValue: 'Low Sulphur Marine Gas Oil', targetValue: 'LSMGO' },
+      { sourceValue: 'Liquefied Natural Gas', targetValue: 'LNG' },
+      { sourceValue: 'Marine Diesel Oil', targetValue: 'MDO' },
+    ],
+    createdAt: '2024-01-20T08:00:00Z',
+    updatedAt: '2024-02-28T16:45:00Z',
+    createdBy: 'admin@seaways.com',
+  },
+  {
+    id: 'lt-004',
+    name: 'Sea State Codes',
+    description: 'Maps descriptive sea states to Douglas scale numbers',
+    rows: [
+      { sourceValue: 'Calm (glassy)', targetValue: '0' },
+      { sourceValue: 'Calm (rippled)', targetValue: '1' },
+      { sourceValue: 'Smooth', targetValue: '2' },
+      { sourceValue: 'Slight', targetValue: '3' },
+      { sourceValue: 'Moderate', targetValue: '4' },
+      { sourceValue: 'Rough', targetValue: '5' },
+      { sourceValue: 'Very Rough', targetValue: '6' },
+      { sourceValue: 'High', targetValue: '7' },
+      { sourceValue: 'Very High', targetValue: '8' },
+      { sourceValue: 'Phenomenal', targetValue: '9' },
+    ],
+    createdAt: '2024-03-01T12:00:00Z',
+    updatedAt: '2024-03-01T12:00:00Z',
+    createdBy: 'admin@seaways.com',
+  },
+]
+
+export function getLookupTableById(id: string): LookupTable | undefined {
+  return lookupTables.find(t => t.id === id)
+}
