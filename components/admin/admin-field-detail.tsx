@@ -1862,95 +1862,100 @@ const NAVTOR_SOURCE_FORMS = [
   { id: 'port-report', name: 'NAVTOR Port Report' },
   { id: 'arrival-report', name: 'NAVTOR Arrival Report' },
   { id: 'departure-report', name: 'NAVTOR Departure Report' },
-  { id: 'bunker-report', name: 'NAVTOR Bunker Report' },
-  { id: 'noon-report', name: 'NAVTOR Noon Report' },
+  { id: 'bunkering-report', name: 'NAVTOR Bunkering Report' },
+  { id: 'cargo-handling-report', name: 'NAVTOR Cargo Handling Report' },
+  { id: 'statement-of-facts', name: 'NAVTOR Statement of Facts' },
 ]
 
 // NAVTOR source fields with full path display, grouped by section
+type NavtorFieldDataType = 'number' | 'text' | 'datetime' | 'enum' | 'latlong' | 'duration'
+
 interface NavtorFieldOption {
   path: string
   displayPath: string // Human-readable full path
   section: string
+  dataType: NavtorFieldDataType
+  exampleValue?: string // Example value from most recent report
 }
 
 const NAVTOR_SOURCE_FIELDS: NavtorFieldOption[] = [
   // General section
-  { path: 'voyageReporting.general.reportDate', displayPath: 'General → Report Date', section: 'General' },
-  { path: 'voyageReporting.general.reportTime', displayPath: 'General → Report Time', section: 'General' },
-  { path: 'voyageReporting.general.voyageNumber', displayPath: 'General → Voyage Number', section: 'General' },
-  { path: 'voyageReporting.general.vesselCondition', displayPath: 'General → Vessel Condition', section: 'General' },
-  { path: 'voyageReporting.general.portOfDeparture', displayPath: 'General → Port of Departure', section: 'General' },
-  { path: 'voyageReporting.general.portOfDestination', displayPath: 'General → Port of Destination', section: 'General' },
-  { path: 'voyageReporting.general.nextPort', displayPath: 'General → Next Port', section: 'General' },
-  { path: 'voyageReporting.general.eta', displayPath: 'General → ETA', section: 'General' },
+  { path: 'voyageReporting.general.reportDate', displayPath: 'General → Report Date', section: 'General', dataType: 'datetime', exampleValue: '2024-03-15' },
+  { path: 'voyageReporting.general.reportTime', displayPath: 'General → Report Time', section: 'General', dataType: 'datetime', exampleValue: '12:00 UTC' },
+  { path: 'voyageReporting.general.voyageNumber', displayPath: 'General → Voyage Number', section: 'General', dataType: 'text', exampleValue: 'V2024-0342' },
+  { path: 'voyageReporting.general.vesselCondition', displayPath: 'General → Vessel Condition', section: 'General', dataType: 'enum', exampleValue: 'LADEN' },
+  { path: 'voyageReporting.general.portOfDeparture', displayPath: 'General → Port of Departure', section: 'General', dataType: 'text', exampleValue: 'Singapore' },
+  { path: 'voyageReporting.general.portOfDestination', displayPath: 'General → Port of Destination', section: 'General', dataType: 'text', exampleValue: 'Rotterdam' },
+  { path: 'voyageReporting.general.nextPort', displayPath: 'General → Next Port', section: 'General', dataType: 'text', exampleValue: 'Suez Canal' },
+  { path: 'voyageReporting.general.eta', displayPath: 'General → ETA', section: 'General', dataType: 'datetime', exampleValue: '2024-04-02 08:00' },
   
   // Position section
-  { path: 'voyageReporting.position.latitude', displayPath: 'Position → Latitude', section: 'Position' },
-  { path: 'voyageReporting.position.longitude', displayPath: 'Position → Longitude', section: 'Position' },
+  { path: 'voyageReporting.position.latitude', displayPath: 'Position → Latitude', section: 'Position', dataType: 'latlong', exampleValue: '1.2644° N' },
+  { path: 'voyageReporting.position.longitude', displayPath: 'Position → Longitude', section: 'Position', dataType: 'latlong', exampleValue: '103.8198° E' },
   
   // Distance & Speed section
-  { path: 'voyageReporting.distanceAndSpeed.reportedSpeed', displayPath: 'Distance & Speed → Reported Speed', section: 'Distance & Speed' },
-  { path: 'voyageReporting.distanceAndSpeed.averageSpeed', displayPath: 'Distance & Speed → Average Speed', section: 'Distance & Speed' },
-  { path: 'voyageReporting.distanceAndSpeed.orderedSpeed', displayPath: 'Distance & Speed → Ordered Speed', section: 'Distance & Speed' },
-  { path: 'voyageReporting.distanceAndSpeed.distanceToGo', displayPath: 'Distance & Speed → Distance To Go', section: 'Distance & Speed' },
-  { path: 'voyageReporting.distanceAndSpeed.distanceSinceLastReport', displayPath: 'Distance & Speed → Distance Since Last Report', section: 'Distance & Speed' },
-  { path: 'voyageReporting.distanceAndSpeed.totalDistance', displayPath: 'Distance & Speed → Total Distance', section: 'Distance & Speed' },
-  { path: 'voyageReporting.distanceAndSpeed.timeSinceLastReport', displayPath: 'Distance & Speed → Time Since Last Report', section: 'Distance & Speed' },
+  { path: 'voyageReporting.distanceAndSpeed.reportedSpeed', displayPath: 'Distance & Speed → Reported Speed', section: 'Distance & Speed', dataType: 'number', exampleValue: '12.5' },
+  { path: 'voyageReporting.distanceAndSpeed.averageSpeed', displayPath: 'Distance & Speed → Average Speed', section: 'Distance & Speed', dataType: 'number', exampleValue: '12.3' },
+  { path: 'voyageReporting.distanceAndSpeed.orderedSpeed', displayPath: 'Distance & Speed → Ordered Speed', section: 'Distance & Speed', dataType: 'number', exampleValue: '13.0' },
+  { path: 'voyageReporting.distanceAndSpeed.distanceToGo', displayPath: 'Distance & Speed → Distance To Go', section: 'Distance & Speed', dataType: 'number', exampleValue: '8,450' },
+  { path: 'voyageReporting.distanceAndSpeed.distanceSinceLastReport', displayPath: 'Distance & Speed → Distance Since Last Report', section: 'Distance & Speed', dataType: 'number', exampleValue: '298' },
+  { path: 'voyageReporting.distanceAndSpeed.totalDistance', displayPath: 'Distance & Speed → Total Distance', section: 'Distance & Speed', dataType: 'number', exampleValue: '1,250' },
+  { path: 'voyageReporting.distanceAndSpeed.timeSinceLastReport', displayPath: 'Distance & Speed → Time Since Last Report', section: 'Distance & Speed', dataType: 'duration', exampleValue: '24:00' },
   
   // Weather section
-  { path: 'voyageReporting.weather.beaufort', displayPath: 'Weather → Beaufort Scale', section: 'Weather' },
-  { path: 'voyageReporting.weather.windDirection', displayPath: 'Weather → Wind Direction', section: 'Weather' },
-  { path: 'voyageReporting.weather.windSpeed', displayPath: 'Weather → Wind Speed', section: 'Weather' },
-  { path: 'voyageReporting.weather.seaState', displayPath: 'Weather → Sea State', section: 'Weather' },
-  { path: 'voyageReporting.weather.seaHeight', displayPath: 'Weather → Sea Height', section: 'Weather' },
-  { path: 'voyageReporting.weather.seaTemperature', displayPath: 'Weather → Sea Temperature', section: 'Weather' },
-  { path: 'voyageReporting.weather.swellHeight', displayPath: 'Weather → Swell Height', section: 'Weather' },
+  { path: 'voyageReporting.weather.beaufort', displayPath: 'Weather → Beaufort Scale', section: 'Weather', dataType: 'number', exampleValue: '4' },
+  { path: 'voyageReporting.weather.windDirection', displayPath: 'Weather → Wind Direction', section: 'Weather', dataType: 'text', exampleValue: 'NNE' },
+  { path: 'voyageReporting.weather.windSpeed', displayPath: 'Weather → Wind Speed', section: 'Weather', dataType: 'number', exampleValue: '18' },
+  { path: 'voyageReporting.weather.seaState', displayPath: 'Weather → Sea State', section: 'Weather', dataType: 'enum', exampleValue: 'Moderate' },
+  { path: 'voyageReporting.weather.seaHeight', displayPath: 'Weather → Sea Height', section: 'Weather', dataType: 'number', exampleValue: '2.1' },
+  { path: 'voyageReporting.weather.seaTemperature', displayPath: 'Weather → Sea Temperature', section: 'Weather', dataType: 'number', exampleValue: '28.5' },
+  { path: 'voyageReporting.weather.swellHeight', displayPath: 'Weather → Swell Height', section: 'Weather', dataType: 'number', exampleValue: '1.8' },
   
   // Main Engine section
-  { path: 'machinery.mainEngine.rpm', displayPath: 'Power → Main Engine → RPM', section: 'Power' },
-  { path: 'machinery.mainEngine.power', displayPath: 'Power → Main Engine → Power', section: 'Power' },
-  { path: 'machinery.mainEngine.runningHours', displayPath: 'Power → Main Engine → Running Hours', section: 'Power' },
-  { path: 'machinery.mainEngine.consumption.HFO', displayPath: 'Power → Main Engine → HFO Consumption', section: 'Power' },
-  { path: 'machinery.mainEngine.consumption.MGO', displayPath: 'Power → Main Engine → MGO Consumption', section: 'Power' },
-  { path: 'machinery.mainEngine.consumption.VLSFO', displayPath: 'Power → Main Engine → VLSFO Consumption', section: 'Power' },
+  { path: 'machinery.mainEngine.rpm', displayPath: 'Power → Main Engine → RPM', section: 'Power', dataType: 'number', exampleValue: '78' },
+  { path: 'machinery.mainEngine.power', displayPath: 'Power → Main Engine → Power', section: 'Power', dataType: 'number', exampleValue: '8,540' },
+  { path: 'machinery.mainEngine.runningHours', displayPath: 'Power → Main Engine → Running Hours', section: 'Power', dataType: 'number', exampleValue: '45,230' },
+  { path: 'machinery.mainEngine.consumption.HFO', displayPath: 'Power → Main Engine → HFO Consumption', section: 'Power', dataType: 'number', exampleValue: '32.5' },
+  { path: 'machinery.mainEngine.consumption.MGO', displayPath: 'Power → Main Engine → MGO Consumption', section: 'Power', dataType: 'number', exampleValue: '0.8' },
+  { path: 'machinery.mainEngine.consumption.VLSFO', displayPath: 'Power → Main Engine → VLSFO Consumption', section: 'Power', dataType: 'number', exampleValue: '28.2' },
   
   // Auxiliary Engine section
-  { path: 'machinery.auxiliaryEngine.consumption.HFO', displayPath: 'Power → Auxiliary Engine → HFO Consumption', section: 'Power' },
-  { path: 'machinery.auxiliaryEngine.consumption.MGO', displayPath: 'Power → Auxiliary Engine → MGO Consumption', section: 'Power' },
-  { path: 'machinery.auxiliaryEngine.runningHours', displayPath: 'Power → Auxiliary Engine → Running Hours', section: 'Power' },
+  { path: 'machinery.auxiliaryEngine.consumption.HFO', displayPath: 'Power → Auxiliary Engine → HFO Consumption', section: 'Power', dataType: 'number', exampleValue: '2.1' },
+  { path: 'machinery.auxiliaryEngine.consumption.MGO', displayPath: 'Power → Auxiliary Engine → MGO Consumption', section: 'Power', dataType: 'number', exampleValue: '1.5' },
+  { path: 'machinery.auxiliaryEngine.runningHours', displayPath: 'Power → Auxiliary Engine → Running Hours', section: 'Power', dataType: 'number', exampleValue: '12,450' },
   
   // Generators section
-  { path: 'machinery.generators.gen1.hours', displayPath: 'Power → Generator 1 → Running Hours', section: 'Power' },
-  { path: 'machinery.generators.gen2.hours', displayPath: 'Power → Generator 2 → Running Hours', section: 'Power' },
-  { path: 'machinery.generators.gen3.hours', displayPath: 'Power → Generator 3 → Running Hours', section: 'Power' },
+  { path: 'machinery.generators.gen1.hours', displayPath: 'Power → Generator 1 → Running Hours', section: 'Power', dataType: 'number', exampleValue: '8,234' },
+  { path: 'machinery.generators.gen2.hours', displayPath: 'Power → Generator 2 → Running Hours', section: 'Power', dataType: 'number', exampleValue: '7,890' },
+  { path: 'machinery.generators.gen3.hours', displayPath: 'Power → Generator 3 → Running Hours', section: 'Power', dataType: 'number', exampleValue: '6,543' },
   
   // Boiler section
-  { path: 'machinery.boiler.hours', displayPath: 'Power → Boiler → Running Hours', section: 'Power' },
-  { path: 'machinery.boiler.consumption.HFO', displayPath: 'Power → Boiler → HFO Consumption', section: 'Power' },
-  { path: 'machinery.boiler.consumption.MGO', displayPath: 'Power → Boiler → MGO Consumption', section: 'Power' },
+  { path: 'machinery.boiler.hours', displayPath: 'Power → Boiler → Running Hours', section: 'Power', dataType: 'number', exampleValue: '3,210' },
+  { path: 'machinery.boiler.consumption.HFO', displayPath: 'Power → Boiler → HFO Consumption', section: 'Power', dataType: 'number', exampleValue: '1.2' },
+  { path: 'machinery.boiler.consumption.MGO', displayPath: 'Power → Boiler → MGO Consumption', section: 'Power', dataType: 'number', exampleValue: '0.3' },
   
   // Bunkers ROB section
-  { path: 'bunkers.ifo.rob', displayPath: 'Bunkers → IFO → ROB', section: 'Bunkers' },
-  { path: 'bunkers.mgo.rob', displayPath: 'Bunkers → MGO → ROB', section: 'Bunkers' },
-  { path: 'bunkers.lsfo.rob', displayPath: 'Bunkers → LSFO → ROB', section: 'Bunkers' },
-  { path: 'bunkers.lsmgo.rob', displayPath: 'Bunkers → LSMGO → ROB', section: 'Bunkers' },
-  { path: 'bunkers.vlsfo.rob', displayPath: 'Bunkers → VLSFO → ROB', section: 'Bunkers' },
-  { path: 'bunkers.freshWater.rob', displayPath: 'Bunkers → Fresh Water → ROB', section: 'Bunkers' },
+  { path: 'bunkers.ifo.rob', displayPath: 'Bunkers → IFO → ROB', section: 'Bunkers', dataType: 'number', exampleValue: '1,245' },
+  { path: 'bunkers.mgo.rob', displayPath: 'Bunkers → MGO → ROB', section: 'Bunkers', dataType: 'number', exampleValue: '185' },
+  { path: 'bunkers.lsfo.rob', displayPath: 'Bunkers → LSFO → ROB', section: 'Bunkers', dataType: 'number', exampleValue: '892' },
+  { path: 'bunkers.lsmgo.rob', displayPath: 'Bunkers → LSMGO → ROB', section: 'Bunkers', dataType: 'number', exampleValue: '124' },
+  { path: 'bunkers.vlsfo.rob', displayPath: 'Bunkers → VLSFO → ROB', section: 'Bunkers', dataType: 'number', exampleValue: '1,580' },
+  { path: 'bunkers.freshWater.rob', displayPath: 'Bunkers → Fresh Water → ROB', section: 'Bunkers', dataType: 'number', exampleValue: '245' },
   
   // Bunkers Consumption section
-  { path: 'bunkers.ifo.consumption.total', displayPath: 'Bunkers → IFO → Consumption Total', section: 'Bunkers' },
-  { path: 'bunkers.ifo.consumption.mainEngine', displayPath: 'Bunkers → IFO → Consumption Main Engine', section: 'Bunkers' },
-  { path: 'bunkers.ifo.consumption.auxiliary', displayPath: 'Bunkers → IFO → Consumption Auxiliary', section: 'Bunkers' },
-  { path: 'bunkers.mgo.consumption.total', displayPath: 'Bunkers → MGO → Consumption Total', section: 'Bunkers' },
+  { path: 'bunkers.ifo.consumption.total', displayPath: 'Bunkers → IFO → Consumption Total', section: 'Bunkers', dataType: 'number', exampleValue: '35.8' },
+  { path: 'bunkers.ifo.consumption.mainEngine', displayPath: 'Bunkers → IFO → Consumption Main Engine', section: 'Bunkers', dataType: 'number', exampleValue: '32.5' },
+  { path: 'bunkers.ifo.consumption.auxiliary', displayPath: 'Bunkers → IFO → Consumption Auxiliary', section: 'Bunkers', dataType: 'number', exampleValue: '2.1' },
+  { path: 'bunkers.mgo.consumption.total', displayPath: 'Bunkers → MGO → Consumption Total', section: 'Bunkers', dataType: 'number', exampleValue: '2.6' },
   
   // Bunkers Received section
-  { path: 'bunkers.received.HFO', displayPath: 'Bunkers → Received → HFO', section: 'Bunkers' },
-  { path: 'bunkers.received.MGO', displayPath: 'Bunkers → Received → MGO', section: 'Bunkers' },
+  { path: 'bunkers.received.HFO', displayPath: 'Bunkers → Received → HFO', section: 'Bunkers', dataType: 'number', exampleValue: '0' },
+  { path: 'bunkers.received.MGO', displayPath: 'Bunkers → Received → MGO', section: 'Bunkers', dataType: 'number', exampleValue: '0' },
   
   // Cargo section
-  { path: 'cargo.totalCargo', displayPath: 'Cargo → Total Cargo', section: 'Cargo' },
-  { path: 'cargo.loadedQuantity', displayPath: 'Cargo → Loaded Quantity', section: 'Cargo' },
-  { path: 'cargo.dischargedQuantity', displayPath: 'Cargo → Discharged Quantity', section: 'Cargo' },
+  { path: 'cargo.totalCargo', displayPath: 'Cargo → Total Cargo', section: 'Cargo', dataType: 'number', exampleValue: '65,420' },
+  { path: 'cargo.loadedQuantity', displayPath: 'Cargo → Loaded Quantity', section: 'Cargo', dataType: 'number', exampleValue: '65,420' },
+  { path: 'cargo.dischargedQuantity', displayPath: 'Cargo → Discharged Quantity', section: 'Cargo', dataType: 'number', exampleValue: '0' },
 ]
 
 // Legacy flat paths for backward compatibility
@@ -2067,11 +2072,29 @@ function SourceFieldAutocomplete({ value, onChange, placeholder }: SourceFieldAu
                       key={field.path}
                       type="button"
                       onClick={() => handleSelect(field)}
-                      className={`w-full px-3 py-2 text-left text-sm hover:bg-[#f8fafc] ${
+                      className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-[#f8fafc] ${
                         field.path === value ? "bg-[#f3e8ff] text-[#7c3aed]" : "text-[#334155]"
                       }`}
                     >
-                      {field.displayPath}
+                      <span className="truncate">{field.displayPath}</span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        {field.exampleValue && (
+                          <span className="max-w-24 truncate text-xs text-[#94a3b8]" title={field.exampleValue}>
+                            {field.exampleValue}
+                          </span>
+                        )}
+                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium uppercase ${
+                          field.dataType === 'number' ? 'bg-[#dbeafe] text-[#1d4ed8]' :
+                          field.dataType === 'text' ? 'bg-[#f3e8ff] text-[#7c3aed]' :
+                          field.dataType === 'datetime' ? 'bg-[#fef3c7] text-[#92400e]' :
+                          field.dataType === 'enum' ? 'bg-[#dcfce7] text-[#166534]' :
+                          field.dataType === 'latlong' ? 'bg-[#fce7f3] text-[#9d174d]' :
+                          field.dataType === 'duration' ? 'bg-[#e0e7ff] text-[#4338ca]' :
+                          'bg-[#f1f5f9] text-[#64748b]'
+                        }`}>
+                          {field.dataType}
+                        </span>
+                      </span>
                     </button>
                   ))}
                 </div>
