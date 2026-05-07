@@ -53,7 +53,7 @@ const transformTypeLabels: Record<TransformType, string> = {
   lookup: "Lookup",
   aggregation: "Aggregation",
   formula: "Formula",
-  constant: "Constant",
+  constant: "Constant value",
   manual: "Manual",
 }
 

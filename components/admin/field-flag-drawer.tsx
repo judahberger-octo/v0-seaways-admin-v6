@@ -262,7 +262,7 @@ export function FieldFlagDrawer({ fieldId, onClose }: FieldFlagDrawerProps) {
           </div>
         </div>
 
-        {/* Re-extraction success banner */}
+        {/* Re-mapping success banner */}
         {reExtractionComplete && (
           <div className="flex-shrink-0 border-b border-[#bbf7d0] bg-[#dcfce7] px-6 py-4">
             <div className="flex items-start gap-3">
@@ -283,7 +283,7 @@ export function FieldFlagDrawer({ fieldId, onClose }: FieldFlagDrawerProps) {
         {isEditPanelOpen && (
           <div className="flex-shrink-0 border-b border-[#e2e8f0] bg-[#f8fafc] p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[#0f172a]">Edit extraction logic</h3>
+              <h3 className="text-sm font-semibold text-[#0f172a]">Edit mapping logic</h3>
               <button
                 onClick={() => setIsEditPanelOpen(false)}
                 className="text-xs text-[#64748b] hover:text-[#0f172a]"
@@ -321,10 +321,10 @@ export function FieldFlagDrawer({ fieldId, onClose }: FieldFlagDrawerProps) {
                 />
               </div>
 
-              {/* Extraction hint */}
+              {/* Mapping hint */}
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-[#334155]">
-                  Extraction hint (AI prompt guidance)
+                  Mapping hint (AI prompt guidance)
                 </label>
                 <textarea
                   value={editedExtractionHint}
@@ -602,7 +602,7 @@ function FlagOccurrenceRow({
                 </p>
               </div>
 
-              {/* New extracted value (only shown after re-extraction) */}
+              {/* New mapped value (only shown after re-mapping) */}
               {hasNewValue && (
                 <div className={`rounded-lg p-3 ${newValueMatches ? "bg-[#dcfce7] ring-2 ring-[#22c55e]" : "bg-[#fef3c7]"}`}>
                   <p className="flex items-center gap-1.5 text-xs font-medium text-[#64748b]">
@@ -633,14 +633,14 @@ function FlagOccurrenceRow({
                   <>
                     <CheckCircle2 className="h-4 w-4 text-[#22c55e]" />
                     <span className="text-xs font-medium text-[#166534]">
-                      New extraction matches source — ready to mark as fixed
+                      New mapping matches source — ready to mark as fixed
                     </span>
                   </>
                 ) : (
                   <>
                     <AlertTriangle className="h-4 w-4 text-[#eab308]" />
                     <span className="text-xs font-medium text-[#92400e]">
-                      New extraction still differs from source — may need further adjustment
+                      New mapping still differs from source — may need further adjustment
                     </span>
                   </>
                 )}

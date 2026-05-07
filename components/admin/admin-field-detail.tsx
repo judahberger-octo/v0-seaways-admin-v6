@@ -1578,7 +1578,7 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                     {/* Info banner */}
                     <div className="rounded-lg border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3">
                       <p className="text-sm text-[#1e40af]">
-                        This field will be filled by the crew on submit. No source extraction is performed.
+                        This field will be filled by the crew on submit. No source mapping is performed.
                       </p>
                     </div>
 
@@ -2295,7 +2295,7 @@ const transformTypeOptions: { value: TransformTypeOption; label: string }[] = [
   { value: 'lookup', label: 'Lookup' },
   { value: 'aggregation', label: 'Aggregation' },
   { value: 'formula', label: 'Formula' },
-  { value: 'constant', label: 'Constant' },
+  { value: 'constant', label: 'Constant value' },
   { value: 'manual', label: 'Manual' },
 ]
 

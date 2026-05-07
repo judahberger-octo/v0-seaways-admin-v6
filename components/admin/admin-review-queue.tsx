@@ -198,7 +198,7 @@ export function AdminReviewQueue() {
         <div className="mb-6">
           <h1 className="text-xl font-semibold text-[#0f172a]">Review Queue</h1>
           <p className="mt-1 text-sm text-[#64748b]">
-            Manage flagged field extractions across all reports
+            Manage flagged field mappings across all reports
           </p>
         </div>
 
