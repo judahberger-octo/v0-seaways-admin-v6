@@ -234,6 +234,82 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
     updateAggregationConfig({ sourceFields: newFields })
   }
 
+  // Formula transform configuration state
+  type FormulaOperator = '+' | '-' | '×' | '÷'
+  interface FormulaOperand {
+    type: 'field' | 'constant'
+    value: string // field path or constant value
+  }
+  interface FormulaTransformConfig {
+    sourceForm: string
+    operands: FormulaOperand[]
+    operators: FormulaOperator[]
+  }
+  const defaultFormulaConfig: FormulaTransformConfig = { 
+    sourceForm: '', 
+    operands: [{ type: 'field', value: '' }, { type: 'field', value: '' }],
+    operators: ['+']
+  }
+  const [sharedFormulaConfig, setSharedFormulaConfig] = useState<FormulaTransformConfig>(defaultFormulaConfig)
+  const [perFormFormulaConfig, setPerFormFormulaConfig] = useState<Record<string, FormulaTransformConfig>>({})
+
+  // Get current formula config for active context
+  const getCurrentFormulaConfig = (): FormulaTransformConfig => {
+    if (sameLogicForAllForms) {
+      return sharedFormulaConfig
+    }
+    return activeFormTab ? perFormFormulaConfig[activeFormTab] || defaultFormulaConfig : defaultFormulaConfig
+  }
+
+  // Update formula config
+  const updateFormulaConfig = (updates: Partial<FormulaTransformConfig>) => {
+    if (sameLogicForAllForms) {
+      setSharedFormulaConfig((prev) => ({ ...prev, ...updates }))
+    } else if (activeFormTab) {
+      setPerFormFormulaConfig((prev) => ({
+        ...prev,
+        [activeFormTab]: { ...(prev[activeFormTab] || defaultFormulaConfig), ...updates }
+      }))
+    }
+    setHasUnsavedChanges(true)
+  }
+
+  // Update a single operand in the formula config
+  const updateFormulaOperand = (index: number, updates: Partial<FormulaOperand>) => {
+    const current = getCurrentFormulaConfig()
+    const newOperands = [...current.operands]
+    newOperands[index] = { ...newOperands[index], ...updates }
+    updateFormulaConfig({ operands: newOperands })
+  }
+
+  // Update an operator in the formula config
+  const updateFormulaOperator = (index: number, value: FormulaOperator) => {
+    const current = getCurrentFormulaConfig()
+    const newOperators = [...current.operators]
+    newOperators[index] = value
+    updateFormulaConfig({ operators: newOperators })
+  }
+
+  // Add a new operand to the formula config
+  const addFormulaOperand = () => {
+    const current = getCurrentFormulaConfig()
+    updateFormulaConfig({ 
+      operands: [...current.operands, { type: 'field', value: '' }],
+      operators: [...current.operators, '+']
+    })
+  }
+
+  // Remove an operand from the formula config
+  const removeFormulaOperand = (index: number) => {
+    const current = getCurrentFormulaConfig()
+    if (current.operands.length <= 2) return // Minimum 2 operands required
+    const newOperands = current.operands.filter((_, i) => i !== index)
+    // Remove the operator before this operand (or after if it's the first)
+    const operatorIndex = index === 0 ? 0 : index - 1
+    const newOperators = current.operators.filter((_, i) => i !== operatorIndex)
+    updateFormulaConfig({ operands: newOperands, operators: newOperators })
+  }
+
   // Get sorted selected forms for tabs
   const selectedForms = (formData.appearsOnFormIds || [])
     .map((id) => targetForms.find((f) => f.id === id))
@@ -880,10 +956,131 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                 )}
 
                 {getCurrentTransformType() === 'formula' && (
-                  <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
-                    <p className="text-sm text-[#64748b]">
-                      Formula transform configuration will be added in Prompt 13.
-                    </p>
+                  <div className="space-y-4">
+                    {/* Source form dropdown */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+                        Source form <span className="text-[#ef4444]">*</span>
+                      </label>
+                      <SourceFormDropdown
+                        value={getCurrentFormulaConfig().sourceForm}
+                        onChange={(value) => updateFormulaConfig({ sourceForm: value })}
+                      />
+                      <p className="mt-1 text-xs text-[#64748b]">
+                        Select which NAVTOR report type to read fields from.
+                      </p>
+                    </div>
+
+                    {/* Formula builder */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+                        Formula <span className="text-[#ef4444]">*</span>
+                      </label>
+                      
+                      {/* Formula row */}
+                      <div className="flex flex-wrap items-start gap-2">
+                        {getCurrentFormulaConfig().operands.map((operand, index) => (
+                          <div key={index} className="flex items-start gap-2">
+                            {/* Operand */}
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1">
+                                {/* Operand type toggle */}
+                                <button
+                                  type="button"
+                                  onClick={() => updateFormulaOperand(index, { 
+                                    type: operand.type === 'field' ? 'constant' : 'field',
+                                    value: '' 
+                                  })}
+                                  className={`rounded px-2 py-1 text-xs font-medium ${
+                                    operand.type === 'field' 
+                                      ? 'bg-[#7c3aed] text-white' 
+                                      : 'bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0]'
+                                  }`}
+                                >
+                                  Field
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => updateFormulaOperand(index, { 
+                                    type: operand.type === 'constant' ? 'field' : 'constant',
+                                    value: '' 
+                                  })}
+                                  className={`rounded px-2 py-1 text-xs font-medium ${
+                                    operand.type === 'constant' 
+                                      ? 'bg-[#7c3aed] text-white' 
+                                      : 'bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0]'
+                                  }`}
+                                >
+                                  Const
+                                </button>
+                                {/* Remove button (only if more than 2 operands) */}
+                                {getCurrentFormulaConfig().operands.length > 2 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeFormulaOperand(index)}
+                                    className="rounded p-1 text-[#94a3b8] hover:bg-[#fee2e2] hover:text-[#ef4444]"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                              
+                              {/* Operand input */}
+                              {operand.type === 'field' ? (
+                                <div className="w-56">
+                                  <SourceFieldAutocomplete
+                                    value={operand.value}
+                                    onChange={(value) => updateFormulaOperand(index, { value })}
+                                    placeholder="Select field..."
+                                  />
+                                </div>
+                              ) : (
+                                <input
+                                  type="number"
+                                  value={operand.value}
+                                  onChange={(e) => updateFormulaOperand(index, { value: e.target.value })}
+                                  placeholder="0"
+                                  className="w-24 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                                />
+                              )}
+                            </div>
+
+                            {/* Operator (between operands) */}
+                            {index < getCurrentFormulaConfig().operands.length - 1 && (
+                              <div className="flex h-[68px] items-end pb-2">
+                                <select
+                                  value={getCurrentFormulaConfig().operators[index] || '+'}
+                                  onChange={(e) => updateFormulaOperator(index, e.target.value as FormulaOperator)}
+                                  className="h-9 w-14 appearance-none rounded-lg border border-[#e2e8f0] bg-white px-2 text-center text-lg font-medium text-[#334155] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                                >
+                                  <option value="+">+</option>
+                                  <option value="-">−</option>
+                                  <option value="×">×</option>
+                                  <option value="÷">÷</option>
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+
+                        {/* Add operand button */}
+                        <div className="flex h-[68px] items-end pb-2">
+                          <button
+                            type="button"
+                            onClick={addFormulaOperand}
+                            className="flex h-9 items-center gap-1 rounded-lg border border-dashed border-[#d1d5db] px-3 text-sm text-[#64748b] hover:border-[#7c3aed] hover:bg-[#f8fafc] hover:text-[#7c3aed]"
+                          >
+                            <Plus className="h-4 w-4" />
+                            Add
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Helper text */}
+                      <p className="mt-3 text-xs text-[#64748b]">
+                        Evaluated left to right. No parentheses or operator precedence — for nested expressions like A ÷ (B − C), document the intended order in Notes.
+                      </p>
+                    </div>
                   </div>
                 )}
 
