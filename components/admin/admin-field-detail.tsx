@@ -179,6 +179,61 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
     setHasUnsavedChanges(true)
   }
 
+  // Aggregation transform configuration state
+  type AggregationOperator = 'sum' | 'average' | 'concat'
+  interface AggregationTransformConfig {
+    sourceForm: string
+    operator: AggregationOperator | ''
+    sourceFields: string[]
+    separator: string // Only used for concat
+  }
+  const defaultAggregationConfig: AggregationTransformConfig = { sourceForm: '', operator: '', sourceFields: ['', ''], separator: ' ' }
+  const [sharedAggregationConfig, setSharedAggregationConfig] = useState<AggregationTransformConfig>(defaultAggregationConfig)
+  const [perFormAggregationConfig, setPerFormAggregationConfig] = useState<Record<string, AggregationTransformConfig>>({})
+
+  // Get current aggregation config for active context
+  const getCurrentAggregationConfig = (): AggregationTransformConfig => {
+    if (sameLogicForAllForms) {
+      return sharedAggregationConfig
+    }
+    return activeFormTab ? perFormAggregationConfig[activeFormTab] || defaultAggregationConfig : defaultAggregationConfig
+  }
+
+  // Update aggregation config
+  const updateAggregationConfig = (updates: Partial<AggregationTransformConfig>) => {
+    if (sameLogicForAllForms) {
+      setSharedAggregationConfig((prev) => ({ ...prev, ...updates }))
+    } else if (activeFormTab) {
+      setPerFormAggregationConfig((prev) => ({
+        ...prev,
+        [activeFormTab]: { ...(prev[activeFormTab] || defaultAggregationConfig), ...updates }
+      }))
+    }
+    setHasUnsavedChanges(true)
+  }
+
+  // Update a single source field in the aggregation config
+  const updateAggregationSourceField = (index: number, value: string) => {
+    const current = getCurrentAggregationConfig()
+    const newFields = [...current.sourceFields]
+    newFields[index] = value
+    updateAggregationConfig({ sourceFields: newFields })
+  }
+
+  // Add a new source field to the aggregation config
+  const addAggregationSourceField = () => {
+    const current = getCurrentAggregationConfig()
+    updateAggregationConfig({ sourceFields: [...current.sourceFields, ''] })
+  }
+
+  // Remove a source field from the aggregation config
+  const removeAggregationSourceField = (index: number) => {
+    const current = getCurrentAggregationConfig()
+    if (current.sourceFields.length <= 2) return // Minimum 2 fields required
+    const newFields = current.sourceFields.filter((_, i) => i !== index)
+    updateAggregationConfig({ sourceFields: newFields })
+  }
+
   // Get sorted selected forms for tabs
   const selectedForms = (formData.appearsOnFormIds || [])
     .map((id) => targetForms.find((f) => f.id === id))
@@ -713,10 +768,114 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                 )}
 
                 {getCurrentTransformType() === 'aggregation' && (
-                  <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
-                    <p className="text-sm text-[#64748b]">
-                      Aggregation transform configuration will be added in Prompt 12.
-                    </p>
+                  <div className="space-y-4">
+                    {/* Source form dropdown */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+                        Source form <span className="text-[#ef4444]">*</span>
+                      </label>
+                      <SourceFormDropdown
+                        value={getCurrentAggregationConfig().sourceForm}
+                        onChange={(value) => updateAggregationConfig({ sourceForm: value })}
+                      />
+                      <p className="mt-1 text-xs text-[#64748b]">
+                        Select which NAVTOR report type to read from.
+                      </p>
+                    </div>
+
+                    {/* Operator dropdown */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+                        Operator <span className="text-[#ef4444]">*</span>
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={getCurrentAggregationConfig().operator}
+                          onChange={(e) => updateAggregationConfig({ operator: e.target.value as AggregationOperator | '' })}
+                          className="w-full appearance-none rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 pr-10 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                        >
+                          <option value="">Select operator...</option>
+                          <option value="sum">Sum</option>
+                          <option value="average">Average</option>
+                          <option value="concat">Concat</option>
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748b]" />
+                      </div>
+                      <p className="mt-1 text-xs text-[#64748b]">
+                        Select how to aggregate the source field values.
+                      </p>
+                    </div>
+
+                    {/* Source fields - repeatable list */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+                        Source fields <span className="text-[#ef4444]">*</span>
+                        <span className="ml-1 font-normal text-[#64748b]">(min 2)</span>
+                      </label>
+                      <div className="space-y-2">
+                        {getCurrentAggregationConfig().sourceFields.map((field, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <div className="flex-1">
+                              <SourceFieldAutocomplete
+                                value={field}
+                                onChange={(value) => updateAggregationSourceField(index, value)}
+                                placeholder={`Source field ${index + 1}...`}
+                              />
+                            </div>
+                            {getCurrentAggregationConfig().sourceFields.length > 2 && (
+                              <button
+                                type="button"
+                                onClick={() => removeAggregationSourceField(index)}
+                                className="flex-shrink-0 rounded-lg p-2 text-[#94a3b8] hover:bg-[#fee2e2] hover:text-[#ef4444]"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        
+                        {/* Add source field button */}
+                        <button
+                          type="button"
+                          onClick={addAggregationSourceField}
+                          className="flex items-center gap-2 rounded-lg border border-dashed border-[#d1d5db] px-3 py-2 text-sm text-[#64748b] hover:border-[#7c3aed] hover:bg-[#f8fafc] hover:text-[#7c3aed]"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add source field
+                        </button>
+                      </div>
+                      <p className="mt-1 text-xs text-[#64748b]">
+                        Select two or more source fields to aggregate.
+                      </p>
+                    </div>
+
+                    {/* Separator input - only for concat */}
+                    {getCurrentAggregationConfig().operator === 'concat' && (
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+                          Separator
+                        </label>
+                        <input
+                          type="text"
+                          value={getCurrentAggregationConfig().separator}
+                          onChange={(e) => updateAggregationConfig({ separator: e.target.value })}
+                          placeholder=" "
+                          className="w-32 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                        />
+                        <p className="mt-1 text-xs text-[#64748b]">
+                          Character(s) to insert between concatenated values. Default is a space.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Validation message */}
+                    {getCurrentAggregationConfig().sourceFields.filter(f => f).length < 2 && (
+                      <div className="rounded-lg border border-[#fef3c7] bg-[#fffbeb] px-3 py-2">
+                        <p className="text-xs text-[#92400e]">
+                          At least 2 source fields are required for any aggregation.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
