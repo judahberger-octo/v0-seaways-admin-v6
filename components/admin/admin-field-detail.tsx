@@ -338,6 +338,34 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
     setHasUnsavedChanges(true)
   }
 
+  // Manual transform configuration state
+  interface ManualTransformConfig {
+    crewInstruction: string
+  }
+  const [sharedManualConfig, setSharedManualConfig] = useState<ManualTransformConfig>({ crewInstruction: '' })
+  const [perFormManualConfig, setPerFormManualConfig] = useState<Record<string, ManualTransformConfig>>({})
+
+  // Get current manual config for active context
+  const getCurrentManualConfig = (): ManualTransformConfig => {
+    if (sameLogicForAllForms) {
+      return sharedManualConfig
+    }
+    return activeFormTab ? perFormManualConfig[activeFormTab] || { crewInstruction: '' } : { crewInstruction: '' }
+  }
+
+  // Update manual config
+  const updateManualConfig = (updates: Partial<ManualTransformConfig>) => {
+    if (sameLogicForAllForms) {
+      setSharedManualConfig((prev) => ({ ...prev, ...updates }))
+    } else if (activeFormTab) {
+      setPerFormManualConfig((prev) => ({
+        ...prev,
+        [activeFormTab]: { ...(prev[activeFormTab] || { crewInstruction: '' }), ...updates }
+      }))
+    }
+    setHasUnsavedChanges(true)
+  }
+
   // Get sorted selected forms for tabs
   const selectedForms = (formData.appearsOnFormIds || [])
     .map((id) => targetForms.find((f) => f.id === id))
@@ -1259,10 +1287,30 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                 )}
 
                 {getCurrentTransformType() === 'manual' && (
-                  <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
-                    <p className="text-sm text-[#64748b]">
-                      Manual transform configuration will be added in Prompt 15.
-                    </p>
+                  <div className="space-y-4">
+                    {/* Info banner */}
+                    <div className="rounded-lg border border-[#bfdbfe] bg-[#eff6ff] px-4 py-3">
+                      <p className="text-sm text-[#1e40af]">
+                        This field will be filled by the crew on submit. No source extraction is performed.
+                      </p>
+                    </div>
+
+                    {/* Crew instruction textarea */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+                        Crew instruction <span className="text-[#64748b]">(optional)</span>
+                      </label>
+                      <textarea
+                        value={getCurrentManualConfig().crewInstruction}
+                        onChange={(e) => updateManualConfig({ crewInstruction: e.target.value })}
+                        placeholder="Enter instructions for the crew..."
+                        rows={4}
+                        className="w-full resize-none rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                      />
+                      <p className="mt-1.5 text-xs text-[#64748b]">
+                        Crew will fill this field on submit. Leave instructions for them here (they&apos;ll see it inline next to the field).
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
