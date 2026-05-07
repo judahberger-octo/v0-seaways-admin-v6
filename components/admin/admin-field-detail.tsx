@@ -1998,6 +1998,10 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                 dataType={formData.dataType || "text"}
                 definitionVersion={formData.version || 1}
                 transformType={getCurrentTransformType()}
+                activeFormType={!sameLogicForAllForms && activeFormTab 
+                  ? selectedForms.find(f => f.id === activeFormTab)?.name 
+                  : undefined
+                }
               />
             </TabbedSection>
 
@@ -3321,9 +3325,10 @@ interface FieldTestPanelProps {
   dataType: FieldDefinition["dataType"]
   definitionVersion: number
   transformType?: string
+  activeFormType?: string // For tabbed mode: the form type to filter reports by
 }
 
-function FieldTestPanel({ fieldId, dataType, definitionVersion, transformType }: FieldTestPanelProps) {
+function FieldTestPanel({ fieldId, dataType, definitionVersion, transformType, activeFormType }: FieldTestPanelProps) {
   const [selectedReport, setSelectedReport] = useState<string>("")
   const [expectedValue, setExpectedValue] = useState<string>("")
   const [isRunning, setIsRunning] = useState(false)
@@ -3413,6 +3418,7 @@ function FieldTestPanel({ fieldId, dataType, definitionVersion, transformType }:
           <ReportPicker
             selectedReportId={selectedReport}
             onChange={setSelectedReport}
+            formTypeFilter={activeFormType}
           />
         </div>
 
@@ -3522,13 +3528,19 @@ function FieldTestPanel({ fieldId, dataType, definitionVersion, transformType }:
 interface ReportPickerProps {
   selectedReportId: string
   onChange: (reportId: string) => void
+  formTypeFilter?: string // Filter reports to this form type (e.g., "Noon (Sea)", "Arrival")
 }
 
-function ReportPicker({ selectedReportId, onChange }: ReportPickerProps) {
+function ReportPicker({ selectedReportId, onChange, formTypeFilter }: ReportPickerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState("")
 
-  const filteredReports = MOCK_REPORTS.filter(
+  // First filter by form type if specified, then by search
+  const formFilteredReports = formTypeFilter 
+    ? MOCK_REPORTS.filter(r => r.type === formTypeFilter)
+    : MOCK_REPORTS
+
+  const filteredReports = formFilteredReports.filter(
     (r) =>
       r.id.toLowerCase().includes(search.toLowerCase()) ||
       r.vesselName.toLowerCase().includes(search.toLowerCase()) ||
