@@ -36,6 +36,12 @@ import {
 } from "./modals"
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from "lucide-react"
 
+// Mock current user for admin detection
+const currentUser = {
+  email: 'admin@seaways.com',
+  role: 'admin' as 'admin' | 'crew', // Toggle to 'crew' to hide admin links
+}
+
 // Field status types
 type FieldStatus = "verified" | "flagged" | "pending" | "not-populated" | "manually-edited"
 type FieldType = "standard" | "critical" | "manualFill"
@@ -408,6 +414,16 @@ function FieldCard({
               <Info className="w-3.5 h-3.5" />
             </button>
           )}
+          {/* Admin-only link to field definition */}
+          {currentUser.role === 'admin' && (
+            <a
+              href={`/admin/field-definitions/${field.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-xs text-purple-600 hover:text-purple-800 hover:underline ml-1"
+            >
+              View in admin panel
+            </a>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {getStatusChip()}
@@ -598,9 +614,20 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
         {/* Header Row: Display name label + Field type pill */}
         <div className="flex items-start justify-between mb-1">
           {/* Display Name - small muted uppercase label, with FIELD_LABELS fallback */}
-          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-            {field.fieldName || FIELD_LABELS[field.id] || field.id}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              {field.fieldName || FIELD_LABELS[field.id] || field.id}
+            </span>
+            {/* Admin-only link to field definition */}
+            {currentUser.role === 'admin' && (
+              <a
+                href={`/admin/field-definitions/${field.id}`}
+                className="text-xs text-purple-600 hover:text-purple-800 hover:underline"
+              >
+                View in admin panel
+              </a>
+            )}
+          </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* In read-only mode: show terminal state pill (Verified/Complete/Flagged) */}
             {/* In edit mode: show field type pill (Critical/Manual fill) */}
