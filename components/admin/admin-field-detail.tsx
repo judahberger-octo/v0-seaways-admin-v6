@@ -366,6 +366,71 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
     setHasUnsavedChanges(true)
   }
 
+  // WHERE conditions state for when the mapping applies
+  type ConditionOperator = 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'contains' | 'is_empty' | 'is_not_empty'
+  interface WhereCondition {
+    id: string
+    fieldPath: string
+    operator: ConditionOperator
+    value: string
+  }
+  type ConditionCombinator = 'AND' | 'OR'
+  interface WhereConditionsConfig {
+    conditions: WhereCondition[]
+    combinator: ConditionCombinator
+  }
+  const defaultWhereConditions: WhereConditionsConfig = { conditions: [], combinator: 'AND' }
+  const [sharedWhereConditions, setSharedWhereConditions] = useState<WhereConditionsConfig>(defaultWhereConditions)
+  const [perFormWhereConditions, setPerFormWhereConditions] = useState<Record<string, WhereConditionsConfig>>({})
+
+  // Get current where conditions for active context
+  const getCurrentWhereConditions = (): WhereConditionsConfig => {
+    if (sameLogicForAllForms) {
+      return sharedWhereConditions
+    }
+    return activeFormTab ? perFormWhereConditions[activeFormTab] || defaultWhereConditions : defaultWhereConditions
+  }
+
+  // Update where conditions
+  const updateWhereConditions = (updates: Partial<WhereConditionsConfig>) => {
+    if (sameLogicForAllForms) {
+      setSharedWhereConditions((prev) => ({ ...prev, ...updates }))
+    } else if (activeFormTab) {
+      setPerFormWhereConditions((prev) => ({
+        ...prev,
+        [activeFormTab]: { ...(prev[activeFormTab] || defaultWhereConditions), ...updates }
+      }))
+    }
+    setHasUnsavedChanges(true)
+  }
+
+  // Add a new condition
+  const addWhereCondition = () => {
+    const current = getCurrentWhereConditions()
+    const newCondition: WhereCondition = {
+      id: `cond-${Date.now()}`,
+      fieldPath: '',
+      operator: 'equals',
+      value: '',
+    }
+    updateWhereConditions({ conditions: [...current.conditions, newCondition] })
+  }
+
+  // Update a condition
+  const updateWhereCondition = (id: string, updates: Partial<WhereCondition>) => {
+    const current = getCurrentWhereConditions()
+    const newConditions = current.conditions.map((c) => 
+      c.id === id ? { ...c, ...updates } : c
+    )
+    updateWhereConditions({ conditions: newConditions })
+  }
+
+  // Remove a condition
+  const removeWhereCondition = (id: string) => {
+    const current = getCurrentWhereConditions()
+    updateWhereConditions({ conditions: current.conditions.filter((c) => c.id !== id) })
+  }
+
   // Get sorted selected forms for tabs
   const selectedForms = (formData.appearsOnFormIds || [])
     .map((id) => targetForms.find((f) => f.id === id))
@@ -1326,6 +1391,132 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
               onTabChange={setActiveFormTab}
             >
               <div className="space-y-8">
+                {/* WHERE conditions - when the mapping applies */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-[#334155]">When does this mapping apply?</h3>
+                    <p className="mt-0.5 text-xs text-[#64748b]">
+                      Define conditions for when this mapping should be applied
+                    </p>
+                  </div>
+
+                  {/* Empty state */}
+                  {getCurrentWhereConditions().conditions.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-[#d1d5db] bg-[#f8fafc] p-6 text-center">
+                      <p className="text-sm text-[#64748b]">No conditions — rule always applies.</p>
+                      <button
+                        type="button"
+                        onClick={addWhereCondition}
+                        className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[#7c3aed] bg-white px-3 py-2 text-sm font-medium text-[#7c3aed] hover:bg-[#f3e8ff]"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add condition
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {getCurrentWhereConditions().conditions.map((condition, index) => (
+                        <div key={condition.id}>
+                          {/* AND/OR combinator between rows */}
+                          {index > 0 && (
+                            <div className="my-2 flex items-center justify-center">
+                              <div className="flex rounded-lg border border-[#e2e8f0] bg-white">
+                                <button
+                                  type="button"
+                                  onClick={() => updateWhereConditions({ combinator: 'AND' })}
+                                  className={`px-3 py-1 text-xs font-medium ${
+                                    getCurrentWhereConditions().combinator === 'AND'
+                                      ? 'bg-[#7c3aed] text-white'
+                                      : 'text-[#64748b] hover:bg-[#f8fafc]'
+                                  } rounded-l-lg`}
+                                >
+                                  AND
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => updateWhereConditions({ combinator: 'OR' })}
+                                  className={`px-3 py-1 text-xs font-medium ${
+                                    getCurrentWhereConditions().combinator === 'OR'
+                                      ? 'bg-[#7c3aed] text-white'
+                                      : 'text-[#64748b] hover:bg-[#f8fafc]'
+                                  } rounded-r-lg`}
+                                >
+                                  OR
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Condition row */}
+                          <div className="flex items-center gap-2 rounded-lg border border-[#e2e8f0] bg-white p-3">
+                            {/* Field picker */}
+                            <div className="flex-1">
+                              <SourceFieldAutocomplete
+                                value={condition.fieldPath}
+                                onChange={(value) => updateWhereCondition(condition.id, { fieldPath: value })}
+                                placeholder="Select field..."
+                              />
+                            </div>
+
+                            {/* Operator dropdown */}
+                            <div className="relative w-36">
+                              <select
+                                value={condition.operator}
+                                onChange={(e) => updateWhereCondition(condition.id, { operator: e.target.value as ConditionOperator })}
+                                className="w-full appearance-none rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 pr-8 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                              >
+                                <option value="equals">equals</option>
+                                <option value="not_equals">not equals</option>
+                                <option value="greater_than">greater than</option>
+                                <option value="less_than">less than</option>
+                                <option value="contains">contains</option>
+                                <option value="is_empty">is empty</option>
+                                <option value="is_not_empty">is not empty</option>
+                              </select>
+                              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748b]" />
+                            </div>
+
+                            {/* Value input (hidden for is_empty/is_not_empty) */}
+                            {condition.operator !== 'is_empty' && condition.operator !== 'is_not_empty' && (
+                              <input
+                                type="text"
+                                value={condition.value}
+                                onChange={(e) => updateWhereCondition(condition.id, { value: e.target.value })}
+                                placeholder="Value..."
+                                className="w-32 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                              />
+                            )}
+
+                            {/* Delete button */}
+                            <button
+                              type="button"
+                              onClick={() => removeWhereCondition(condition.id)}
+                              className="rounded-lg p-2 text-[#94a3b8] hover:bg-[#fee2e2] hover:text-[#ef4444]"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Add condition button */}
+                      <button
+                        type="button"
+                        onClick={addWhereCondition}
+                        className="flex items-center gap-2 rounded-lg border border-dashed border-[#d1d5db] px-3 py-2 text-sm text-[#64748b] hover:border-[#7c3aed] hover:bg-[#f8fafc] hover:text-[#7c3aed]"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add condition
+                      </button>
+
+                      {/* Helper text */}
+                      <p className="text-xs text-[#64748b]">
+                        If conditions don&apos;t match, this field is left unmapped for that report.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
                 {/* A) Validation Rules */}
                 <div className="space-y-4">
                   <div>
