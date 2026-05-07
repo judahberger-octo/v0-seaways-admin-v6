@@ -431,6 +431,31 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
     updateWhereConditions({ conditions: current.conditions.filter((c) => c.id !== id) })
   }
 
+  // Notes state (engineering handoff)
+  const [sharedNotes, setSharedNotes] = useState('')
+  const [perFormNotes, setPerFormNotes] = useState<Record<string, string>>({})
+
+  // Get current notes for active context
+  const getCurrentNotes = (): string => {
+    if (sameLogicForAllForms) {
+      return sharedNotes
+    }
+    return activeFormTab ? perFormNotes[activeFormTab] || '' : ''
+  }
+
+  // Update notes
+  const updateNotes = (value: string) => {
+    if (sameLogicForAllForms) {
+      setSharedNotes(value)
+    } else if (activeFormTab) {
+      setPerFormNotes((prev) => ({
+        ...prev,
+        [activeFormTab]: value
+      }))
+    }
+    setHasUnsavedChanges(true)
+  }
+
   // Get sorted selected forms for tabs
   const selectedForms = (formData.appearsOnFormIds || [])
     .map((id) => targetForms.find((f) => f.id === id))
@@ -1585,9 +1610,26 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
               activeFormId={activeFormTab}
               onTabChange={setActiveFormTab}
             >
-              <p className="text-sm text-[#64748b]">
-                Add internal notes about this field definition for your team.
-              </p>
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+                    Notes for engineering
+                  </label>
+                  <textarea
+                    value={getCurrentNotes()}
+                    onChange={(e) => updateNotes(e.target.value)}
+                    placeholder="Document edge cases, workflow assumptions, or anything that needs context beyond the structured config above..."
+                    rows={6}
+                    className="w-full resize-y rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                  />
+                  <p className="mt-1.5 text-xs text-[#64748b]">
+                    Free-text notes for the engineering team that builds the integration. Use this to document edge cases, workflow assumptions, or anything that needs context beyond the structured config above. Markdown supported.
+                  </p>
+                </div>
+                <p className="text-xs text-[#94a3b8]">
+                  Notes are visible to all admins; not surfaced to crew anywhere.
+                </p>
+              </div>
             </TabbedSection>
 
             {/* Section 5: Check */}
