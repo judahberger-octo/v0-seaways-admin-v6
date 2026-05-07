@@ -2615,13 +2615,13 @@ function FormsMultiSelect({ selectedFormIds, onChange }: FormsMultiSelectProps) 
 
 // NAVTOR source forms (report types)
 const NAVTOR_SOURCE_FORMS = [
-  { id: 'sea-report', name: 'NAVTOR Sea Report' },
-  { id: 'port-report', name: 'NAVTOR Port Report' },
-  { id: 'arrival-report', name: 'NAVTOR Arrival Report' },
-  { id: 'departure-report', name: 'NAVTOR Departure Report' },
-  { id: 'bunkering-report', name: 'NAVTOR Bunkering Report' },
-  { id: 'cargo-handling-report', name: 'NAVTOR Cargo Handling Report' },
-  { id: 'statement-of-facts', name: 'NAVTOR Statement of Facts' },
+  { id: 'navtor-sea', name: 'NAVTOR Sea' },
+  { id: 'navtor-sea-arrival', name: 'NAVTOR Sea (Arrival)' },
+  { id: 'navtor-departure', name: 'NAVTOR Departure' },
+  { id: 'navtor-port', name: 'NAVTOR Port' },
+  { id: 'navtor-maneuvering', name: 'NAVTOR Maneuvering' },
+  { id: 'navtor-anchor', name: 'NAVTOR Anchor' },
+  { id: 'navtor-drifting', name: 'NAVTOR Drifting' },
 ]
 
 // NAVTOR source fields with full path display, grouped by section
