@@ -1997,6 +1997,7 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                 fieldId={fieldId || ""} 
                 dataType={formData.dataType || "text"}
                 definitionVersion={formData.version || 1}
+                transformType={getCurrentTransformType()}
               />
             </TabbedSection>
 
@@ -3319,131 +3320,78 @@ interface FieldTestPanelProps {
   fieldId: string
   dataType: FieldDefinition["dataType"]
   definitionVersion: number
+  transformType?: string
 }
 
-function FieldTestPanel({ fieldId, dataType, definitionVersion }: FieldTestPanelProps) {
+function FieldTestPanel({ fieldId, dataType, definitionVersion, transformType }: FieldTestPanelProps) {
   const [selectedReport, setSelectedReport] = useState<string>("")
   const [expectedValue, setExpectedValue] = useState<string>("")
   const [isRunning, setIsRunning] = useState(false)
-  const [runProgress, setRunProgress] = useState<Array<"pending" | "success" | "fail">>([])
   const [testResult, setTestResult] = useState<{
-    correctCount: number
-    outputs: Array<{ value: string; correct: boolean }>
-  } | null>(null)
-  const [showHistory, setShowHistory] = useState(false)
-  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null)
-  const [showFullSetModal, setShowFullSetModal] = useState(false)
-  const [isRunningFullSet, setIsRunningFullSet] = useState(false)
-  const [fullSetResults, setFullSetResults] = useState<Array<{
-    reportId: string
-    vesselName: string
-    score: number
+    sourceValue: string | string[]
+    transformedValue: string
+    expectedValue: string
     passed: boolean
-  }>>([])
+    timestamp: Date
+    mappingConfig: string
+  } | null>(null)
 
-  // Get test history for this field
-  const testHistory = fieldId ? getTestRunsForField(fieldId) : []
+  // Handle Manual transform type - no automated test
+  if (transformType === 'manual') {
+    return (
+      <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-6 text-center">
+        <p className="text-sm text-[#64748b]">
+          Manual — crew fills on submit. No automated test.
+        </p>
+      </div>
+    )
+  }
 
   const handleRunTest = async () => {
     if (!selectedReport || !expectedValue) return
 
     setIsRunning(true)
     setTestResult(null)
-    setRunProgress(Array(10).fill("pending"))
 
-    // Simulate 10 test runs with delays
-    const outputs: Array<{ value: string; correct: boolean }> = []
+    // Simulate a single test run
+    await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 400))
+
+    // Simulate extraction result
+    const variance = Math.random()
+    let sourceValue: string | string[]
+    let transformedValue: string
     
-    for (let i = 0; i < 10; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300))
-      
-      // Simulate extraction result - mostly correct with some variance
-      const variance = Math.random()
-      let extractedValue: string
-      let isCorrect: boolean
-      
-      if (dataType === "number") {
-        const expected = parseFloat(expectedValue)
-        if (variance > 0.15) {
-          extractedValue = expectedValue
-          isCorrect = true
-        } else {
-          // Introduce small variance for numeric fields
-          const offset = (Math.random() - 0.5) * expected * 0.1
-          extractedValue = (expected + offset).toFixed(2)
-          isCorrect = false
-        }
-      } else {
-        isCorrect = variance > 0.1
-        extractedValue = isCorrect ? expectedValue : `${expectedValue}_variant`
-      }
-      
-      outputs.push({ value: extractedValue, correct: isCorrect })
-      
-      setRunProgress((prev) => {
-        const newProgress = [...prev]
-        newProgress[i] = isCorrect ? "success" : "fail"
-        return newProgress
-      })
+    // For Aggregation/Formula, show multiple source values
+    if (transformType === 'aggregation' || transformType === 'formula') {
+      sourceValue = ['12.5', '8.3', '4.2'] // Example multi-value source
+      transformedValue = variance > 0.2 ? expectedValue : (parseFloat(expectedValue) * 0.95).toFixed(2)
+    } else {
+      sourceValue = variance > 0.15 ? expectedValue : `${expectedValue}_raw`
+      transformedValue = variance > 0.2 ? expectedValue : `${expectedValue}_transformed`
     }
 
-    const correctCount = outputs.filter((o) => o.correct).length
-    setTestResult({ correctCount, outputs })
+    // Check if pass or fail
+    const passed = transformedValue === expectedValue
+
+    setTestResult({
+      sourceValue,
+      transformedValue,
+      expectedValue,
+      passed,
+      timestamp: new Date(),
+      mappingConfig: `${transformType || 'direct'} v${definitionVersion}`,
+    })
     setIsRunning(false)
   }
 
-  const getScoreColor = (score: number) => {
-    if (score >= 9) return "text-[#22c55e]"
-    if (score >= 6) return "text-[#eab308]"
-    return "text-[#ef4444]"
-  }
-
-  const getScoreBgColor = (score: number) => {
-    if (score >= 9) return "bg-[#f0fdf4]"
-    if (score >= 6) return "bg-[#fef9c3]"
-    return "bg-[#fef2f2]"
-  }
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+  const formatTimestamp = (date: Date) => {
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
     })
-  }
-
-  // Run against full test set
-  const handleRunFullSet = async () => {
-    setShowFullSetModal(true)
-    setIsRunningFullSet(true)
-    setFullSetResults([])
-
-    // Get test reports that have this field
-    const relevantReports = testReports.filter(r => 
-      r.expectedValues.some(ev => ev.fieldId === fieldId)
-    )
-
-    const results: typeof fullSetResults = []
-
-    for (const report of relevantReports) {
-      await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300))
-      
-      // Simulate test score
-      const score = Math.random() > 0.15 ? 8 + Math.floor(Math.random() * 3) : 4 + Math.floor(Math.random() * 4)
-      
-      results.push({
-        reportId: report.id,
-        vesselName: report.vesselName,
-        score,
-        passed: score >= 8,
-      })
-      
-      setFullSetResults([...results])
-    }
-
-    setIsRunningFullSet(false)
   }
 
   return (
@@ -3451,13 +3399,12 @@ function FieldTestPanel({ fieldId, dataType, definitionVersion }: FieldTestPanel
       {/* Instructional text */}
       <div className="rounded-lg bg-[#f8fafc] px-4 py-3">
         <p className="text-sm text-[#64748b]">
-          Run the field&apos;s extraction logic against a source report 10 times and compare to the expected value. 
-          Use this to verify consistency before deploying changes.
+          Run the field&apos;s mapping against a source report once and compare to the expected value.
         </p>
       </div>
 
-      {/* Test inputs */}
-      <div className="space-y-4">
+      {/* Test inputs - 3 side by side */}
+      <div className="grid grid-cols-3 gap-4">
         {/* Source report picker */}
         <div>
           <label className="mb-1.5 block text-sm font-medium text-[#334155]">
@@ -3481,253 +3428,92 @@ function FieldTestPanel({ fieldId, dataType, definitionVersion }: FieldTestPanel
           />
         </div>
 
-        {/* Buttons */}
-        <div className="flex gap-3">
+        {/* Run test button */}
+        <div className="flex items-end">
           <button
             type="button"
             onClick={handleRunTest}
             disabled={!selectedReport || !expectedValue || isRunning}
-            className="flex items-center gap-2 rounded-lg bg-[#7c3aed] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#6d28d9] disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-[42px] w-full items-center justify-center gap-2 rounded-lg bg-[#7c3aed] px-6 text-sm font-semibold text-white hover:bg-[#6d28d9] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Play className="h-4 w-4" />
-            Run x10
-          </button>
-          <button
-            type="button"
-            onClick={handleRunFullSet}
-            disabled={isRunning || isRunningFullSet}
-            className="flex items-center gap-2 rounded-lg border border-[#e2e8f0] px-4 py-2.5 text-sm font-medium text-[#334155] hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Run against full set
+            {isRunning ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Running...
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4" />
+                Run test
+              </>
+            )}
           </button>
         </div>
       </div>
-
-      {/* Full Set Results Modal */}
-      {showFullSetModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-[#e2e8f0] px-6 py-4">
-              <div>
-                <h3 className="text-lg font-semibold text-[#0f172a]">Full set test results</h3>
-                <p className="text-sm text-[#64748b]">Definition v{definitionVersion}</p>
-              </div>
-              <button
-                onClick={() => setShowFullSetModal(false)}
-                disabled={isRunningFullSet}
-                className="rounded-lg p-1 text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#0f172a] disabled:opacity-50"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="p-6">
-              {/* Summary */}
-              {fullSetResults.length > 0 && (
-                <div className={`mb-4 rounded-lg p-4 ${
-                  fullSetResults.filter(r => r.passed).length === fullSetResults.length 
-                    ? "bg-[#f0fdf4]" 
-                    : "bg-[#fef9c3]"
-                }`}>
-                  <p className="text-lg font-bold text-[#0f172a]">
-                    Passed {fullSetResults.filter(r => r.passed).length}/{fullSetResults.length} reports
-                  </p>
-                  <p className="text-sm text-[#64748b]">
-                    {isRunningFullSet ? "Running tests..." : "All tests complete"}
-                  </p>
-                </div>
-              )}
-
-              {/* Results list */}
-              <div className="max-h-64 space-y-2 overflow-y-auto">
-                {fullSetResults.map((result, idx) => (
-                  <div
-                    key={result.reportId}
-                    className="flex items-center justify-between rounded-lg border border-[#e2e8f0] px-4 py-3"
-                  >
-                    <div>
-                      <p className="font-mono text-sm font-medium text-[#334155]">
-                        {result.reportId}
-                      </p>
-                      <p className="text-xs text-[#64748b]">{result.vesselName}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`font-semibold ${getScoreColor(result.score)}`}>
-                        {result.score}/10
-                      </span>
-                      {result.passed ? (
-                        <CheckCircle2 className="h-5 w-5 text-[#22c55e]" />
-                      ) : (
-                        <X className="h-5 w-5 text-[#ef4444]" />
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                {isRunningFullSet && fullSetResults.length === 0 && (
-                  <p className="py-8 text-center text-sm text-[#64748b]">Starting tests...</p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex justify-end border-t border-[#e2e8f0] px-6 py-4">
-              <button
-                onClick={() => setShowFullSetModal(false)}
-                disabled={isRunningFullSet}
-                className="rounded-lg bg-[#7c3aed] px-4 py-2 text-sm font-medium text-white hover:bg-[#6d28d9] disabled:opacity-50"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Progress indicator */}
-      {(isRunning || runProgress.length > 0) && (
-        <div className="space-y-3">
-          <p className="text-sm font-medium text-[#334155]">Progress</p>
-          <div className="flex gap-1.5">
-            {runProgress.map((status, index) => (
-              <div
-                key={index}
-                className={`h-8 w-8 rounded-lg transition-colors ${
-                  status === "pending"
-                    ? "bg-[#e2e8f0]"
-                    : status === "success"
-                      ? "bg-[#22c55e]"
-                      : "bg-[#ef4444]"
-                }`}
-              />
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Results card */}
       {testResult && (
-        <div className={`rounded-xl border p-5 ${getScoreBgColor(testResult.correctCount)}`}>
-          {/* Big score stat */}
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <p className={`text-4xl font-bold ${getScoreColor(testResult.correctCount)}`}>
-                {testResult.correctCount}/10
-              </p>
-              <p className="text-sm text-[#64748b]">correct extractions</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-[#94a3b8]">Definition version</p>
-              <p className="text-sm font-medium text-[#64748b]">v{definitionVersion}</p>
-            </div>
-          </div>
-
-          {/* Expected value pinned at top */}
-          <div className="mb-3 rounded-lg bg-white px-3 py-2 border border-[#e2e8f0]">
-            <p className="text-xs text-[#64748b]">Expected value</p>
-            <p className="font-mono text-sm font-semibold text-[#0f172a]">{expectedValue}</p>
-          </div>
-
-          {/* List of outputs */}
-          <div className="space-y-1">
-            {testResult.outputs.map((output, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between rounded-lg bg-white px-3 py-2"
-              >
-                <span className="text-sm text-[#64748b]">Run {index + 1}</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm text-[#0f172a]">{output.value}</span>
-                  {output.correct ? (
-                    <CheckCircle2 className="h-4 w-4 text-[#22c55e]" />
-                  ) : (
-                    <X className="h-4 w-4 text-[#ef4444]" />
-                  )}
-                </div>
+        <div className="space-y-3">
+          {/* Status pill */}
+          <div className="flex justify-center">
+            {testResult.passed ? (
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#dcfce7] px-4 py-2 text-sm font-semibold text-[#166534]">
+                <CheckCircle2 className="h-5 w-5" />
+                Pass
               </div>
-            ))}
+            ) : (
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#fee2e2] px-4 py-2 text-sm font-semibold text-[#991b1b]">
+                <X className="h-5 w-5" />
+                Fail
+              </div>
+            )}
           </div>
+
+          {/* 3-pane result card */}
+          <div className="grid grid-cols-3 gap-0 overflow-hidden rounded-xl border border-[#e2e8f0]">
+            {/* LEFT pane: Source value */}
+            <div className="border-r border-[#e2e8f0] bg-[#f8fafc] p-4">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[#64748b]">
+                Source value
+              </p>
+              {Array.isArray(testResult.sourceValue) ? (
+                <div className="space-y-1">
+                  {testResult.sourceValue.map((val, idx) => (
+                    <p key={idx} className="font-mono text-sm text-[#334155]">{val}</p>
+                  ))}
+                </div>
+              ) : (
+                <p className="font-mono text-sm text-[#334155]">{testResult.sourceValue}</p>
+              )}
+            </div>
+
+            {/* MIDDLE pane: Transformed value */}
+            <div className={`border-r border-[#e2e8f0] p-4 ${testResult.passed ? 'bg-[#f0fdf4]' : 'bg-[#fef2f2]'}`}>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[#64748b]">
+                Transformed value
+              </p>
+              <p className={`font-mono text-sm font-semibold ${testResult.passed ? 'text-[#166534]' : 'text-[#991b1b]'}`}>
+                {testResult.transformedValue}
+              </p>
+            </div>
+
+            {/* RIGHT pane: Expected value */}
+            <div className="bg-white p-4">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[#64748b]">
+                Expected value
+              </p>
+              <p className="font-mono text-sm font-semibold text-[#0f172a]">
+                {testResult.expectedValue}
+              </p>
+            </div>
+          </div>
+
+          {/* Timestamp and mapping config */}
+          <p className="text-center text-xs text-[#94a3b8]">
+            {formatTimestamp(testResult.timestamp)} • {testResult.mappingConfig}
+          </p>
         </div>
       )}
-
-      {/* Test history */}
-      <div className="border-t border-[#e2e8f0] pt-6">
-        <button
-          type="button"
-          onClick={() => setShowHistory(!showHistory)}
-          className="flex w-full items-center justify-between text-left"
-        >
-          <h3 className="text-sm font-medium text-[#334155]">
-            Test history
-            <span className="ml-2 text-[#64748b]">({testHistory.length})</span>
-          </h3>
-          <ChevronRight
-            className={`h-4 w-4 text-[#64748b] transition-transform ${showHistory ? "rotate-90" : ""}`}
-          />
-        </button>
-
-        {showHistory && testHistory.length > 0 && (
-          <div className="mt-4 space-y-2">
-            {testHistory.map((run) => {
-              const report = MOCK_REPORTS.find((r) => r.id === run.reportId)
-              const isExpanded = expandedHistoryId === run.id
-
-              return (
-                <div key={run.id} className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc]">
-                  <button
-                    type="button"
-                    onClick={() => setExpandedHistoryId(isExpanded ? null : run.id)}
-                    className="flex w-full items-center justify-between px-4 py-3 text-left"
-                  >
-                    <div className="flex items-center gap-4">
-                      <span className="font-mono text-sm text-[#334155]">{run.reportId}</span>
-                      <span className="text-sm text-[#64748b]">{run.expectedValue}</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className={`font-semibold ${getScoreColor(run.correctCount)}`}>
-                        {run.correctCount}/10
-                      </span>
-                      <span className="text-xs text-[#94a3b8]">v{run.definitionVersion}</span>
-                      <span className="text-xs text-[#94a3b8]">{formatDate(run.ranAt)}</span>
-                      <ChevronRight
-                        className={`h-4 w-4 text-[#64748b] transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                      />
-                    </div>
-                  </button>
-
-                  {isExpanded && (
-                    <div className="border-t border-[#e2e8f0] px-4 py-3">
-                      <div className="mb-2 rounded-lg bg-white px-3 py-2 border border-[#e2e8f0]">
-                        <p className="text-xs text-[#64748b]">Expected value</p>
-                        <p className="font-mono text-sm font-semibold text-[#0f172a]">
-                          {run.expectedValue}
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-5 gap-1">
-                        {run.runs.map((isCorrect, idx) => (
-                          <div
-                            key={idx}
-                            className={`flex h-8 items-center justify-center rounded text-xs font-medium ${
-                              isCorrect
-                                ? "bg-[#dcfce7] text-[#166534]"
-                                : "bg-[#fee2e2] text-[#991b1b]"
-                            }`}
-                          >
-                            {isCorrect ? "Pass" : "Fail"}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        {showHistory && testHistory.length === 0 && (
-          <p className="mt-4 text-sm text-[#64748b]">No test runs yet for this field.</p>
-        )}
-      </div>
     </div>
   )
 }
