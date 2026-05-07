@@ -19,7 +19,7 @@ const sections = [
   { id: "properties", label: "Properties" },
   { id: "mapping", label: "Mapping" },
   { id: "notes", label: "Notes" },
-  { id: "check", label: "Check" },
+  { id: "validation", label: "Validation" },
   { id: "test", label: "Test" },
   { id: "activity", label: "Activity" },
 ] as const
@@ -454,7 +454,7 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
   }
 
   // Check (verification rules) state
-  type CheckRuleKind = 'sum_equals' | 'between' | 'regex' | 'enum' | 'cross_field_equals' | 'data_type_match'
+  type CheckRuleKind = 'sum_equals' | 'between' | 'regex' | 'enum' | 'cross_field_equals' | 'data_type_match' | 'match_mapping'
   type CheckSeverity = 'warn' | 'block'
   interface CheckRule {
     id: string
@@ -1625,136 +1625,74 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
               </div>
             </SectionCard>
 
-            {/* Section 5: Check */}
+            {/* Section 5: Validation */}
             <SectionCard
-              id="check"
-              title="Check"
+              id="validation"
+              title="Validation rules"
             >
               <div className="space-y-6">
                 {/* Section description */}
                 <p className="text-sm text-[#64748b]">
-                  Verification rules applied at submission time. When crew submits, the check runs against the field&apos;s value and warns or blocks if it fails.
+                  Rules that run at submission. Failed rules either warn the crew (default) or block submission.
                 </p>
 
-                {/* Apply mapping as check checkbox */}
-                <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#e2e8f0] bg-white p-4 hover:bg-[#f8fafc]">
-                  <input
-                    type="checkbox"
-                    checked={getCurrentCheckConfig().applyMappingAsCheck}
-                    onChange={(e) => handleApplyMappingAsCheckToggle(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-[#d1d5db] text-[#7c3aed] focus:ring-[#7c3aed]"
-                  />
-                  <div>
-                    <span className="text-sm font-medium text-[#334155]">Apply mapping as a check</span>
-                    <p className="mt-0.5 text-xs text-[#64748b]">
-                      Auto-derive a check that mirrors the Mapping logic (e.g., if Mapping is Direct from path X, check is &quot;value matches the value at path X&quot;).
-                    </p>
-                  </div>
-                </label>
-
-                {/* Check rules editor */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium text-[#334155]">Check rules</h3>
-                    <button
-                      type="button"
-                      onClick={() => addCheckRule()}
-                      className="flex items-center gap-1.5 rounded-lg border border-[#7c3aed] bg-white px-3 py-1.5 text-sm font-medium text-[#7c3aed] hover:bg-[#f3e8ff]"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Add rule
-                    </button>
-                  </div>
-
+                {/* Validation rules list */}
+                <div className="space-y-3">
                   {getCurrentCheckConfig().rules.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-[#d1d5db] bg-[#f8fafc] p-6 text-center">
-                      <p className="text-sm text-[#64748b]">No check rules defined. Field will pass all checks.</p>
+                      <p className="text-sm text-[#64748b]">No validation rules defined. Field will pass all checks.</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      {getCurrentCheckConfig().rules.map((rule) => (
-                        <div key={rule.id} className="rounded-lg border border-[#e2e8f0] bg-white p-4">
-                          <div className="flex items-start gap-3">
-                            {/* Rule kind dropdown */}
-                            <div className="flex-1">
-                              <label className="mb-1 block text-xs font-medium text-[#64748b]">Rule type</label>
-                              <div className="relative">
-                                <select
-                                  value={rule.kind}
-                                  onChange={(e) => updateCheckRule(rule.id, { kind: e.target.value as CheckRuleKind, config: {} })}
-                                  className="w-full appearance-none rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 pr-8 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
-                                >
-                                  <option value="data_type_match">Data type match</option>
-                                  <option value="sum_equals">Sum equals</option>
-                                  <option value="between">Between</option>
-                                  <option value="regex">Regex</option>
-                                  <option value="enum">Enum</option>
-                                  <option value="cross_field_equals">Cross-field equals</option>
-                                </select>
-                                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748b]" />
-                              </div>
+                    getCurrentCheckConfig().rules.map((rule) => (
+                      <div key={rule.id} className="rounded-lg border border-[#e2e8f0] bg-white p-4">
+                        <div className="flex items-start gap-3">
+                          {/* Rule kind dropdown */}
+                          <div className="w-48">
+                            <label className="mb-1 block text-xs font-medium text-[#64748b]">Rule type</label>
+                            <div className="relative">
+                              <select
+                                value={rule.kind}
+                                onChange={(e) => updateCheckRule(rule.id, { kind: e.target.value as CheckRuleKind, config: {} })}
+                                className="w-full appearance-none rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 pr-8 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                              >
+                                <option value="between">Between</option>
+                                <option value="regex">Regex</option>
+                                <option value="enum">Enum</option>
+                                <option value="sum_equals">Sum equals</option>
+                                <option value="cross_field_equals">Cross-field equals</option>
+                                <option value="data_type_match">Data type match</option>
+                                <option value="match_mapping">Match mapping</option>
+                              </select>
+                              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748b]" />
                             </div>
-
-                            {/* Severity selector */}
-                            <div className="w-40">
-                              <label className="mb-1 block text-xs font-medium text-[#64748b]">Severity</label>
-                              <div className="flex rounded-lg border border-[#e2e8f0] bg-white">
-                                <button
-                                  type="button"
-                                  onClick={() => updateCheckRule(rule.id, { severity: 'warn' })}
-                                  className={`flex-1 px-3 py-2 text-xs font-medium ${
-                                    rule.severity === 'warn'
-                                      ? 'bg-[#fef3c7] text-[#92400e]'
-                                      : 'text-[#64748b] hover:bg-[#f8fafc]'
-                                  } rounded-l-lg`}
-                                >
-                                  Warn
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => updateCheckRule(rule.id, { severity: 'block' })}
-                                  className={`flex-1 px-3 py-2 text-xs font-medium ${
-                                    rule.severity === 'block'
-                                      ? 'bg-[#fee2e2] text-[#991b1b]'
-                                      : 'text-[#64748b] hover:bg-[#f8fafc]'
-                                  } rounded-r-lg`}
-                                >
-                                  Block
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Delete button */}
-                            <button
-                              type="button"
-                              onClick={() => removeCheckRule(rule.id)}
-                              className="mt-5 rounded-lg p-2 text-[#94a3b8] hover:bg-[#fee2e2] hover:text-[#ef4444]"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
                           </div>
 
-                          {/* Diverged from mapping badge */}
-                          {rule.divergedFromMapping && (
-                            <div className="mt-2">
-                              <span className="inline-flex items-center gap-1 rounded-full bg-[#fef3c7] px-2 py-0.5 text-xs font-medium text-[#92400e]">
-                                <AlertCircle className="h-3 w-3" />
-                                Diverged from mapping
-                              </span>
-                            </div>
-                          )}
-
                           {/* Rule-specific configuration */}
-                          <div className="mt-3">
+                          <div className="flex-1">
+                            <label className="mb-1 block text-xs font-medium text-[#64748b]">Configuration</label>
                             {rule.kind === 'data_type_match' && (
-                              <p className="text-xs text-[#64748b]">
-                                Verifies the extracted value is parseable as the field&apos;s declared data type ({formData.dataType || 'text'}).
+                              <p className="py-2 text-sm text-[#64748b]">
+                                No config needed — verifies value is parseable as {formData.dataType || 'text'}.
                               </p>
+                            )}
+
+                            {rule.kind === 'match_mapping' && (
+                              <div className="flex items-center gap-2 py-2">
+                                <p className="text-sm text-[#64748b]">
+                                  Auto-derived from current Mapping config.
+                                </p>
+                                {rule.divergedFromMapping && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-[#fef3c7] px-2 py-0.5 text-xs font-medium text-[#92400e]">
+                                    <AlertCircle className="h-3 w-3" />
+                                    Diverged from mapping
+                                  </span>
+                                )}
+                              </div>
                             )}
 
                             {rule.kind === 'sum_equals' && (
                               <div className="flex items-center gap-2">
-                                <span className="text-sm text-[#64748b]">Sum of selected fields equals</span>
+                                <span className="text-sm text-[#64748b]">Sum equals</span>
                                 <input
                                   type="number"
                                   value={(rule.config.targetValue as string) || ''}
@@ -1767,80 +1705,157 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
 
                             {rule.kind === 'between' && (
                               <div className="flex items-center gap-2">
-                                <span className="text-sm text-[#64748b]">Value between</span>
                                 <input
                                   type="number"
                                   value={(rule.config.min as string) || ''}
                                   onChange={(e) => updateCheckRule(rule.id, { config: { ...rule.config, min: e.target.value } })}
                                   placeholder="Min"
-                                  className="w-20 rounded-lg border border-[#e2e8f0] bg-white px-2 py-1.5 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                                  className="w-24 rounded-lg border border-[#e2e8f0] bg-white px-2 py-1.5 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
                                 />
-                                <span className="text-sm text-[#64748b]">and</span>
+                                <span className="text-sm text-[#64748b]">to</span>
                                 <input
                                   type="number"
                                   value={(rule.config.max as string) || ''}
                                   onChange={(e) => updateCheckRule(rule.id, { config: { ...rule.config, max: e.target.value } })}
                                   placeholder="Max"
-                                  className="w-20 rounded-lg border border-[#e2e8f0] bg-white px-2 py-1.5 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                                  className="w-24 rounded-lg border border-[#e2e8f0] bg-white px-2 py-1.5 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
                                 />
                               </div>
                             )}
 
                             {rule.kind === 'regex' && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-[#64748b]">Matches pattern</span>
-                                <input
-                                  type="text"
-                                  value={(rule.config.pattern as string) || ''}
-                                  onChange={(e) => updateCheckRule(rule.id, { config: { ...rule.config, pattern: e.target.value } })}
-                                  placeholder="^[A-Z]{3}$"
-                                  className="flex-1 rounded-lg border border-[#e2e8f0] bg-white px-2 py-1.5 font-mono text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
-                                />
-                              </div>
+                              <input
+                                type="text"
+                                value={(rule.config.pattern as string) || ''}
+                                onChange={(e) => updateCheckRule(rule.id, { config: { ...rule.config, pattern: e.target.value } })}
+                                placeholder="^[A-Z]{3}$"
+                                className="w-full rounded-lg border border-[#e2e8f0] bg-white px-2 py-1.5 font-mono text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                              />
                             )}
 
                             {rule.kind === 'enum' && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-[#64748b]">Value is one of</span>
-                                <input
-                                  type="text"
-                                  value={(rule.config.values as string) || ''}
-                                  onChange={(e) => updateCheckRule(rule.id, { config: { ...rule.config, values: e.target.value } })}
-                                  placeholder="LADEN, BALLAST, ANCHORED"
-                                  className="flex-1 rounded-lg border border-[#e2e8f0] bg-white px-2 py-1.5 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
-                                />
-                              </div>
+                              <input
+                                type="text"
+                                value={(rule.config.values as string) || ''}
+                                onChange={(e) => updateCheckRule(rule.id, { config: { ...rule.config, values: e.target.value } })}
+                                placeholder="LADEN, BALLAST, ANCHORED"
+                                className="w-full rounded-lg border border-[#e2e8f0] bg-white px-2 py-1.5 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                              />
                             )}
 
                             {rule.kind === 'cross_field_equals' && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-[#64748b]">Value equals field</span>
-                                <div className="flex-1">
-                                  <SourceFieldAutocomplete
-                                    value={(rule.config.fieldPath as string) || ''}
-                                    onChange={(value) => updateCheckRule(rule.id, { config: { ...rule.config, fieldPath: value } })}
-                                    placeholder="Select field..."
-                                  />
-                                </div>
-                              </div>
+                              <SourceFieldAutocomplete
+                                value={(rule.config.fieldPath as string) || ''}
+                                onChange={(value) => updateCheckRule(rule.id, { config: { ...rule.config, fieldPath: value } })}
+                                placeholder="Select field..."
+                              />
                             )}
                           </div>
 
-                          {/* Severity helper text */}
-                          {rule.severity === 'block' && (
-                            <p className="mt-2 text-xs text-[#94a3b8]">
-                              Use sparingly — blocking submission interrupts crew workflow.
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                          {/* Severity selector */}
+                          <div className="w-44">
+                            <label className="mb-1 block text-xs font-medium text-[#64748b]">Severity</label>
+                            <div className="flex rounded-lg border border-[#e2e8f0] bg-white">
+                              <button
+                                type="button"
+                                onClick={() => updateCheckRule(rule.id, { severity: 'warn' })}
+                                className={`flex-1 px-3 py-2 text-xs font-medium ${
+                                  rule.severity === 'warn'
+                                    ? 'bg-[#fef3c7] text-[#92400e]'
+                                    : 'text-[#64748b] hover:bg-[#f8fafc]'
+                                } rounded-l-lg`}
+                              >
+                                Warn
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => updateCheckRule(rule.id, { severity: 'block' })}
+                                className={`flex-1 px-3 py-2 text-xs font-medium ${
+                                  rule.severity === 'block'
+                                    ? 'bg-[#fee2e2] text-[#991b1b]'
+                                    : 'text-[#64748b] hover:bg-[#f8fafc]'
+                                } rounded-r-lg`}
+                              >
+                                Block
+                              </button>
+                            </div>
+                          </div>
 
-                  {/* Global severity helper */}
-                  <p className="text-xs text-[#64748b]">
-                    Default to Warn. Crew autonomy matters — block only when an incorrect value would corrupt downstream systems.
-                  </p>
+                          {/* Delete button */}
+                          <button
+                            type="button"
+                            onClick={() => removeCheckRule(rule.id)}
+                            className="mt-5 rounded-lg p-2 text-[#94a3b8] hover:bg-[#fee2e2] hover:text-[#ef4444]"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        {/* Plain-English description preview */}
+                        <div className="mt-3 rounded-lg bg-[#f8fafc] px-3 py-2">
+                          <p className="text-sm text-[#334155]">
+                            {rule.kind === 'between' && rule.config.min !== undefined && rule.config.max !== undefined
+                              ? `Value must be between ${rule.config.min} and ${rule.config.max}`
+                              : rule.kind === 'regex' && rule.config.pattern
+                                ? `Value must match pattern: ${rule.config.pattern}`
+                                : rule.kind === 'enum' && rule.config.values
+                                  ? `Value must be one of: ${rule.config.values}`
+                                  : rule.kind === 'sum_equals' && rule.config.targetValue !== undefined
+                                    ? `Sum of fields must equal ${rule.config.targetValue}`
+                                    : rule.kind === 'cross_field_equals' && rule.config.fieldPath
+                                      ? `Value must equal field: ${rule.config.fieldPath}`
+                                      : rule.kind === 'data_type_match'
+                                        ? `Value must be parseable as ${formData.dataType || 'text'}`
+                                        : rule.kind === 'match_mapping'
+                                          ? 'Value must match the current mapping output'
+                                          : 'Configure rule parameters above'}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Add buttons */}
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => addCheckRule()}
+                    className="flex items-center gap-1.5 rounded-lg border border-[#7c3aed] bg-white px-3 py-2 text-sm font-medium text-[#7c3aed] hover:bg-[#f3e8ff]"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add rule
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newRule: CheckRule = {
+                        id: `rule-${Date.now()}`,
+                        kind: 'match_mapping',
+                        config: {},
+                        severity: 'warn',
+                        divergedFromMapping: false,
+                      }
+                      const currentConfig = getCurrentCheckConfig()
+                      updateCheckConfig({
+                        rules: [...currentConfig.rules, newRule]
+                      })
+                    }}
+                    className="flex items-center gap-1.5 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm font-medium text-[#334155] hover:bg-[#f8fafc]"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Match mapping
+                  </button>
+                </div>
+
+                {/* Advanced expression subsection */}
+                <div className="border-t border-[#e2e8f0] pt-6">
+                  <AdvancedExpressionEditor
+                    expression={formData.advancedExpression || ""}
+                    severity={formData.advancedExpressionSeverity || "warn"}
+                    onExpressionChange={(expr) => updateFormData({ advancedExpression: expr })}
+                    onSeverityChange={(sev) => updateFormData({ advancedExpressionSeverity: sev })}
+                  />
                 </div>
               </div>
             </SectionCard>
