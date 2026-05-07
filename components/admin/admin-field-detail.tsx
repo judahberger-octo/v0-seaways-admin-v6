@@ -17,10 +17,12 @@ import {
 // Section IDs for navigation
 const sections = [
   { id: "identity", label: "Identity & metadata" },
-  { id: "extraction", label: "Extraction" },
-  { id: "logic", label: "Logic" },
-  { id: "test-suite", label: "Test suite" },
-  { id: "version-history", label: "Version history" },
+  { id: "mapping", label: "Mapping" },
+  { id: "conditions", label: "Conditions" },
+  { id: "notes", label: "Notes" },
+  { id: "check", label: "Check" },
+  { id: "test", label: "Test" },
+  { id: "activity", label: "Activity" },
 ] as const
 
 type SectionId = (typeof sections)[number]["id"]
@@ -64,11 +66,13 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
   // Track if there are unsaved changes
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
+  // Form scope toggle - same logic for all selected forms
+  const [sameLogicForAllForms, setSameLogicForAllForms] = useState(true)
+
   // Active section for sidebar highlighting
   const [activeSection, setActiveSection] = useState<SectionId>("identity")
 
-  // Formula help modal
-  const [showFormulaHelp, setShowFormulaHelp] = useState(false)
+  
 
   // Track scroll to update active section
   useEffect(() => {
@@ -181,11 +185,6 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
           <span className="rounded-full bg-[#f3e8ff] px-3 py-1 text-xs font-medium text-[#7c3aed]">
             {activeSystem.name}
           </span>
-          {!isCreateMode && (
-            <span className="rounded-full bg-[#f1f5f9] px-3 py-1 text-xs font-medium text-[#64748b]">
-              v{formData.version}
-            </span>
-          )}
         </div>
         <div className="flex items-center gap-3">
           {hasUnsavedChanges && (
@@ -237,6 +236,46 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
           className="flex-1 overflow-y-auto p-8"
         >
           <div className="max-w-3xl space-y-6">
+            {/* Form Scope Panel - Always visible at top */}
+            <section className="rounded-xl border border-[#e2e8f0] bg-white p-6">
+              <h2 className="mb-4 text-base font-semibold text-[#0f172a]">
+                Forms this field appears on
+              </h2>
+              
+              {/* Form chip picker */}
+              <FormScopeChipPicker
+                selectedFormIds={formData.appearsOnFormIds || []}
+                onChange={(formIds) => {
+                  updateFormData({ appearsOnFormIds: formIds })
+                }}
+              />
+              
+              {/* Same logic toggle */}
+              <div className="mt-4 flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-[#334155]">Same logic for all selected forms</p>
+                  <p className="mt-0.5 text-xs text-[#64748b]">
+                    When off, configure mapping per form using the tabs below.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={sameLogicForAllForms}
+                  onClick={() => setSameLogicForAllForms(!sameLogicForAllForms)}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#7c3aed] focus:ring-offset-2 ${
+                    sameLogicForAllForms ? "bg-[#7c3aed]" : "bg-[#d1d5db]"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      sameLogicForAllForms ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+            </section>
+
             {/* Section 1: Identity & Metadata */}
             <section
               id="section-identity"
@@ -276,17 +315,6 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                     </span>
                     <span className="text-xs text-[#94a3b8]">Read-only in v0</span>
                   </div>
-                </div>
-
-                {/* Appears on forms (multi-select chips) */}
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-[#334155]">
-                    Appears on forms
-                  </label>
-                  <FormsMultiSelect
-                    selectedFormIds={formData.appearsOnFormIds || []}
-                    onChange={(formIds) => updateFormData({ appearsOnFormIds: formIds })}
-                  />
                 </div>
 
                 {/* Data type dropdown */}
@@ -394,105 +422,18 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                     </button>
                   </div>
 
-                  {/* Read-only toggle */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-[#334155]">Read-only in target</p>
-                      <p className="text-xs text-[#64748b]">
-                        Field cannot be edited in the target form. Read-only display only.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={formData.isReadOnlyInTarget || false}
-                      onClick={() => updateFormData({ isReadOnlyInTarget: !formData.isReadOnlyInTarget })}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#7c3aed] focus:ring-offset-2 ${
-                        formData.isReadOnlyInTarget ? "bg-[#7c3aed]" : "bg-[#d1d5db]"
-                      }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          formData.isReadOnlyInTarget ? "translate-x-5" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  {/* Calculated field toggle */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-[#334155]">Calculated field</p>
-                      <p className="text-xs text-[#64748b]">
-                        Value is computed from a formula. Crew can verify or override.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={formData.isCalculated || false}
-                      onClick={() => updateFormData({ 
-                        isCalculated: !formData.isCalculated,
-                        formula: formData.isCalculated ? undefined : (formData.formula || "")
-                      })}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#7c3aed] focus:ring-offset-2 ${
-                        formData.isCalculated ? "bg-[#7c3aed]" : "bg-[#d1d5db]"
-                      }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          formData.isCalculated ? "translate-x-5" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  {/* Formula editor - shown when calculated is enabled */}
-                  {formData.isCalculated && (
-                    <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-[#334155]">Formula</p>
-                          <p className="text-xs text-[#64748b]">
-                            Define how this field&apos;s value is calculated
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setShowFormulaHelp(true)}
-                          className="flex items-center gap-1 text-xs text-[#7c3aed] hover:underline"
-                        >
-                          <HelpCircle className="h-3.5 w-3.5" />
-                          Help
-                        </button>
-                      </div>
-                      
-                      <textarea
-                        value={formData.formula || ""}
-                        onChange={(e) => updateFormData({ formula: e.target.value })}
-                        placeholder="${field.IFO_Consumed} + ${field.MGO_Consumed}"
-                        rows={3}
-                        className="w-full resize-none rounded-lg border border-[#e2e8f0] bg-[#1e1e1e] px-4 py-3 font-mono text-sm text-[#d4d4d4] placeholder:text-[#6b6b6b] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
-                      />
-                      
-                      <div className="rounded-lg bg-[#fef3c7] px-3 py-2">
-                        <p className="text-xs text-[#92400e]">
-                          Calculated fields appear to crew as normal verifiable fields. The formula is shown as helper text on the field, but the value remains editable so crew can override.
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                  
                 </div>
               </div>
             </section>
 
-            {/* Section 2: Extraction */}
+            {/* Section 2: Mapping */}
             <section
-              id="section-extraction"
+              id="section-mapping"
               className="rounded-xl border border-[#e2e8f0] bg-white p-6"
             >
               <h2 className="mb-6 text-base font-semibold text-[#0f172a]">
-                Extraction
+                Mapping
               </h2>
               
               <div className="grid gap-6 lg:grid-cols-2">
@@ -609,13 +550,13 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
               </div>
             </section>
 
-            {/* Section 3: Logic */}
+            {/* Section 3: Conditions */}
             <section
-              id="section-logic"
+              id="section-conditions"
               className="rounded-xl border border-[#e2e8f0] bg-white p-6"
             >
               <h2 className="mb-6 text-base font-semibold text-[#0f172a]">
-                Logic
+                Conditions
               </h2>
               
               <div className="space-y-8">
@@ -678,13 +619,39 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
               </div>
             </section>
 
-            {/* Section 4: Test Suite */}
+            {/* Section 4: Notes */}
             <section
-              id="section-test-suite"
+              id="section-notes"
               className="rounded-xl border border-[#e2e8f0] bg-white p-6"
             >
               <h2 className="mb-6 text-base font-semibold text-[#0f172a]">
-                Test suite
+                Notes
+              </h2>
+              <p className="text-sm text-[#64748b]">
+                Add internal notes about this field definition for your team.
+              </p>
+            </section>
+
+            {/* Section 5: Check */}
+            <section
+              id="section-check"
+              className="rounded-xl border border-[#e2e8f0] bg-white p-6"
+            >
+              <h2 className="mb-6 text-base font-semibold text-[#0f172a]">
+                Check
+              </h2>
+              <p className="text-sm text-[#64748b]">
+                Define validation checks for this field.
+              </p>
+            </section>
+
+            {/* Section 6: Test */}
+            <section
+              id="section-test"
+              className="rounded-xl border border-[#e2e8f0] bg-white p-6"
+            >
+              <h2 className="mb-6 text-base font-semibold text-[#0f172a]">
+                Test
               </h2>
               
               <FieldTestPanel 
@@ -694,77 +661,67 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
               />
             </section>
 
-            {/* Section 5: Version History */}
+            {/* Section 7: Activity */}
             <section
-              id="section-version-history"
+              id="section-activity"
               className="rounded-xl border border-[#e2e8f0] bg-white p-6"
             >
               <h2 className="mb-6 text-base font-semibold text-[#0f172a]">
-                Version history
+                Activity
               </h2>
-              {/* Placeholder - will be expanded in Prompt 15 */}
               <p className="text-sm text-[#64748b]">
-                Version history section content coming soon...
+                View the audit log and activity history for this field.
               </p>
             </section>
           </div>
         </main>
       </div>
 
-      {/* Formula Help Modal */}
-      {showFormulaHelp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h4 className="text-lg font-semibold text-[#0f172a]">Formula Reference</h4>
-              <button
-                type="button"
-                onClick={() => setShowFormulaHelp(false)}
-                className="rounded-lg p-1 text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#0f172a]"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            
-            <div className="space-y-4 text-sm">
-              <div>
-                <h5 className="font-medium text-[#334155]">Field References</h5>
-                <p className="text-[#64748b]">Use <code className="rounded bg-[#f1f5f9] px-1 py-0.5 font-mono text-xs">{`\${field.LogicalName}`}</code> to reference other fields</p>
-              </div>
-              
-              <div>
-                <h5 className="font-medium text-[#334155]">Arithmetic Operators</h5>
-                <p className="text-[#64748b]"><code className="font-mono">+</code> <code className="font-mono">-</code> <code className="font-mono">*</code> <code className="font-mono">/</code> <code className="font-mono">()</code></p>
-              </div>
-              
-              <div>
-                <h5 className="font-medium text-[#334155]">Functions</h5>
-                <p className="text-[#64748b]">
-                  <code className="font-mono">SUM(...)</code>, 
-                  <code className="font-mono"> AVG(...)</code>, 
-                  <code className="font-mono"> MIN(...)</code>, 
-                  <code className="font-mono"> MAX(...)</code>, 
-                  <code className="font-mono"> ROUND(x, decimals)</code>
-                </p>
-              </div>
-              
-              <div className="rounded-lg bg-[#f8fafc] p-3">
-                <h5 className="font-medium text-[#334155]">Examples</h5>
-                <div className="mt-2 space-y-1">
-                  <code className="block text-xs text-[#64748b]">{`\${field.IFO_Consumed} + \${field.MGO_Consumed}`}</code>
-                  <code className="block text-xs text-[#64748b]">{`ROUND(\${field.Distance} / \${field.Time}, 2)`}</code>
-                  <code className="block text-xs text-[#64748b]">{`SUM(\${field.IFO_ROB}, \${field.MGO_ROB}, \${field.VLSFO_ROB})`}</code>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      
     </div>
   )
 }
 
-// Multi-select component for forms
+// Form scope chip picker - shows all forms as selectable chips
+interface FormScopeChipPickerProps {
+  selectedFormIds: string[]
+  onChange: (formIds: string[]) => void
+}
+
+function FormScopeChipPicker({ selectedFormIds, onChange }: FormScopeChipPickerProps) {
+  const toggleForm = (formId: string) => {
+    if (selectedFormIds.includes(formId)) {
+      onChange(selectedFormIds.filter((id) => id !== formId))
+    } else {
+      onChange([...selectedFormIds, formId])
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {targetForms.map((form) => {
+        const isSelected = selectedFormIds.includes(form.id)
+        return (
+          <button
+            key={form.id}
+            type="button"
+            onClick={() => toggleForm(form.id)}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+              isSelected
+                ? "bg-[#7c3aed] text-white"
+                : "bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0] hover:text-[#334155]"
+            }`}
+          >
+            {isSelected && <Check className="h-3.5 w-3.5" />}
+            {form.name}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// Multi-select component for forms (dropdown style, kept for reference)
 interface FormsMultiSelectProps {
   selectedFormIds: string[]
   onChange: (formIds: string[]) => void
