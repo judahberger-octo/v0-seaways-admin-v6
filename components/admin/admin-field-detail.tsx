@@ -365,71 +365,6 @@ interface FormulaTransformConfig {
     setHasUnsavedChanges(true)
   }
 
-  // WHERE conditions state for when the mapping applies
-  type ConditionOperator = 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'contains' | 'is_empty' | 'is_not_empty'
-  interface WhereCondition {
-    id: string
-    fieldPath: string
-    operator: ConditionOperator
-    value: string
-  }
-  type ConditionCombinator = 'AND' | 'OR'
-  interface WhereConditionsConfig {
-    conditions: WhereCondition[]
-    combinator: ConditionCombinator
-  }
-  const defaultWhereConditions: WhereConditionsConfig = { conditions: [], combinator: 'AND' }
-  const [sharedWhereConditions, setSharedWhereConditions] = useState<WhereConditionsConfig>(defaultWhereConditions)
-  const [perFormWhereConditions, setPerFormWhereConditions] = useState<Record<string, WhereConditionsConfig>>({})
-
-  // Get current where conditions for active context
-  const getCurrentWhereConditions = (): WhereConditionsConfig => {
-    if (sameLogicForAllForms) {
-      return sharedWhereConditions
-    }
-    return activeFormTab ? perFormWhereConditions[activeFormTab] || defaultWhereConditions : defaultWhereConditions
-  }
-
-  // Update where conditions
-  const updateWhereConditions = (updates: Partial<WhereConditionsConfig>) => {
-    if (sameLogicForAllForms) {
-      setSharedWhereConditions((prev) => ({ ...prev, ...updates }))
-    } else if (activeFormTab) {
-      setPerFormWhereConditions((prev) => ({
-        ...prev,
-        [activeFormTab]: { ...(prev[activeFormTab] || defaultWhereConditions), ...updates }
-      }))
-    }
-    setHasUnsavedChanges(true)
-  }
-
-  // Add a new condition
-  const addWhereCondition = () => {
-    const current = getCurrentWhereConditions()
-    const newCondition: WhereCondition = {
-      id: `cond-${Date.now()}`,
-      fieldPath: '',
-      operator: 'equals',
-      value: '',
-    }
-    updateWhereConditions({ conditions: [...current.conditions, newCondition] })
-  }
-
-  // Update a condition
-  const updateWhereCondition = (id: string, updates: Partial<WhereCondition>) => {
-    const current = getCurrentWhereConditions()
-    const newConditions = current.conditions.map((c) => 
-      c.id === id ? { ...c, ...updates } : c
-    )
-    updateWhereConditions({ conditions: newConditions })
-  }
-
-  // Remove a condition
-  const removeWhereCondition = (id: string) => {
-    const current = getCurrentWhereConditions()
-    updateWhereConditions({ conditions: current.conditions.filter((c) => c.id !== id) })
-  }
-
   // Notes state (engineering handoff)
   const [sharedNotes, setSharedNotes] = useState('')
   const [perFormNotes, setPerFormNotes] = useState<Record<string, string>>({})
@@ -466,10 +401,9 @@ interface FormulaTransformConfig {
     divergedFromMapping?: boolean // True if user edited away from auto-generated
   }
   interface CheckConfig {
-    applyMappingAsCheck: boolean
     rules: CheckRule[]
   }
-  const defaultCheckConfig: CheckConfig = { applyMappingAsCheck: false, rules: [] }
+  const defaultCheckConfig: CheckConfig = { rules: [] }
   const [sharedCheckConfig, setSharedCheckConfig] = useState<CheckConfig>(defaultCheckConfig)
   const [perFormCheckConfig, setPerFormCheckConfig] = useState<Record<string, CheckConfig>>({})
 
@@ -512,8 +446,8 @@ interface FormulaTransformConfig {
     const current = getCurrentCheckConfig()
     const newRules = current.rules.map((r) => {
       if (r.id === id) {
-        // If rule was auto-generated and user is editing config or kind, mark as diverged
-        const isDiverging = current.applyMappingAsCheck && 
+        // If it's a match_mapping rule and user is editing config or kind, mark as diverged
+        const isDiverging = r.kind === 'match_mapping' && 
           (updates.kind !== undefined || updates.config !== undefined)
         return { 
           ...r, 
@@ -530,54 +464,6 @@ interface FormulaTransformConfig {
   const removeCheckRule = (id: string) => {
     const current = getCurrentCheckConfig()
     updateCheckConfig({ rules: current.rules.filter((r) => r.id !== id) })
-  }
-
-  // Handle "Apply mapping as check" toggle
-  const handleApplyMappingAsCheckToggle = (checked: boolean) => {
-    if (checked) {
-      // Auto-generate a rule based on current transform type
-      const transformType = getCurrentTransformType()
-      let autoRule: CheckRule | null = null
-
-      if (transformType === 'direct') {
-        const directConfig = getCurrentDirectConfig()
-        if (directConfig.sourceField) {
-          autoRule = {
-            id: `check-auto-${Date.now()}`,
-            kind: 'cross_field_equals',
-            config: { fieldPath: directConfig.sourceField },
-            severity: 'warn',
-            divergedFromMapping: false,
-          }
-        }
-      } else if (transformType === 'constant') {
-        const constantConfig = getCurrentConstantConfig()
-        autoRule = {
-          id: `check-auto-${Date.now()}`,
-          kind: 'regex',
-          config: { pattern: `^${constantConfig.value}$` },
-          severity: 'warn',
-          divergedFromMapping: false,
-        }
-      }
-      // Default to data type match if no specific auto-rule
-      if (!autoRule) {
-        autoRule = {
-          id: `check-auto-${Date.now()}`,
-          kind: 'data_type_match',
-          config: {},
-          severity: 'warn',
-          divergedFromMapping: false,
-        }
-      }
-
-      updateCheckConfig({ 
-        applyMappingAsCheck: true, 
-        rules: [autoRule, ...getCurrentCheckConfig().rules]
-      })
-    } else {
-      updateCheckConfig({ applyMappingAsCheck: false })
-    }
   }
 
   // Activity feed filter state
