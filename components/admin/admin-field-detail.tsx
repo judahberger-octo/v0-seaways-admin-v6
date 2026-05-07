@@ -893,7 +893,7 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
               </div>
             </section>
 
-            {/* Section 1: Identity & Metadata */}
+            {/* Section 1: Identity & Metadata - NEVER tabbed, single source of truth */}
             <section
               id="section-identity"
               className="rounded-xl border border-[#e2e8f0] bg-white p-6"
@@ -902,7 +902,7 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                 Identity & metadata
               </h2>
               
-              <div className="space-y-5">
+              <div className="grid grid-cols-3 gap-4">
                 {/* Logical field name */}
                 <div>
                   <label 
@@ -919,19 +919,6 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                     placeholder="e.g., IFO ROB"
                     className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
                   />
-                </div>
-
-                {/* Target system (read-only) */}
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-[#334155]">
-                    Target system
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center rounded-full bg-[#f3e8ff] px-3 py-1.5 text-sm font-medium text-[#7c3aed]">
-                      {activeSystem.name}
-                    </span>
-                    <span className="text-xs text-[#94a3b8]">Read-only in v0</span>
-                  </div>
                 </div>
 
                 {/* Data type dropdown */}
@@ -967,79 +954,27 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                   </div>
                 </div>
 
-                {/* Unit (only for number/duration) */}
-                {(formData.dataType === "number" || formData.dataType === "duration") && (
-                  <div>
-                    <label 
-                      htmlFor="unit" 
-                      className="mb-1.5 block text-sm font-medium text-[#334155]"
-                    >
-                      Unit
-                    </label>
-                    <input
-                      id="unit"
-                      type="text"
-                      value={formData.unit || ""}
-                      onChange={(e) => updateFormData({ unit: e.target.value || undefined })}
-                      placeholder="e.g., kts, nm, MT, hrs"
-                      className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
-                    />
-                  </div>
-                )}
-
-                {/* Toggles section */}
-                <div className="space-y-4 pt-2">
-                  {/* Criticality toggle */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-[#334155]">Critical field</p>
-                      <p className="text-xs text-[#64748b]">
-                        Critical fields must be manually verified by crew before submitting.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={formData.isCritical}
-                      onClick={() => updateFormData({ isCritical: !formData.isCritical })}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#7c3aed] focus:ring-offset-2 ${
-                        formData.isCritical ? "bg-[#7c3aed]" : "bg-[#d1d5db]"
-                      }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          formData.isCritical ? "translate-x-5" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  {/* Mandatory toggle */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-[#334155]">Mandatory field</p>
-                      <p className="text-xs text-[#64748b]">
-                        Mandatory fields must have a value before the form can be submitted.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={formData.isMandatory}
-                      onClick={() => updateFormData({ isMandatory: !formData.isMandatory })}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#7c3aed] focus:ring-offset-2 ${
-                        formData.isMandatory ? "bg-[#7c3aed]" : "bg-[#d1d5db]"
-                      }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          formData.isMandatory ? "translate-x-5" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  
+                {/* Unit (only enabled for number/duration) */}
+                <div>
+                  <label 
+                    htmlFor="unit" 
+                    className="mb-1.5 block text-sm font-medium text-[#334155]"
+                  >
+                    Unit
+                  </label>
+                  <input
+                    id="unit"
+                    type="text"
+                    value={formData.unit || ""}
+                    onChange={(e) => updateFormData({ unit: e.target.value || undefined })}
+                    placeholder="e.g., kts, nm, MT, hrs"
+                    disabled={formData.dataType !== "number" && formData.dataType !== "duration"}
+                    className={`w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed] ${
+                      formData.dataType !== "number" && formData.dataType !== "duration" 
+                        ? "cursor-not-allowed bg-[#f8fafc] text-[#94a3b8]" 
+                        : ""
+                    }`}
+                  />
                 </div>
               </div>
             </section>
