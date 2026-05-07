@@ -75,6 +75,49 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
   // Confirmation dialog for switching back to shared logic
   const [showSharedLogicConfirm, setShowSharedLogicConfirm] = useState(false)
 
+  // Transform type state - shared or per-form
+  type MappingTransformType = 'direct' | 'lookup' | 'aggregation' | 'formula' | 'constant' | 'manual' | null
+  const [sharedTransformType, setSharedTransformType] = useState<MappingTransformType>(null)
+  const [perFormTransformType, setPerFormTransformType] = useState<Record<string, MappingTransformType>>({})
+
+  // Confirmation dialog for changing transform type
+  const [showTransformChangeConfirm, setShowTransformChangeConfirm] = useState<{
+    newType: MappingTransformType
+    formId?: string // undefined means shared mode
+  } | null>(null)
+
+  // Get current transform type for active context
+  const getCurrentTransformType = (): MappingTransformType => {
+    if (sameLogicForAllForms) {
+      return sharedTransformType
+    }
+    return activeFormTab ? perFormTransformType[activeFormTab] || null : null
+  }
+
+  // Set transform type with confirmation if needed
+  const handleTransformTypeChange = (newType: MappingTransformType, formId?: string) => {
+    const currentType = formId ? perFormTransformType[formId] : sharedTransformType
+    
+    // If changing from a configured type to a different type, show confirmation
+    if (currentType && currentType !== newType) {
+      setShowTransformChangeConfirm({ newType, formId })
+    } else {
+      // No confirmation needed - first selection or same type
+      applyTransformTypeChange(newType, formId)
+    }
+  }
+
+  // Apply the transform type change
+  const applyTransformTypeChange = (newType: MappingTransformType, formId?: string) => {
+    if (formId) {
+      setPerFormTransformType((prev) => ({ ...prev, [formId]: newType }))
+    } else {
+      setSharedTransformType(newType)
+    }
+    setHasUnsavedChanges(true)
+    setShowTransformChangeConfirm(null)
+  }
+
   // Get sorted selected forms for tabs
   const selectedForms = (formData.appearsOnFormIds || [])
     .map((id) => targetForms.find((f) => f.id === id))
@@ -481,117 +524,82 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
               activeFormId={activeFormTab}
               onTabChange={setActiveFormTab}
             >
-              <div className="grid gap-6 lg:grid-cols-2">
-                {/* A) NAVTOR Source Paths */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-[#334155]">NAVTOR source paths</h3>
-                    <p className="mt-0.5 text-xs text-[#64748b]">
-                      Map this field to one or more NAVTOR API paths
-                    </p>
-                  </div>
-                  
-                  {/* Source paths list */}
-                  <div className="space-y-2">
-                    {(formData.navtorSourcePaths || []).map((path, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <NavtorPathPicker
-                          value={path}
-                          onChange={(newPath) => {
-                            const newPaths = [...(formData.navtorSourcePaths || [])]
-                            newPaths[index] = newPath
-                            updateFormData({ navtorSourcePaths: newPaths })
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newPaths = (formData.navtorSourcePaths || []).filter((_, i) => i !== index)
-                            updateFormData({ navtorSourcePaths: newPaths })
-                          }}
-                          className="flex-shrink-0 rounded-lg p-2 text-[#94a3b8] hover:bg-[#fee2e2] hover:text-[#ef4444]"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                    
-                    {/* Add path button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        updateFormData({ 
-                          navtorSourcePaths: [...(formData.navtorSourcePaths || []), ""] 
-                        })
-                      }}
-                      className="flex items-center gap-2 rounded-lg border border-dashed border-[#d1d5db] px-3 py-2 text-sm text-[#64748b] hover:border-[#7c3aed] hover:bg-[#f8fafc] hover:text-[#7c3aed]"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add source path
-                    </button>
-                  </div>
-                  
-                  {/* Aggregate toggle */}
-                  <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-[#334155]">
-                          Aggregate across source reports
-                        </p>
-                        <p className="mt-1 text-xs text-[#64748b]">
-                          {formData.aggregateAcrossReports 
-                            ? "Sum values across all selected source reports" 
-                            : "Use the value from the most recent report"}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={formData.aggregateAcrossReports || false}
-                        onClick={() => updateFormData({ aggregateAcrossReports: !formData.aggregateAcrossReports })}
-                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#7c3aed] focus:ring-offset-2 ${
-                          formData.aggregateAcrossReports ? "bg-[#7c3aed]" : "bg-[#d1d5db]"
-                        }`}
-                      >
-                        <span
-                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                            formData.aggregateAcrossReports ? "translate-x-5" : "translate-x-0"
-                          }`}
-                        />
-                      </button>
-                    </div>
-                  </div>
+              <div className="space-y-6">
+                {/* Transform type picker */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-[#334155]">
+                    Transform type
+                  </label>
+                  <TransformTypePicker
+                    value={getCurrentTransformType()}
+                    onChange={(type) => {
+                      handleTransformTypeChange(
+                        type,
+                        sameLogicForAllForms ? undefined : activeFormTab || undefined
+                      )
+                    }}
+                  />
+                  <p className="mt-2 text-xs text-[#64748b]">
+                    Select how this field&apos;s value is derived from source data.
+                  </p>
                 </div>
 
-                {/* B) Extraction Hint */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-[#334155]">Extraction hint</h3>
-                    <p className="mt-0.5 text-xs text-[#64748b]">
-                      Describe how to extract this field (included in LLM prompt). Markdown allowed.
+                {/* Transform-specific configuration */}
+                {getCurrentTransformType() === null && (
+                  <div className="rounded-lg border border-dashed border-[#d1d5db] bg-[#f8fafc] p-8 text-center">
+                    <p className="text-sm text-[#64748b]">
+                      Select a transform type above to configure the mapping.
                     </p>
                   </div>
-                  
-                  <div className="relative">
-                    <textarea
-                      value={formData.extractionHint || ""}
-                      onChange={(e) => {
-                        if (e.target.value.length <= 1000) {
-                          updateFormData({ extractionHint: e.target.value })
-                        }
-                      }}
-                      placeholder="Describe how to extract this field. The hint is included in the LLM prompt. Example: 'Reported Speed in knots — found in the Distance & Speed tab. If multiple values exist, prefer the one labeled &quot;average&quot;.'"
-                      rows={8}
-                      className="w-full resize-none rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
-                    />
-                    <div className="absolute bottom-3 right-3 text-xs text-[#94a3b8]">
-                      <span className={(formData.extractionHint?.length || 0) > 900 ? "text-[#f97316]" : ""}>
-                        {formData.extractionHint?.length || 0}
-                      </span>
-                      /1000
-                    </div>
+                )}
+
+                {getCurrentTransformType() === 'direct' && (
+                  <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
+                    <p className="text-sm text-[#64748b]">
+                      Direct transform configuration will be added in Prompt 10.
+                    </p>
                   </div>
-                </div>
+                )}
+
+                {getCurrentTransformType() === 'lookup' && (
+                  <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
+                    <p className="text-sm text-[#64748b]">
+                      Lookup transform configuration will be added in Prompt 11.
+                    </p>
+                  </div>
+                )}
+
+                {getCurrentTransformType() === 'aggregation' && (
+                  <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
+                    <p className="text-sm text-[#64748b]">
+                      Aggregation transform configuration will be added in Prompt 12.
+                    </p>
+                  </div>
+                )}
+
+                {getCurrentTransformType() === 'formula' && (
+                  <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
+                    <p className="text-sm text-[#64748b]">
+                      Formula transform configuration will be added in Prompt 13.
+                    </p>
+                  </div>
+                )}
+
+                {getCurrentTransformType() === 'constant' && (
+                  <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
+                    <p className="text-sm text-[#64748b]">
+                      Constant transform configuration will be added in Prompt 14.
+                    </p>
+                  </div>
+                )}
+
+                {getCurrentTransformType() === 'manual' && (
+                  <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
+                    <p className="text-sm text-[#64748b]">
+                      Manual transform configuration will be added in Prompt 15.
+                    </p>
+                  </div>
+                )}
               </div>
             </TabbedSection>
 
@@ -759,6 +767,90 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
           </div>
         </div>
       )}
+
+      {/* Confirmation Dialog for changing transform type */}
+      {showTransformChangeConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-start gap-4">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#fef3c7]">
+                <AlertCircle className="h-5 w-5 text-[#f59e0b]" />
+              </div>
+              <div>
+                <h4 className="text-lg font-semibold text-[#0f172a]">Change transform type?</h4>
+                <p className="mt-2 text-sm text-[#64748b]">
+                  Switching to <span className="font-medium text-[#334155]">{showTransformChangeConfirm.newType}</span> will clear any existing mapping configuration for this transform.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowTransformChangeConfirm(null)}
+                className="rounded-lg border border-[#e2e8f0] bg-white px-4 py-2 text-sm font-medium text-[#334155] hover:bg-[#f8fafc]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (showTransformChangeConfirm) {
+                    applyTransformTypeChange(
+                      showTransformChangeConfirm.newType,
+                      showTransformChangeConfirm.formId
+                    )
+                  }
+                }}
+                className="rounded-lg bg-[#7c3aed] px-4 py-2 text-sm font-medium text-white hover:bg-[#6d28d9]"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Transform type picker - segmented control for selecting mapping transform
+type TransformTypeOption = 'direct' | 'lookup' | 'aggregation' | 'formula' | 'constant' | 'manual'
+
+const transformTypeOptions: { value: TransformTypeOption; label: string }[] = [
+  { value: 'direct', label: 'Direct' },
+  { value: 'lookup', label: 'Lookup' },
+  { value: 'aggregation', label: 'Aggregation' },
+  { value: 'formula', label: 'Formula' },
+  { value: 'constant', label: 'Constant' },
+  { value: 'manual', label: 'Manual' },
+]
+
+interface TransformTypePickerProps {
+  value: TransformTypeOption | null
+  onChange: (type: TransformTypeOption) => void
+}
+
+function TransformTypePicker({ value, onChange }: TransformTypePickerProps) {
+  return (
+    <div className="flex rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-1">
+      {transformTypeOptions.map((option) => {
+        const isSelected = value === option.value
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              isSelected
+                ? "bg-[#7c3aed] text-white shadow-sm"
+                : "text-[#64748b] hover:bg-white hover:text-[#334155]"
+            }`}
+          >
+            {option.label}
+          </button>
+        )
+      })}
     </div>
   )
 }
