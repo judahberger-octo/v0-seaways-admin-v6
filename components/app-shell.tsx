@@ -88,7 +88,10 @@ export function AppShell({
   
   // Handle Layers click - navigate to Report management
   const handleLayersClick = () => {
-    if (isReviewMode) {
+    if (isAdminView) {
+      // Exit admin view to go back to Report management
+      onAdminViewChange?.(false)
+    } else if (isReviewMode) {
       // If in review mode, trigger back navigation (with unsaved check)
       if (hasUnsavedChanges) {
         setShowUnsavedModal(true)
