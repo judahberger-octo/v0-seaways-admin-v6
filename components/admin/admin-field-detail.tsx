@@ -310,6 +310,34 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
     updateFormulaConfig({ operands: newOperands, operators: newOperators })
   }
 
+  // Constant transform configuration state
+  interface ConstantTransformConfig {
+    value: string
+  }
+  const [sharedConstantConfig, setSharedConstantConfig] = useState<ConstantTransformConfig>({ value: '' })
+  const [perFormConstantConfig, setPerFormConstantConfig] = useState<Record<string, ConstantTransformConfig>>({})
+
+  // Get current constant config for active context
+  const getCurrentConstantConfig = (): ConstantTransformConfig => {
+    if (sameLogicForAllForms) {
+      return sharedConstantConfig
+    }
+    return activeFormTab ? perFormConstantConfig[activeFormTab] || { value: '' } : { value: '' }
+  }
+
+  // Update constant config
+  const updateConstantConfig = (updates: Partial<ConstantTransformConfig>) => {
+    if (sameLogicForAllForms) {
+      setSharedConstantConfig((prev) => ({ ...prev, ...updates }))
+    } else if (activeFormTab) {
+      setPerFormConstantConfig((prev) => ({
+        ...prev,
+        [activeFormTab]: { ...(prev[activeFormTab] || { value: '' }), ...updates }
+      }))
+    }
+    setHasUnsavedChanges(true)
+  }
+
   // Get sorted selected forms for tabs
   const selectedForms = (formData.appearsOnFormIds || [])
     .map((id) => targetForms.find((f) => f.id === id))
@@ -1085,10 +1113,148 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                 )}
 
                 {getCurrentTransformType() === 'constant' && (
-                  <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
-                    <p className="text-sm text-[#64748b]">
-                      Constant transform configuration will be added in Prompt 14.
-                    </p>
+                  <div className="space-y-4">
+                    {/* Value input - typed to match field's data type */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+                        Value <span className="text-[#ef4444]">*</span>
+                      </label>
+                      
+                      {/* Number input */}
+                      {formData.dataType === 'number' && (
+                        <input
+                          type="number"
+                          value={getCurrentConstantConfig().value}
+                          onChange={(e) => updateConstantConfig({ value: e.target.value })}
+                          placeholder="Enter a number..."
+                          className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                        />
+                      )}
+
+                      {/* Text input */}
+                      {formData.dataType === 'text' && (
+                        <input
+                          type="text"
+                          value={getCurrentConstantConfig().value}
+                          onChange={(e) => updateConstantConfig({ value: e.target.value })}
+                          placeholder="Enter text..."
+                          className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                        />
+                      )}
+
+                      {/* Datetime input */}
+                      {formData.dataType === 'datetime' && (
+                        <input
+                          type="datetime-local"
+                          value={getCurrentConstantConfig().value}
+                          onChange={(e) => updateConstantConfig({ value: e.target.value })}
+                          className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                        />
+                      )}
+
+                      {/* Enum dropdown */}
+                      {formData.dataType === 'enum' && (
+                        <div className="relative">
+                          <select
+                            value={getCurrentConstantConfig().value}
+                            onChange={(e) => updateConstantConfig({ value: e.target.value })}
+                            className="w-full appearance-none rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 pr-10 text-sm text-[#0f172a] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                          >
+                            <option value="">Select a value...</option>
+                            <option value="option_1">Option 1</option>
+                            <option value="option_2">Option 2</option>
+                            <option value="option_3">Option 3</option>
+                          </select>
+                          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748b]" />
+                        </div>
+                      )}
+
+                      {/* Lat/Long input */}
+                      {formData.dataType === 'latlong' && (
+                        <div className="flex gap-3">
+                          <div className="flex-1">
+                            <label className="mb-1 block text-xs text-[#64748b]">Latitude</label>
+                            <input
+                              type="number"
+                              step="0.000001"
+                              value={getCurrentConstantConfig().value.split(',')[0] || ''}
+                              onChange={(e) => {
+                                const lng = getCurrentConstantConfig().value.split(',')[1] || ''
+                                updateConstantConfig({ value: `${e.target.value},${lng}` })
+                              }}
+                              placeholder="-90 to 90"
+                              className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <label className="mb-1 block text-xs text-[#64748b]">Longitude</label>
+                            <input
+                              type="number"
+                              step="0.000001"
+                              value={getCurrentConstantConfig().value.split(',')[1] || ''}
+                              onChange={(e) => {
+                                const lat = getCurrentConstantConfig().value.split(',')[0] || ''
+                                updateConstantConfig({ value: `${lat},${e.target.value}` })
+                              }}
+                              placeholder="-180 to 180"
+                              className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Duration input */}
+                      {formData.dataType === 'duration' && (
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <label className="mb-1 block text-xs text-[#64748b]">Hours</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={getCurrentConstantConfig().value.split(':')[0] || ''}
+                              onChange={(e) => {
+                                const mins = getCurrentConstantConfig().value.split(':')[1] || '0'
+                                updateConstantConfig({ value: `${e.target.value}:${mins}` })
+                              }}
+                              placeholder="0"
+                              className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                            />
+                          </div>
+                          <span className="mt-5 text-lg text-[#64748b]">:</span>
+                          <div className="flex-1">
+                            <label className="mb-1 block text-xs text-[#64748b]">Minutes</label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="59"
+                              value={getCurrentConstantConfig().value.split(':')[1] || ''}
+                              onChange={(e) => {
+                                const hrs = getCurrentConstantConfig().value.split(':')[0] || '0'
+                                updateConstantConfig({ value: `${hrs}:${e.target.value}` })
+                              }}
+                              placeholder="0"
+                              className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Fallback for unknown data types */}
+                      {!formData.dataType && (
+                        <input
+                          type="text"
+                          value={getCurrentConstantConfig().value}
+                          onChange={(e) => updateConstantConfig({ value: e.target.value })}
+                          placeholder="Set data type in Identity & metadata first..."
+                          disabled
+                          className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-sm text-[#94a3b8]"
+                        />
+                      )}
+
+                      <p className="mt-2 text-xs text-[#64748b]">
+                        This value is hardcoded. Every report will receive this exact value for this field.
+                      </p>
+                    </div>
                   </div>
                 )}
 
