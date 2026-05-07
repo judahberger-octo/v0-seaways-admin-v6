@@ -69,6 +69,51 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
   // Form scope toggle - same logic for all selected forms
   const [sameLogicForAllForms, setSameLogicForAllForms] = useState(true)
 
+  // Active form tab (when in divergent mode)
+  const [activeFormTab, setActiveFormTab] = useState<string | null>(null)
+
+  // Confirmation dialog for switching back to shared logic
+  const [showSharedLogicConfirm, setShowSharedLogicConfirm] = useState(false)
+
+  // Get sorted selected forms for tabs
+  const selectedForms = (formData.appearsOnFormIds || [])
+    .map((id) => targetForms.find((f) => f.id === id))
+    .filter((f): f is typeof targetForms[0] => f !== undefined)
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  // Set active form tab to first form when entering divergent mode or when forms change
+  useEffect(() => {
+    if (!sameLogicForAllForms && selectedForms.length > 0 && !activeFormTab) {
+      setActiveFormTab(selectedForms[0].id)
+    }
+    // If active tab is removed, switch to first form
+    if (activeFormTab && !selectedForms.find((f) => f.id === activeFormTab)) {
+      setActiveFormTab(selectedForms[0]?.id || null)
+    }
+  }, [sameLogicForAllForms, selectedForms, activeFormTab])
+
+  // Handle toggle change with confirmation
+  const handleToggleSameLogic = () => {
+    if (sameLogicForAllForms) {
+      // Turning OFF - no confirmation needed
+      setSameLogicForAllForms(false)
+    } else {
+      // Turning ON - need confirmation if there are multiple forms
+      if (selectedForms.length > 1) {
+        setShowSharedLogicConfirm(true)
+      } else {
+        setSameLogicForAllForms(true)
+      }
+    }
+  }
+
+  // Confirm switching to shared logic
+  const confirmSharedLogic = () => {
+    setSameLogicForAllForms(true)
+    setShowSharedLogicConfirm(false)
+    setActiveFormTab(null)
+  }
+
   // Active section for sidebar highlighting
   const [activeSection, setActiveSection] = useState<SectionId>("identity")
 
@@ -262,7 +307,7 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                   type="button"
                   role="switch"
                   aria-checked={sameLogicForAllForms}
-                  onClick={() => setSameLogicForAllForms(!sameLogicForAllForms)}
+                  onClick={handleToggleSameLogic}
                   className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#7c3aed] focus:ring-offset-2 ${
                     sameLogicForAllForms ? "bg-[#7c3aed]" : "bg-[#d1d5db]"
                   }`}
@@ -428,14 +473,14 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
             </section>
 
             {/* Section 2: Mapping */}
-            <section
-              id="section-mapping"
-              className="rounded-xl border border-[#e2e8f0] bg-white p-6"
+            <TabbedSection
+              id="mapping"
+              title="Mapping"
+              isTabbedMode={!sameLogicForAllForms}
+              forms={selectedForms}
+              activeFormId={activeFormTab}
+              onTabChange={setActiveFormTab}
             >
-              <h2 className="mb-6 text-base font-semibold text-[#0f172a]">
-                Mapping
-              </h2>
-              
               <div className="grid gap-6 lg:grid-cols-2">
                 {/* A) NAVTOR Source Paths */}
                 <div className="space-y-4">
@@ -548,17 +593,17 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                   </div>
                 </div>
               </div>
-            </section>
+            </TabbedSection>
 
             {/* Section 3: Conditions */}
-            <section
-              id="section-conditions"
-              className="rounded-xl border border-[#e2e8f0] bg-white p-6"
+            <TabbedSection
+              id="conditions"
+              title="Conditions"
+              isTabbedMode={!sameLogicForAllForms}
+              forms={selectedForms}
+              activeFormId={activeFormTab}
+              onTabChange={setActiveFormTab}
             >
-              <h2 className="mb-6 text-base font-semibold text-[#0f172a]">
-                Conditions
-              </h2>
-              
               <div className="space-y-8">
                 {/* A) Validation Rules */}
                 <div className="space-y-4">
@@ -617,51 +662,53 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                   onSeverityChange={(sev) => updateFormData({ advancedExpressionSeverity: sev })}
                 />
               </div>
-            </section>
+            </TabbedSection>
 
             {/* Section 4: Notes */}
-            <section
-              id="section-notes"
-              className="rounded-xl border border-[#e2e8f0] bg-white p-6"
+            <TabbedSection
+              id="notes"
+              title="Notes"
+              isTabbedMode={!sameLogicForAllForms}
+              forms={selectedForms}
+              activeFormId={activeFormTab}
+              onTabChange={setActiveFormTab}
             >
-              <h2 className="mb-6 text-base font-semibold text-[#0f172a]">
-                Notes
-              </h2>
               <p className="text-sm text-[#64748b]">
                 Add internal notes about this field definition for your team.
               </p>
-            </section>
+            </TabbedSection>
 
             {/* Section 5: Check */}
-            <section
-              id="section-check"
-              className="rounded-xl border border-[#e2e8f0] bg-white p-6"
+            <TabbedSection
+              id="check"
+              title="Check"
+              isTabbedMode={!sameLogicForAllForms}
+              forms={selectedForms}
+              activeFormId={activeFormTab}
+              onTabChange={setActiveFormTab}
             >
-              <h2 className="mb-6 text-base font-semibold text-[#0f172a]">
-                Check
-              </h2>
               <p className="text-sm text-[#64748b]">
                 Define validation checks for this field.
               </p>
-            </section>
+            </TabbedSection>
 
             {/* Section 6: Test */}
-            <section
-              id="section-test"
-              className="rounded-xl border border-[#e2e8f0] bg-white p-6"
+            <TabbedSection
+              id="test"
+              title="Test"
+              isTabbedMode={!sameLogicForAllForms}
+              forms={selectedForms}
+              activeFormId={activeFormTab}
+              onTabChange={setActiveFormTab}
             >
-              <h2 className="mb-6 text-base font-semibold text-[#0f172a]">
-                Test
-              </h2>
-              
               <FieldTestPanel 
                 fieldId={fieldId || ""} 
                 dataType={formData.dataType || "text"}
                 definitionVersion={formData.version || 1}
               />
-            </section>
+            </TabbedSection>
 
-            {/* Section 7: Activity */}
+            {/* Section 7: Activity - NOT tabbed, unified timeline */}
             <section
               id="section-activity"
               className="rounded-xl border border-[#e2e8f0] bg-white p-6"
@@ -677,7 +724,41 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
         </main>
       </div>
 
-      
+      {/* Confirmation Dialog for switching to shared logic */}
+      {showSharedLogicConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-start gap-4">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#fef3c7]">
+                <AlertCircle className="h-5 w-5 text-[#f59e0b]" />
+              </div>
+              <div>
+                <h4 className="text-lg font-semibold text-[#0f172a]">Switch to shared logic?</h4>
+                <p className="mt-2 text-sm text-[#64748b]">
+                  The configuration from <span className="font-medium text-[#334155]">{selectedForms[0]?.name || "the first form"}</span> will apply to all forms. The other tabs&apos; configurations will be discarded.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowSharedLogicConfirm(false)}
+                className="rounded-lg border border-[#e2e8f0] bg-white px-4 py-2 text-sm font-medium text-[#334155] hover:bg-[#f8fafc]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmSharedLogic}
+                className="rounded-lg bg-[#7c3aed] px-4 py-2 text-sm font-medium text-white hover:bg-[#6d28d9]"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -718,6 +799,88 @@ function FormScopeChipPicker({ selectedFormIds, onChange }: FormScopeChipPickerP
         )
       })}
     </div>
+  )
+}
+
+// Form tabs component for tabbed mode (per-form configuration)
+interface FormTabsProps {
+  forms: typeof targetForms
+  activeFormId: string | null
+  onTabChange: (formId: string) => void
+}
+
+function FormTabs({ forms, activeFormId, onTabChange }: FormTabsProps) {
+  if (forms.length === 0) return null
+
+  return (
+    <div className="flex gap-1 border-b border-[#e2e8f0]">
+      {forms.map((form) => {
+        const isActive = form.id === activeFormId
+        return (
+          <button
+            key={form.id}
+            type="button"
+            onClick={() => onTabChange(form.id)}
+            className={`relative px-4 py-2 text-sm font-medium transition-colors ${
+              isActive
+                ? "text-[#7c3aed]"
+                : "text-[#64748b] hover:text-[#334155]"
+            }`}
+          >
+            {form.name}
+            {isActive && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#7c3aed]" />
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// Wrapper component for tabbed sections
+interface TabbedSectionProps {
+  id: string
+  title: string
+  isTabbedMode: boolean
+  forms: typeof targetForms
+  activeFormId: string | null
+  onTabChange: (formId: string) => void
+  children: React.ReactNode
+}
+
+function TabbedSection({
+  id,
+  title,
+  isTabbedMode,
+  forms,
+  activeFormId,
+  onTabChange,
+  children,
+}: TabbedSectionProps) {
+  return (
+    <section
+      id={`section-${id}`}
+      className="rounded-xl border border-[#e2e8f0] bg-white"
+    >
+      {/* Header with optional tabs */}
+      <div className={isTabbedMode ? "border-b border-[#e2e8f0]" : ""}>
+        <div className="flex items-center justify-between p-6 pb-0">
+          <h2 className="text-base font-semibold text-[#0f172a]">{title}</h2>
+        </div>
+        {isTabbedMode && forms.length > 0 && (
+          <div className="px-6 pt-4">
+            <FormTabs
+              forms={forms}
+              activeFormId={activeFormId}
+              onTabChange={onTabChange}
+            />
+          </div>
+        )}
+      </div>
+      {/* Content */}
+      <div className="p-6 pt-6">{children}</div>
+    </section>
   )
 }
 
