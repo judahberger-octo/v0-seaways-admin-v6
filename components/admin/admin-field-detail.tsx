@@ -988,6 +988,64 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
               />
             )}
 
+            {/* Section: Properties (Critical, Mandatory) - IS affected by form tabs */}
+            <SectionCard
+              id="properties"
+              title="Properties"
+            >
+              <div className="space-y-4">
+                {/* Critical field toggle */}
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-[#334155]">Critical field</p>
+                    <p className="text-xs text-[#64748b]">
+                      Critical fields must be manually verified by crew before submitting.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={formData.isCritical}
+                    onClick={() => updateFormData({ isCritical: !formData.isCritical })}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#7c3aed] focus:ring-offset-2 ${
+                      formData.isCritical ? "bg-[#7c3aed]" : "bg-[#d1d5db]"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        formData.isCritical ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Mandatory field toggle */}
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-[#334155]">Mandatory field</p>
+                    <p className="text-xs text-[#64748b]">
+                      Mandatory fields must have a value before the form can be submitted.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={formData.isMandatory}
+                    onClick={() => updateFormData({ isMandatory: !formData.isMandatory })}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#7c3aed] focus:ring-offset-2 ${
+                      formData.isMandatory ? "bg-[#7c3aed]" : "bg-[#d1d5db]"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        formData.isMandatory ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </SectionCard>
+
             {/* Section 2: Mapping */}
             <SectionCard
               id="mapping"
