@@ -237,10 +237,12 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
     type: 'field' | 'constant'
     value: string // field path or constant value
   }
-  interface FormulaTransformConfig {
-    sourceForm: string
-    operands: FormulaOperand[]
-    operators: FormulaOperator[]
+interface FormulaTransformConfig {
+  sourceForm: string
+  operands: FormulaOperand[]
+  operators: FormulaOperator[]
+  expression?: string // Advanced mode: free-form expression with IF, comparisons, etc.
+  useAdvancedMode?: boolean
   }
   const defaultFormulaConfig: FormulaTransformConfig = { 
     sourceForm: '', 
@@ -1294,132 +1296,14 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
                 )}
 
                 {getCurrentTransformType() === 'formula' && (
-                  <div className="space-y-4">
-                    {/* Source form dropdown */}
-                    <div>
-                      <label className="mb-1.5 block text-sm font-medium text-[#334155]">
-                        Source form <span className="text-[#ef4444]">*</span>
-                      </label>
-                      <SourceFormDropdown
-                        value={getCurrentFormulaConfig().sourceForm}
-                        onChange={(value) => updateFormulaConfig({ sourceForm: value })}
-                      />
-                      <p className="mt-1 text-xs text-[#64748b]">
-                        Select which NAVTOR report type to read fields from.
-                      </p>
-                    </div>
-
-                    {/* Formula builder */}
-                    <div>
-                      <label className="mb-1.5 block text-sm font-medium text-[#334155]">
-                        Formula <span className="text-[#ef4444]">*</span>
-                      </label>
-                      
-                      {/* Formula row */}
-                      <div className="flex flex-wrap items-start gap-2">
-                        {getCurrentFormulaConfig().operands.map((operand, index) => (
-                          <div key={index} className="flex items-start gap-2">
-                            {/* Operand */}
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-1">
-                                {/* Operand type toggle */}
-                                <button
-                                  type="button"
-                                  onClick={() => updateFormulaOperand(index, { 
-                                    type: operand.type === 'field' ? 'constant' : 'field',
-                                    value: '' 
-                                  })}
-                                  className={`rounded px-2 py-1 text-xs font-medium ${
-                                    operand.type === 'field' 
-                                      ? 'bg-[#7c3aed] text-white' 
-                                      : 'bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0]'
-                                  }`}
-                                >
-                                  Field
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => updateFormulaOperand(index, { 
-                                    type: operand.type === 'constant' ? 'field' : 'constant',
-                                    value: '' 
-                                  })}
-                                  className={`rounded px-2 py-1 text-xs font-medium ${
-                                    operand.type === 'constant' 
-                                      ? 'bg-[#7c3aed] text-white' 
-                                      : 'bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0]'
-                                  }`}
-                                >
-                                  Const
-                                </button>
-                                {/* Remove button (only if more than 2 operands) */}
-                                {getCurrentFormulaConfig().operands.length > 2 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => removeFormulaOperand(index)}
-                                    className="rounded p-1 text-[#94a3b8] hover:bg-[#fee2e2] hover:text-[#ef4444]"
-                                  >
-                                    <X className="h-3.5 w-3.5" />
-                                  </button>
-                                )}
-                              </div>
-                              
-                              {/* Operand input */}
-                              {operand.type === 'field' ? (
-                                <div className="w-56">
-                                  <SourceFieldAutocomplete
-                                    value={operand.value}
-                                    onChange={(value) => updateFormulaOperand(index, { value })}
-                                    placeholder="Select field..."
-                                  />
-                                </div>
-                              ) : (
-                                <input
-                                  type="number"
-                                  value={operand.value}
-                                  onChange={(e) => updateFormulaOperand(index, { value: e.target.value })}
-                                  placeholder="0"
-                                  className="w-24 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
-                                />
-                              )}
-                            </div>
-
-                            {/* Operator (between operands) */}
-                            {index < getCurrentFormulaConfig().operands.length - 1 && (
-                              <div className="flex h-[68px] items-end pb-2">
-                                <select
-                                  value={getCurrentFormulaConfig().operators[index] || '+'}
-                                  onChange={(e) => updateFormulaOperator(index, e.target.value as FormulaOperator)}
-                                  className="h-9 w-14 appearance-none rounded-lg border border-[#e2e8f0] bg-white px-2 text-center text-lg font-medium text-[#334155] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
-                                >
-                                  <option value="+">+</option>
-                                  <option value="-">−</option>
-                                  <option value="×">×</option>
-                                  <option value="÷">÷</option>
-                                </select>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-
-                        {/* Add operand button */}
-                        <div className="flex h-[68px] items-end pb-2">
-                          <button
-                            type="button"
-                            onClick={addFormulaOperand}
-                            className="flex h-9 items-center gap-1 rounded-lg border border-dashed border-[#d1d5db] px-3 text-sm text-[#64748b] hover:border-[#7c3aed] hover:bg-[#f8fafc] hover:text-[#7c3aed]"
-                          >
-                            <Plus className="h-4 w-4" />
-                            Add
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Helper text */}
-                      <p className="mt-3 text-xs text-[#64748b]">
-                        Evaluated left to right. No parentheses or operator precedence — for nested expressions like A ÷ (B − C), document the intended order in Notes.
-                      </p>
-                    </div>
-                  </div>
+                  <FormulaTransformEditor
+                    config={getCurrentFormulaConfig()}
+                    onConfigChange={updateFormulaConfig}
+                    onOperandChange={updateFormulaOperand}
+                    onOperatorChange={updateFormulaOperator}
+                    onAddOperand={addFormulaOperand}
+                    onRemoveOperand={removeFormulaOperand}
+                  />
                 )}
 
                 {getCurrentTransformType() === 'constant' && (
@@ -2500,6 +2384,452 @@ const NAVTOR_SOURCE_FIELDS: NavtorFieldOption[] = [
 
 // Legacy flat paths for backward compatibility
 const NAVTOR_PATHS = NAVTOR_SOURCE_FIELDS.map(f => f.path)
+
+// Formula Transform Editor with enhanced expression language
+interface FormulaTransformEditorProps {
+  config: FormulaTransformConfig
+  onConfigChange: (updates: Partial<FormulaTransformConfig>) => void
+  onOperandChange: (index: number, updates: Partial<FormulaOperand>) => void
+  onOperatorChange: (index: number, value: FormulaOperator) => void
+  onAddOperand: () => void
+  onRemoveOperand: (index: number) => void
+}
+
+function FormulaTransformEditor({
+  config,
+  onConfigChange,
+  onOperandChange,
+  onOperatorChange,
+  onAddOperand,
+  onRemoveOperand,
+}: FormulaTransformEditorProps) {
+  const [showReferenceModal, setShowReferenceModal] = useState(false)
+  const [formulaExpression, setFormulaExpression] = useState('')
+  const [expressionError, setExpressionError] = useState<string | null>(null)
+  const [expressionValid, setExpressionValid] = useState(false)
+  const [useAdvancedMode, setUseAdvancedMode] = useState(false)
+
+  // Validate the formula expression
+  const validateExpression = () => {
+    const expr = formulaExpression.trim()
+    if (!expr) {
+      setExpressionError('Expression cannot be empty')
+      setExpressionValid(false)
+      return
+    }
+
+    // Check for balanced parentheses
+    let parenCount = 0
+    for (const char of expr) {
+      if (char === '(') parenCount++
+      if (char === ')') parenCount--
+      if (parenCount < 0) {
+        setExpressionError('Unbalanced parentheses: unexpected closing parenthesis')
+        setExpressionValid(false)
+        return
+      }
+    }
+    if (parenCount !== 0) {
+      setExpressionError('Unbalanced parentheses: missing closing parenthesis')
+      setExpressionValid(false)
+      return
+    }
+
+    // Check for valid field references
+    const fieldRefPattern = /\$\{field\.[a-zA-Z_][a-zA-Z0-9_]*\}/g
+    const fieldRefs = expr.match(fieldRefPattern) || []
+    
+    // Check for valid function usage
+    const functionPattern = /(SUM|AVG|MIN|MAX|ROUND|IF)\s*\(/gi
+    const functions = expr.match(functionPattern) || []
+    
+    // Check IF function has proper syntax
+    const ifPattern = /IF\s*\([^,]+,[^,]+,[^)]+\)/gi
+    const ifUsages = expr.match(/IF\s*\(/gi) || []
+    if (ifUsages.length > 0) {
+      // Basic check for IF arguments
+      const ifMatches = expr.match(ifPattern) || []
+      if (ifMatches.length !== ifUsages.length) {
+        setExpressionError('IF function requires 3 arguments: IF(condition, then_value, else_value)')
+        setExpressionValid(false)
+        return
+      }
+    }
+
+    // Check for invalid characters (allowing comparison and logical operators)
+    const validCharsPattern = /^[\s\d\w\.\$\{\}\+\-\*\/\×\÷\(\)\,\=\!\<\>\&\|\"\']+$/
+    if (!validCharsPattern.test(expr.replace(/AND|OR|NOT/g, ''))) {
+      setExpressionError('Expression contains invalid characters')
+      setExpressionValid(false)
+      return
+    }
+
+    setExpressionError(null)
+    setExpressionValid(true)
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Source form dropdown */}
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+          Source form <span className="text-[#ef4444]">*</span>
+        </label>
+        <SourceFormDropdown
+          value={config.sourceForm}
+          onChange={(value) => onConfigChange({ sourceForm: value })}
+        />
+        <p className="mt-1 text-xs text-[#64748b]">
+          Select which NAVTOR report type to read fields from.
+        </p>
+      </div>
+
+      {/* Mode toggle */}
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-[#64748b]">Mode:</span>
+        <div className="flex rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-0.5">
+          <button
+            type="button"
+            onClick={() => setUseAdvancedMode(false)}
+            className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+              !useAdvancedMode
+                ? 'bg-white text-[#0f172a] shadow-sm'
+                : 'text-[#64748b] hover:text-[#334155]'
+            }`}
+          >
+            Visual
+          </button>
+          <button
+            type="button"
+            onClick={() => setUseAdvancedMode(true)}
+            className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+              useAdvancedMode
+                ? 'bg-white text-[#0f172a] shadow-sm'
+                : 'text-[#64748b] hover:text-[#334155]'
+            }`}
+          >
+            Expression
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowReferenceModal(true)}
+          className="ml-auto flex items-center gap-1 text-sm text-[#7c3aed] hover:underline"
+        >
+          <HelpCircle className="h-4 w-4" />
+          Expression reference
+        </button>
+      </div>
+
+      {!useAdvancedMode ? (
+        /* Visual formula builder */
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+            Formula <span className="text-[#ef4444]">*</span>
+          </label>
+          
+          {/* Formula row */}
+          <div className="flex flex-wrap items-start gap-2">
+            {config.operands.map((operand, index) => (
+              <div key={index} className="flex items-start gap-2">
+                {/* Operand */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1">
+                    {/* Operand type toggle */}
+                    <button
+                      type="button"
+                      onClick={() => onOperandChange(index, { 
+                        type: operand.type === 'field' ? 'constant' : 'field',
+                        value: '' 
+                      })}
+                      className={`rounded px-2 py-1 text-xs font-medium ${
+                        operand.type === 'field' 
+                          ? 'bg-[#7c3aed] text-white' 
+                          : 'bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0]'
+                      }`}
+                    >
+                      Field
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onOperandChange(index, { 
+                        type: operand.type === 'constant' ? 'field' : 'constant',
+                        value: '' 
+                      })}
+                      className={`rounded px-2 py-1 text-xs font-medium ${
+                        operand.type === 'constant' 
+                          ? 'bg-[#7c3aed] text-white' 
+                          : 'bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0]'
+                      }`}
+                    >
+                      Const
+                    </button>
+                    {/* Remove button (only if more than 2 operands) */}
+                    {config.operands.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => onRemoveOperand(index)}
+                        className="rounded p-1 text-[#94a3b8] hover:bg-[#fee2e2] hover:text-[#ef4444]"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Operand input */}
+                  {operand.type === 'field' ? (
+                    <div className="w-56">
+                      <SourceFieldAutocomplete
+                        value={operand.value}
+                        onChange={(value) => onOperandChange(index, { value })}
+                        placeholder="Select field..."
+                      />
+                    </div>
+                  ) : (
+                    <input
+                      type="number"
+                      value={operand.value}
+                      onChange={(e) => onOperandChange(index, { value: e.target.value })}
+                      placeholder="0"
+                      className="w-24 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                    />
+                  )}
+                </div>
+
+                {/* Operator (between operands) */}
+                {index < config.operands.length - 1 && (
+                  <div className="flex h-[68px] items-end pb-2">
+                    <select
+                      value={config.operators[index] || '+'}
+                      onChange={(e) => onOperatorChange(index, e.target.value as FormulaOperator)}
+                      className="h-9 w-14 appearance-none rounded-lg border border-[#e2e8f0] bg-white px-2 text-center text-lg font-medium text-[#334155] focus:border-[#7c3aed] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+                    >
+                      <option value="+">+</option>
+                      <option value="-">−</option>
+                      <option value="×">×</option>
+                      <option value="÷">÷</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Add operand button */}
+            <div className="flex h-[68px] items-end pb-2">
+              <button
+                type="button"
+                onClick={onAddOperand}
+                className="flex h-9 items-center gap-1 rounded-lg border border-dashed border-[#d1d5db] px-3 text-sm text-[#64748b] hover:border-[#7c3aed] hover:bg-[#f8fafc] hover:text-[#7c3aed]"
+              >
+                <Plus className="h-4 w-4" />
+                Add
+              </button>
+            </div>
+          </div>
+
+          {/* Helper text */}
+          <p className="mt-3 text-xs text-[#64748b]">
+            For complex expressions with IF, comparisons, or nested logic, switch to Expression mode.
+          </p>
+        </div>
+      ) : (
+        /* Advanced expression editor */
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-[#334155]">
+            Expression <span className="text-[#ef4444]">*</span>
+          </label>
+          <textarea
+            value={formulaExpression}
+            onChange={(e) => {
+              setFormulaExpression(e.target.value)
+              setExpressionError(null)
+              setExpressionValid(false)
+            }}
+            placeholder={'${field.IFO_Consumed} + ${field.MGO_Consumed}\n\nor with IF:\n\nIF(${field.CargoWeight} > 0, "Loaded", "Ballast")'}
+            rows={4}
+            className={`w-full rounded-lg border bg-white px-3 py-2 font-mono text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:ring-1 ${
+              expressionError
+                ? 'border-[#ef4444] focus:border-[#ef4444] focus:ring-[#ef4444]'
+                : expressionValid
+                  ? 'border-[#22c55e] focus:border-[#22c55e] focus:ring-[#22c55e]'
+                  : 'border-[#e2e8f0] focus:border-[#7c3aed] focus:ring-[#7c3aed]'
+            }`}
+          />
+          
+          {/* Error/success message */}
+          {expressionError && (
+            <p className="mt-1.5 flex items-center gap-1 text-xs text-[#ef4444]">
+              <AlertCircle className="h-3.5 w-3.5" />
+              {expressionError}
+            </p>
+          )}
+          {expressionValid && !expressionError && (
+            <p className="mt-1.5 flex items-center gap-1 text-xs text-[#22c55e]">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Expression is valid
+            </p>
+          )}
+
+          {/* Validate button */}
+          <button
+            type="button"
+            onClick={validateExpression}
+            className="mt-3 flex items-center gap-2 rounded-lg border border-[#7c3aed] bg-white px-4 py-2 text-sm font-medium text-[#7c3aed] hover:bg-[#f3e8ff]"
+          >
+            <Play className="h-4 w-4" />
+            Validate expression
+          </button>
+        </div>
+      )}
+
+      {/* Reference Modal */}
+      {showReferenceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-[#0f172a]">Formula Expression Reference</h3>
+              <button
+                type="button"
+                onClick={() => setShowReferenceModal(false)}
+                className="rounded-lg p-2 text-[#64748b] hover:bg-[#f1f5f9]"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-6 text-sm">
+              {/* Field references */}
+              <div>
+                <h4 className="mb-2 font-semibold text-[#334155]">Field References</h4>
+                <div className="rounded-lg bg-[#f8fafc] p-3">
+                  <code className="text-[#7c3aed]">{'${field.LogicalName}'}</code>
+                  <p className="mt-1 text-[#64748b]">Reference any field by its logical name</p>
+                </div>
+              </div>
+
+              {/* Arithmetic operators */}
+              <div>
+                <h4 className="mb-2 font-semibold text-[#334155]">Arithmetic Operators</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { op: '+', desc: 'Addition' },
+                    { op: '−', desc: 'Subtraction' },
+                    { op: '×', desc: 'Multiplication' },
+                    { op: '÷', desc: 'Division' },
+                    { op: '( )', desc: 'Grouping' },
+                  ].map(({ op, desc }) => (
+                    <div key={op} className="flex items-center gap-2 rounded bg-[#f8fafc] px-3 py-2">
+                      <code className="font-bold text-[#7c3aed]">{op}</code>
+                      <span className="text-[#64748b]">{desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Comparison operators */}
+              <div>
+                <h4 className="mb-2 font-semibold text-[#334155]">Comparison Operators</h4>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { op: '==', desc: 'Equal to' },
+                    { op: '!=', desc: 'Not equal to' },
+                    { op: '<', desc: 'Less than' },
+                    { op: '>', desc: 'Greater than' },
+                    { op: '<=', desc: 'Less than or equal' },
+                    { op: '>=', desc: 'Greater than or equal' },
+                  ].map(({ op, desc }) => (
+                    <div key={op} className="flex items-center gap-2 rounded bg-[#f8fafc] px-3 py-2">
+                      <code className="font-bold text-[#7c3aed]">{op}</code>
+                      <span className="text-[#64748b]">{desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Logical operators */}
+              <div>
+                <h4 className="mb-2 font-semibold text-[#334155]">Logical Operators</h4>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { op: 'AND', desc: 'Both conditions true' },
+                    { op: 'OR', desc: 'Either condition true' },
+                    { op: 'NOT', desc: 'Negates condition' },
+                  ].map(({ op, desc }) => (
+                    <div key={op} className="flex items-center gap-2 rounded bg-[#f8fafc] px-3 py-2">
+                      <code className="font-bold text-[#7c3aed]">{op}</code>
+                      <span className="text-[#64748b]">{desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Functions */}
+              <div>
+                <h4 className="mb-2 font-semibold text-[#334155]">Functions</h4>
+                <div className="space-y-2">
+                  {[
+                    { fn: 'SUM(a, b, ...)', desc: 'Sum of values' },
+                    { fn: 'AVG(a, b, ...)', desc: 'Average of values' },
+                    { fn: 'MIN(a, b, ...)', desc: 'Minimum value' },
+                    { fn: 'MAX(a, b, ...)', desc: 'Maximum value' },
+                    { fn: 'ROUND(value, decimals)', desc: 'Round to decimal places' },
+                    { fn: 'IF(condition, then_value, else_value)', desc: 'Conditional logic' },
+                  ].map(({ fn, desc }) => (
+                    <div key={fn} className="flex items-center justify-between rounded bg-[#f8fafc] px-3 py-2">
+                      <code className="text-[#7c3aed]">{fn}</code>
+                      <span className="text-[#64748b]">{desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Examples */}
+              <div>
+                <h4 className="mb-2 font-semibold text-[#334155]">Examples</h4>
+                <div className="space-y-2">
+                  <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                    <code className="block text-xs text-[#7c3aed]">
+                      {'${field.IFO_Consumed} + ${field.MGO_Consumed}'}
+                    </code>
+                    <p className="mt-1 text-xs text-[#64748b]">Simple addition of two fields</p>
+                  </div>
+                  <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                    <code className="block text-xs text-[#7c3aed]">
+                      {'ROUND(${field.Distance} / ${field.Time}, 2)'}
+                    </code>
+                    <p className="mt-1 text-xs text-[#64748b]">Calculate speed rounded to 2 decimals</p>
+                  </div>
+                  <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                    <code className="block text-xs text-[#7c3aed]">
+                      {'IF(${field.CargoWeight} > 0, "Loaded", IF(${field.BallastWater} > 0, "Light Ballast", null))'}
+                    </code>
+                    <p className="mt-1 text-xs text-[#64748b]">Nested IF for cargo status</p>
+                  </div>
+                  <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                    <code className="block text-xs text-[#7c3aed]">
+                      {'SUM(${field.AuxBoiler1}, ${field.AuxBoiler2}, IF(${field.CompositeBoilerPresent}, ${field.CompositeBoiler}, 0))'}
+                    </code>
+                    <p className="mt-1 text-xs text-[#64748b]">Conditional sum with optional field</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowReferenceModal(false)}
+                className="rounded-lg bg-[#7c3aed] px-4 py-2 text-sm font-medium text-white hover:bg-[#6d28d9]"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // Source Form Dropdown component
 interface SourceFormDropdownProps {
