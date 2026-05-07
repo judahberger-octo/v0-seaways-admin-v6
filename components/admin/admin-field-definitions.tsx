@@ -17,6 +17,7 @@ import {
   targetForms,
   targetSystems,
   type FieldDefinition,
+  type TransformType,
 } from "@/lib/admin-mock-data"
 
 // Format relative time
@@ -46,7 +47,50 @@ function getDataTypeColor(dataType: FieldDefinition["dataType"]): string {
   return colors[dataType] || "bg-gray-100 text-gray-700"
 }
 
-type SortKey = "name" | "dataType" | "critical" | "mandatory" | "calculated" | "lastModified" | "version"
+// Transform type display label
+const transformTypeLabels: Record<TransformType, string> = {
+  direct: "Direct",
+  lookup: "Lookup",
+  aggregation: "Aggregation",
+  formula: "Formula",
+  constant: "Constant",
+  manual: "Manual",
+}
+
+// Get transform display info for a field
+function getTransformDisplayInfo(field: FieldDefinition): { 
+  label: string
+  isMixed: boolean
+  breakdown?: string 
+} {
+  // If field has per-form transforms, it's mixed
+  if (field.transformTypePerForm && Object.keys(field.transformTypePerForm).length > 0) {
+    const breakdown = Object.entries(field.transformTypePerForm)
+      .map(([formId, transform]) => {
+        const form = targetForms.find(f => f.id === formId)
+        const formShort = form?.shortName || form?.name || formId
+        return `${formShort}: ${transformTypeLabels[transform]}`
+      })
+      .join(" · ")
+    return { label: "Mixed", isMixed: true, breakdown }
+  }
+  // Single transform type
+  if (field.transformType) {
+    return { label: transformTypeLabels[field.transformType], isMixed: false }
+  }
+  // No transform configured
+  return { label: "—", isMixed: false }
+}
+
+// Get sort key for transform type (Mixed sorts last)
+function getTransformSortKey(field: FieldDefinition): string {
+  if (field.transformTypePerForm && Object.keys(field.transformTypePerForm).length > 0) {
+    return "zzz_mixed" // Sort Mixed last alphabetically
+  }
+  return field.transformType || "zzz_none"
+}
+
+type SortKey = "name" | "transformType" | "dataType" | "critical" | "mandatory" | "calculated" | "lastModified" | "version"
 type SortDir = "asc" | "desc"
 
 interface FilterState {
@@ -113,6 +157,9 @@ export function AdminFieldDefinitions({ onSelectField, onCreateField }: AdminFie
       switch (sortKey) {
         case "name":
           cmp = a.logicalName.localeCompare(b.logicalName)
+          break
+        case "transformType":
+          cmp = getTransformSortKey(a).localeCompare(getTransformSortKey(b))
           break
         case "dataType":
           cmp = a.dataType.localeCompare(b.dataType)
@@ -402,11 +449,17 @@ export function AdminFieldDefinitions({ onSelectField, onCreateField }: AdminFie
       {/* Table */}
       <div className="rounded-xl border border-[#e2e8f0] bg-white">
         {/* Table Header */}
-        <div className="grid grid-cols-[2fr_1.5fr_100px_100px_100px_100px_100px_80px] gap-4 border-b border-[#e2e8f0] px-4 py-3 text-sm font-medium text-[#64748b]">
+        <div className="grid grid-cols-[2fr_1.2fr_110px_100px_100px_100px_100px_100px_80px] gap-4 border-b border-[#e2e8f0] px-4 py-3 text-sm font-medium text-[#64748b]">
           <button onClick={() => handleSort("name")} className="flex items-center gap-1 text-left hover:text-[#0f172a]">
             Field name <SortIcon columnKey="name" />
           </button>
           <span>Forms</span>
+          <button
+            onClick={() => handleSort("transformType")}
+            className="flex items-center gap-1 text-left hover:text-[#0f172a]"
+          >
+            Transform <SortIcon columnKey="transformType" />
+          </button>
           <button
             onClick={() => handleSort("dataType")}
             className="flex items-center gap-1 text-left hover:text-[#0f172a]"
@@ -456,7 +509,7 @@ export function AdminFieldDefinitions({ onSelectField, onCreateField }: AdminFie
               <button
                 key={field.id}
                 onClick={() => handleRowClick(field.id)}
-                className="grid w-full grid-cols-[2fr_1.5fr_100px_100px_100px_100px_100px_80px] gap-4 px-4 py-3 text-left text-sm transition-colors hover:bg-[#f8fafc]"
+                className="grid w-full grid-cols-[2fr_1.2fr_110px_100px_100px_100px_100px_100px_80px] gap-4 px-4 py-3 text-left text-sm transition-colors hover:bg-[#f8fafc]"
               >
                 <span className="font-medium text-[#0f172a]">{field.logicalName}</span>
                 <div className="flex flex-wrap gap-1">
@@ -474,6 +527,28 @@ export function AdminFieldDefinitions({ onSelectField, onCreateField }: AdminFie
                     </span>
                   )}
                 </div>
+                {/* Transform type column */}
+                {(() => {
+                  const transformInfo = getTransformDisplayInfo(field)
+                  return (
+                    <span className="relative group">
+                      <span
+                        className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          transformInfo.isMixed
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        {transformInfo.label}
+                      </span>
+                      {transformInfo.isMixed && transformInfo.breakdown && (
+                        <span className="absolute left-0 top-full z-10 mt-1 hidden whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-xs text-white shadow-lg group-hover:block">
+                          {transformInfo.breakdown}
+                        </span>
+                      )}
+                    </span>
+                  )
+                })()}
                 <span
                   className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-xs font-medium ${getDataTypeColor(field.dataType)}`}
                 >

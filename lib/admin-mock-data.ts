@@ -45,6 +45,8 @@ export interface ValidationRule {
   severity: 'block' | 'warn'
 }
 
+export type TransformType = 'direct' | 'lookup' | 'aggregation' | 'formula' | 'constant' | 'manual'
+
 export interface FieldDefinition {
   id: string
   targetSystemId: string
@@ -68,6 +70,9 @@ export interface FieldDefinition {
   version: number
   updatedAt: string
   updatedBy: string
+  // Transform type - either single for all forms or per-form mapping
+  transformType?: TransformType
+  transformTypePerForm?: Record<string, TransformType>
 }
 
 export interface Flag {
@@ -1071,27 +1076,58 @@ const fieldDefinitionData: Array<{
   },
 ]
 
+// Helper to determine transform type based on field characteristics
+function determineTransformType(fd: typeof fieldDefinitionData[0], index: number): { transformType?: TransformType; transformTypePerForm?: Record<string, TransformType> } {
+  // Calculated fields use formula transform
+  if (fd.isCalculated) {
+    return { transformType: 'formula' }
+  }
+  // Manual fill fields (no NAVTOR paths) use manual transform
+  if (fd.navtorPaths.length === 0 || fd.extractionHint.includes('MANUAL FILL')) {
+    return { transformType: 'manual' }
+  }
+  // Some fields have lookup transforms (e.g., enum fields that need mapping)
+  if (fd.dataType === 'enum' && index % 3 === 0) {
+    return { transformType: 'lookup' }
+  }
+  // Some fields have mixed transforms per form (for demo purposes)
+  if (fd.appearsOnForms.length > 2 && index % 7 === 0) {
+    const transforms: TransformType[] = ['direct', 'manual', 'lookup']
+    const perForm: Record<string, TransformType> = {}
+    fd.appearsOnForms.forEach((formId, i) => {
+      perForm[formId] = transforms[i % transforms.length]
+    })
+    return { transformTypePerForm: perForm }
+  }
+  // Default to direct transform
+  return { transformType: 'direct' }
+}
+
 // Generate field definitions with proper IDs and versions
 let fieldDefIdCounter = 1
-export const fieldDefinitions: FieldDefinition[] = fieldDefinitionData.map((fd) => ({
-  id: `fd-${String(fieldDefIdCounter++).padStart(4, '0')}`,
-  targetSystemId: 'veslink',
-  logicalName: fd.logicalName,
-  name: fd.logicalName,
-  appearsOnFormIds: fd.appearsOnForms,
-  navtorSourcePaths: fd.navtorPaths,
-  dataType: fd.dataType,
-  unit: fd.unit,
-  isCritical: fd.isCritical,
-  isMandatory: fd.isMandatory,
-  isCalculated: fd.isCalculated,
-  formula: fd.formula,
-  extractionHint: fd.extractionHint,
-  validationRules: fd.validationRules || [],
-  version: Math.floor(Math.random() * 8) + 1, // v1-v8
-  updatedAt: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString(), // Last 90 days
-  updatedBy: 'admin@seaways.com',
-}))
+export const fieldDefinitions: FieldDefinition[] = fieldDefinitionData.map((fd, index) => {
+  const transforms = determineTransformType(fd, index)
+  return {
+    id: `fd-${String(fieldDefIdCounter++).padStart(4, '0')}`,
+    targetSystemId: 'veslink',
+    logicalName: fd.logicalName,
+    name: fd.logicalName,
+    appearsOnFormIds: fd.appearsOnForms,
+    navtorSourcePaths: fd.navtorPaths,
+    dataType: fd.dataType,
+    unit: fd.unit,
+    isCritical: fd.isCritical,
+    isMandatory: fd.isMandatory,
+    isCalculated: fd.isCalculated,
+    formula: fd.formula,
+    extractionHint: fd.extractionHint,
+    validationRules: fd.validationRules || [],
+    version: Math.floor(Math.random() * 8) + 1, // v1-v8
+    updatedAt: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString(), // Last 90 days
+    updatedBy: 'admin@seaways.com',
+    ...transforms,
+  }
+})
 
 // ----------------------------------------------------------------------------
 // Flags (~200 flags spread across fields, some with 20+ flags)
