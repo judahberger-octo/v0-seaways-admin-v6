@@ -1479,6 +1479,16 @@ interface FormulaTransformConfig {
                     </div>
                   </div>
                 )}
+
+                {/* Null handling note */}
+                <div className="mt-6 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                  <p className="text-xs text-[#64748b]">
+                    If any source field is missing or empty at runtime, this mapping produces null and the field is left unmapped on the report. Crew will see it as an empty field they can fill manually.
+                  </p>
+                  <p className="mt-1.5 text-xs text-[#64748b]">
+                    <span className="font-medium text-[#334155]">Exception:</span> the Aggregation &quot;first non-null&quot; operator walks the source list trying each in order until one is populated; only if all are null does it return null.
+                  </p>
+                </div>
               </div>
             </SectionCard>
 
