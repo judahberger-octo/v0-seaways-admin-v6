@@ -16,8 +16,8 @@ interface AdminTabItem {
 const adminTabs: AdminTabItem[] = [
   { id: "overview", label: "Overview", slug: "overview" },
   { id: "field-definitions", label: "Field Definitions", slug: "field-definitions" },
-  { id: "review-queue", label: "Review Queue", slug: "review-queue" },
-  { id: "vessels", label: "Vessels", slug: "vessels" },
+  { id: "review-queue", label: "Review Queue — TBD", slug: "review-queue" },
+  { id: "vessels", label: "Vessels — WIP", slug: "vessels" },
 ]
 
 interface AdminLayoutProps {
