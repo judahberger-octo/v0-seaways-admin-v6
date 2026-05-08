@@ -867,20 +867,25 @@ interface FormulaTransformConfig {
               </div>
             </section>
 
-            {/* Top-level form tab strip (only when Same logic is OFF) */}
-            {!sameLogicForAllForms && selectedForms.length > 0 && (
-              <TopLevelFormTabStrip
-                forms={selectedForms}
-                activeFormId={activeFormTab}
-                onTabChange={setActiveFormTab}
-              />
-            )}
+            {/* Tabbed Configuration Container */}
+            <div className="overflow-hidden rounded-lg border border-[#e5e7eb] bg-white">
+              {/* Tab strip header */}
+              {!sameLogicForAllForms && selectedForms.length > 0 && (
+                <TopLevelFormTabStrip
+                  forms={selectedForms}
+                  activeFormId={activeFormTab}
+                  onTabChange={setActiveFormTab}
+                />
+              )}
 
-            {/* Section: Properties (Critical, Mandatory) - IS affected by form tabs */}
-            <SectionCard
-              id="properties"
-              title="Properties"
-            >
+              {/* Nested sections container */}
+              <div className="space-y-6 p-6">
+                  {/* Section: Properties (Critical, Mandatory) - IS affected by form tabs */}
+                  <SectionCard
+                    id="properties"
+                    title="Properties"
+                    nested
+                  >
               <div className="space-y-4">
                 {/* Critical field toggle */}
                 <div className="flex items-start justify-between gap-4">
@@ -932,13 +937,14 @@ interface FormulaTransformConfig {
                   </button>
                 </div>
               </div>
-            </SectionCard>
+                  </SectionCard>
 
-            {/* Section 2: Mapping */}
-            <SectionCard
-              id="mapping"
-              title="Mapping"
-            >
+                  {/* Section 2: Mapping */}
+                  <SectionCard
+                    id="mapping"
+                    title="Mapping"
+                    nested
+                  >
               <div className="space-y-6">
                 {/* Transform type picker */}
                 <div>
@@ -1376,13 +1382,14 @@ interface FormulaTransformConfig {
                   </p>
                 </div>
               </div>
-            </SectionCard>
+                  </SectionCard>
 
-            {/* Section 4: Notes */}
-            <SectionCard
-              id="notes"
-              title="Notes"
-            >
+                  {/* Section 4: Notes */}
+                  <SectionCard
+                    id="notes"
+                    title="Notes"
+                    nested
+                  >
               <div className="space-y-3">
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-[#334155]">
@@ -1403,13 +1410,14 @@ interface FormulaTransformConfig {
                   Notes are visible to all admins; not surfaced to crew anywhere.
                 </p>
               </div>
-            </SectionCard>
+                  </SectionCard>
 
-            {/* Section 5: Validation */}
-            <SectionCard
-              id="validation"
-              title="Validation rules"
-            >
+                  {/* Section 5: Validation */}
+                  <SectionCard
+                    id="validation"
+                    title="Validation rules"
+                    nested
+                  >
               <div className="space-y-6">
                 {/* Section description */}
                 <p className="text-sm text-[#64748b]">
@@ -1638,13 +1646,14 @@ interface FormulaTransformConfig {
                   />
                 </div>
               </div>
-            </SectionCard>
+                  </SectionCard>
 
-            {/* Section 6: Test */}
-            <SectionCard
-              id="test"
-              title="Test"
-            >
+                  {/* Section 6: Test */}
+                  <SectionCard
+                    id="test"
+                    title="Test"
+                    nested
+                  >
               <FieldTestPanel 
                 fieldId={fieldId || ""} 
                 dataType={formData.dataType || "text"}
@@ -1655,7 +1664,9 @@ interface FormulaTransformConfig {
                   : undefined
                 }
               />
-            </SectionCard>
+                  </SectionCard>
+              </div>
+            </div>
 
             {/* Section 7: Activity - NOT tabbed, unified timeline */}
             <section
@@ -1983,13 +1994,16 @@ function LookupTablePreview({ tableId }: LookupTablePreviewProps) {
   )
 }
 
-// Form scope chip picker - shows all forms as selectable chips
+// Form scope dropdown picker - dropdown with checkboxes and removable chips
 interface FormScopeChipPickerProps {
   selectedFormIds: string[]
   onChange: (formIds: string[]) => void
 }
 
 function FormScopeChipPicker({ selectedFormIds, onChange }: FormScopeChipPickerProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
   const toggleForm = (formId: string) => {
     if (selectedFormIds.includes(formId)) {
       onChange(selectedFormIds.filter((id) => id !== formId))
@@ -1998,26 +2012,107 @@ function FormScopeChipPicker({ selectedFormIds, onChange }: FormScopeChipPickerP
     }
   }
 
+  const removeForm = (formId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    onChange(selectedFormIds.filter((id) => id !== formId))
+  }
+
+  // Close on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [])
+
+  // Get selected forms in display order
+  const selectedFormsDisplay = targetForms.filter((f) => selectedFormIds.includes(f.id))
+
   return (
-    <div className="flex flex-wrap gap-2">
-      {targetForms.map((form) => {
-        const isSelected = selectedFormIds.includes(form.id)
-        return (
-          <button
-            key={form.id}
-            type="button"
-            onClick={() => toggleForm(form.id)}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-              isSelected
-                ? "bg-[#7c3aed] text-white"
-                : "bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0] hover:text-[#334155]"
-            }`}
-          >
-            {isSelected && <Check className="h-3.5 w-3.5" />}
-            {form.name}
-          </button>
-        )
-      })}
+    <div ref={containerRef} className="relative">
+      {/* Closed state - input row with chips */}
+      <div
+        role="combobox"
+        aria-expanded={isOpen}
+        tabIndex={0}
+        onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setIsOpen(!isOpen)
+          }
+        }}
+        className={`flex w-full min-h-[42px] cursor-pointer items-center justify-between gap-2 rounded-lg border bg-white px-3 py-2 text-left transition-colors ${
+          isOpen 
+            ? 'border-[#7c3aed] ring-1 ring-[#7c3aed]' 
+            : 'border-[#e2e8f0] hover:border-[#cbd5e1]'
+        }`}
+      >
+        <div className="flex flex-1 flex-wrap gap-1.5">
+          {selectedFormsDisplay.length === 0 ? (
+            <span className="text-sm text-[#94a3b8]">Select forms...</span>
+          ) : (
+            selectedFormsDisplay.map((form) => (
+              <span
+                key={form.id}
+                className="inline-flex items-center gap-1 rounded-md bg-[#f1f5f9] px-2 py-0.5 text-sm font-medium text-[#334155]"
+              >
+                {form.name}
+                <button
+                  type="button"
+                  onClick={(e) => removeForm(form.id, e)}
+                  className="ml-0.5 rounded-sm p-0.5 text-[#64748b] hover:bg-[#e2e8f0] hover:text-[#0f172a]"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))
+          )}
+        </div>
+        <ChevronDown className={`h-4 w-4 flex-shrink-0 text-[#64748b] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </div>
+
+      {/* Open state - dropdown panel */}
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-lg border border-[#e2e8f0] bg-white py-1 shadow-lg">
+          {targetForms.map((form) => {
+            const isSelected = selectedFormIds.includes(form.id)
+            return (
+              <button
+                key={form.id}
+                type="button"
+                onClick={() => toggleForm(form.id)}
+                className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[#f8fafc]"
+              >
+                <div className={`flex h-4 w-4 items-center justify-center rounded border ${
+                  isSelected 
+                    ? 'border-[#7c3aed] bg-[#7c3aed]' 
+                    : 'border-[#d1d5db] bg-white'
+                }`}>
+                  {isSelected && <Check className="h-3 w-3 text-white" />}
+                </div>
+                <span className={isSelected ? 'font-medium text-[#0f172a]' : 'text-[#334155]'}>
+                  {form.name}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -2027,13 +2122,28 @@ interface SectionCardProps {
   id: string
   title: string
   children: React.ReactNode
+  nested?: boolean // When true, uses lighter styling for sections inside TabbedConfigContainer
 }
 
 function SectionCard({
   id,
   title,
   children,
+  nested = false,
 }: SectionCardProps) {
+  if (nested) {
+    // Nested style: no border, divider below, small uppercase heading
+    return (
+      <section
+        id={`section-${id}`}
+        className="border-b border-[#f1f5f9] pb-6 last:border-b-0 last:pb-0"
+      >
+        <h3 className="mb-4 text-xs font-semibold uppercase tracking-wide text-[#64748b]">{title}</h3>
+        <div>{children}</div>
+      </section>
+    )
+  }
+  
   return (
     <section
       id={`section-${id}`}
@@ -2050,6 +2160,7 @@ function SectionCard({
 }
 
 // Top-level form tab strip (shown when "Same logic for all" is OFF)
+// This is just the tab strip header - it will be rendered inside the TabbedConfigContainer
 interface TopLevelFormTabStripProps {
   forms: typeof targetForms
   activeFormId: string | null
@@ -2060,23 +2171,32 @@ function TopLevelFormTabStrip({ forms, activeFormId, onTabChange }: TopLevelForm
   if (forms.length === 0) return null
   
   return (
-    <div className="rounded-xl border border-[#e2e8f0] bg-white p-4">
-      <div className="flex items-center gap-1 overflow-x-auto">
-        {forms.map((form) => (
+    <div className="flex items-end">
+      {forms.map((form) => {
+        const isActive = activeFormId === form.id
+        return (
           <button
             key={form.id}
             type="button"
             onClick={() => onTabChange(form.id)}
-            className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              activeFormId === form.id
-                ? "bg-[#7c3aed] text-white"
-                : "text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155]"
+            className={`relative whitespace-nowrap px-5 py-2.5 text-sm font-medium transition-colors ${
+              isActive
+                ? "rounded-t-lg bg-white text-[#7c3aed] z-10"
+                : "text-[#64748b] hover:text-[#334155] border-b border-[#e5e7eb]"
             }`}
+            style={isActive ? { 
+              marginBottom: '-1px',
+              borderTop: '2px solid #7c3aed',
+              borderLeft: '1px solid #e5e7eb',
+              borderRight: '1px solid #e5e7eb',
+            } : undefined}
           >
             {form.name}
           </button>
-        ))}
-      </div>
+        )
+      })}
+      {/* Filler to extend the bottom border */}
+      <div className="flex-1 border-b border-[#e5e7eb]" />
     </div>
   )
 }
