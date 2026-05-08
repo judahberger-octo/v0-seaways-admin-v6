@@ -1983,13 +1983,16 @@ function LookupTablePreview({ tableId }: LookupTablePreviewProps) {
   )
 }
 
-// Form scope chip picker - shows all forms as selectable chips
+// Form scope dropdown picker - dropdown with checkboxes and removable chips
 interface FormScopeChipPickerProps {
   selectedFormIds: string[]
   onChange: (formIds: string[]) => void
 }
 
 function FormScopeChipPicker({ selectedFormIds, onChange }: FormScopeChipPickerProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
   const toggleForm = (formId: string) => {
     if (selectedFormIds.includes(formId)) {
       onChange(selectedFormIds.filter((id) => id !== formId))
@@ -1998,26 +2001,99 @@ function FormScopeChipPicker({ selectedFormIds, onChange }: FormScopeChipPickerP
     }
   }
 
+  const removeForm = (formId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    onChange(selectedFormIds.filter((id) => id !== formId))
+  }
+
+  // Close on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [])
+
+  // Get selected forms in display order
+  const selectedFormsDisplay = targetForms.filter((f) => selectedFormIds.includes(f.id))
+
   return (
-    <div className="flex flex-wrap gap-2">
-      {targetForms.map((form) => {
-        const isSelected = selectedFormIds.includes(form.id)
-        return (
-          <button
-            key={form.id}
-            type="button"
-            onClick={() => toggleForm(form.id)}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-              isSelected
-                ? "bg-[#7c3aed] text-white"
-                : "bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0] hover:text-[#334155]"
-            }`}
-          >
-            {isSelected && <Check className="h-3.5 w-3.5" />}
-            {form.name}
-          </button>
-        )
-      })}
+    <div ref={containerRef} className="relative">
+      {/* Closed state - input row with chips */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`flex w-full min-h-[42px] items-center justify-between gap-2 rounded-lg border bg-white px-3 py-2 text-left transition-colors ${
+          isOpen 
+            ? 'border-[#7c3aed] ring-1 ring-[#7c3aed]' 
+            : 'border-[#e2e8f0] hover:border-[#cbd5e1]'
+        }`}
+      >
+        <div className="flex flex-1 flex-wrap gap-1.5">
+          {selectedFormsDisplay.length === 0 ? (
+            <span className="text-sm text-[#94a3b8]">Select forms...</span>
+          ) : (
+            selectedFormsDisplay.map((form) => (
+              <span
+                key={form.id}
+                className="inline-flex items-center gap-1 rounded-md bg-[#f1f5f9] px-2 py-0.5 text-sm font-medium text-[#334155]"
+              >
+                {form.name}
+                <button
+                  type="button"
+                  onClick={(e) => removeForm(form.id, e)}
+                  className="ml-0.5 rounded-sm p-0.5 text-[#64748b] hover:bg-[#e2e8f0] hover:text-[#0f172a]"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))
+          )}
+        </div>
+        <ChevronDown className={`h-4 w-4 flex-shrink-0 text-[#64748b] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {/* Open state - dropdown panel */}
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-lg border border-[#e2e8f0] bg-white py-1 shadow-lg">
+          {targetForms.map((form) => {
+            const isSelected = selectedFormIds.includes(form.id)
+            return (
+              <button
+                key={form.id}
+                type="button"
+                onClick={() => toggleForm(form.id)}
+                className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[#f8fafc]"
+              >
+                <div className={`flex h-4 w-4 items-center justify-center rounded border ${
+                  isSelected 
+                    ? 'border-[#7c3aed] bg-[#7c3aed]' 
+                    : 'border-[#d1d5db] bg-white'
+                }`}>
+                  {isSelected && <Check className="h-3 w-3 text-white" />}
+                </div>
+                <span className={isSelected ? 'font-medium text-[#0f172a]' : 'text-[#334155]'}>
+                  {form.name}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
