@@ -868,30 +868,18 @@ interface FormulaTransformConfig {
             </section>
 
             {/* Tabbed Configuration Container */}
-            <div className="relative">
-              {/* Left accent stripe */}
-              <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-[#7c3aed]" />
-              
-              {/* Container wrapper */}
-              <div className="rounded-xl border border-[#e2e8f0] bg-white overflow-hidden">
-                {/* Tab strip header - sticky on scroll */}
-                {!sameLogicForAllForms && selectedForms.length > 0 && (
-                  <div className="sticky top-0 z-10 border-b border-[#e2e8f0] bg-white pl-4">
-                    {/* CONFIGURING label */}
-                    <p className="pt-3 pb-1 text-[10px] font-medium uppercase tracking-wider text-[#94a3b8]">
-                      Configuring
-                    </p>
-                    {/* Tab strip */}
-                    <TopLevelFormTabStrip
-                      forms={selectedForms}
-                      activeFormId={activeFormTab}
-                      onTabChange={setActiveFormTab}
-                    />
-                  </div>
-                )}
+            <div className="overflow-hidden rounded-lg border border-[#e5e7eb] bg-white">
+              {/* Tab strip header */}
+              {!sameLogicForAllForms && selectedForms.length > 0 && (
+                <TopLevelFormTabStrip
+                  forms={selectedForms}
+                  activeFormId={activeFormTab}
+                  onTabChange={setActiveFormTab}
+                />
+              )}
 
-                {/* Nested sections container */}
-                <div className="space-y-4 p-5">
+              {/* Nested sections container */}
+              <div className="space-y-6 p-6">
                   {/* Section: Properties (Critical, Mandatory) - IS affected by form tabs */}
                   <SectionCard
                     id="properties"
@@ -1677,7 +1665,6 @@ interface FormulaTransformConfig {
                 }
               />
                   </SectionCard>
-                </div>
               </div>
             </div>
 
@@ -2145,16 +2132,14 @@ function SectionCard({
   nested = false,
 }: SectionCardProps) {
   if (nested) {
-    // Nested style: lighter borders, tinted background, reduced padding
+    // Nested style: no border, divider below, small uppercase heading
     return (
       <section
         id={`section-${id}`}
-        className="rounded-lg border border-[#e2e8f0]/60 bg-[#fafbfc]"
+        className="border-b border-[#f1f5f9] pb-6 last:border-b-0 last:pb-0"
       >
-        <div className="flex items-center justify-between px-5 pt-4 pb-0">
-          <h3 className="text-sm font-semibold text-[#334155]">{title}</h3>
-        </div>
-        <div className="px-5 py-4">{children}</div>
+        <h3 className="mb-4 text-xs font-semibold uppercase tracking-wide text-[#64748b]">{title}</h3>
+        <div>{children}</div>
       </section>
     )
   }
@@ -2186,21 +2171,32 @@ function TopLevelFormTabStrip({ forms, activeFormId, onTabChange }: TopLevelForm
   if (forms.length === 0) return null
   
   return (
-    <div className="flex items-center gap-1 overflow-x-auto">
-      {forms.map((form) => (
-        <button
-          key={form.id}
-          type="button"
-          onClick={() => onTabChange(form.id)}
-          className={`whitespace-nowrap rounded-t-lg px-5 py-3 text-sm font-medium transition-colors ${
-            activeFormId === form.id
-              ? "bg-[#7c3aed] text-white"
-              : "bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0] hover:text-[#334155]"
-          }`}
-        >
-          {form.name}
-        </button>
-      ))}
+    <div className="flex items-end">
+      {forms.map((form) => {
+        const isActive = activeFormId === form.id
+        return (
+          <button
+            key={form.id}
+            type="button"
+            onClick={() => onTabChange(form.id)}
+            className={`relative whitespace-nowrap px-5 py-2.5 text-sm font-medium transition-colors ${
+              isActive
+                ? "rounded-t-lg bg-white text-[#7c3aed] z-10"
+                : "text-[#64748b] hover:text-[#334155] border-b border-[#e5e7eb]"
+            }`}
+            style={isActive ? { 
+              marginBottom: '-1px',
+              borderTop: '2px solid #7c3aed',
+              borderLeft: '1px solid #e5e7eb',
+              borderRight: '1px solid #e5e7eb',
+            } : undefined}
+          >
+            {form.name}
+          </button>
+        )
+      })}
+      {/* Filler to extend the bottom border */}
+      <div className="flex-1 border-b border-[#e5e7eb]" />
     </div>
   )
 }
