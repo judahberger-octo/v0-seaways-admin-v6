@@ -354,13 +354,14 @@ export function FlagFieldModal({
           >
             Cancel
           </button>
-        <button
-          onClick={handleSubmit}
-          disabled={!reason}
-          className="px-5 py-2.5 bg-[#7c3aed] hover:bg-[#6d28d9] disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
-        >
-          Flag as incorrect
-        </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!reason}
+            className="px-5 py-2.5 bg-[#7c3aed] hover:bg-[#6d28d9] disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            Flag as incorrect
+          </button>
+        </div>
       </div>
     </div>
   )
