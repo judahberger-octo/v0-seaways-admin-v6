@@ -867,20 +867,37 @@ interface FormulaTransformConfig {
               </div>
             </section>
 
-            {/* Top-level form tab strip (only when Same logic is OFF) */}
-            {!sameLogicForAllForms && selectedForms.length > 0 && (
-              <TopLevelFormTabStrip
-                forms={selectedForms}
-                activeFormId={activeFormTab}
-                onTabChange={setActiveFormTab}
-              />
-            )}
+            {/* Tabbed Configuration Container */}
+            <div className="relative">
+              {/* Left accent stripe */}
+              <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-[#7c3aed]" />
+              
+              {/* Container wrapper */}
+              <div className="rounded-xl border border-[#e2e8f0] bg-white overflow-hidden">
+                {/* Tab strip header - sticky on scroll */}
+                {!sameLogicForAllForms && selectedForms.length > 0 && (
+                  <div className="sticky top-0 z-10 border-b border-[#e2e8f0] bg-white pl-4">
+                    {/* CONFIGURING label */}
+                    <p className="pt-3 pb-1 text-[10px] font-medium uppercase tracking-wider text-[#94a3b8]">
+                      Configuring
+                    </p>
+                    {/* Tab strip */}
+                    <TopLevelFormTabStrip
+                      forms={selectedForms}
+                      activeFormId={activeFormTab}
+                      onTabChange={setActiveFormTab}
+                    />
+                  </div>
+                )}
 
-            {/* Section: Properties (Critical, Mandatory) - IS affected by form tabs */}
-            <SectionCard
-              id="properties"
-              title="Properties"
-            >
+                {/* Nested sections container */}
+                <div className="space-y-4 p-5">
+                  {/* Section: Properties (Critical, Mandatory) - IS affected by form tabs */}
+                  <SectionCard
+                    id="properties"
+                    title="Properties"
+                    nested
+                  >
               <div className="space-y-4">
                 {/* Critical field toggle */}
                 <div className="flex items-start justify-between gap-4">
@@ -932,13 +949,14 @@ interface FormulaTransformConfig {
                   </button>
                 </div>
               </div>
-            </SectionCard>
+                  </SectionCard>
 
-            {/* Section 2: Mapping */}
-            <SectionCard
-              id="mapping"
-              title="Mapping"
-            >
+                  {/* Section 2: Mapping */}
+                  <SectionCard
+                    id="mapping"
+                    title="Mapping"
+                    nested
+                  >
               <div className="space-y-6">
                 {/* Transform type picker */}
                 <div>
@@ -1376,13 +1394,14 @@ interface FormulaTransformConfig {
                   </p>
                 </div>
               </div>
-            </SectionCard>
+                  </SectionCard>
 
-            {/* Section 4: Notes */}
-            <SectionCard
-              id="notes"
-              title="Notes"
-            >
+                  {/* Section 4: Notes */}
+                  <SectionCard
+                    id="notes"
+                    title="Notes"
+                    nested
+                  >
               <div className="space-y-3">
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-[#334155]">
@@ -1403,13 +1422,14 @@ interface FormulaTransformConfig {
                   Notes are visible to all admins; not surfaced to crew anywhere.
                 </p>
               </div>
-            </SectionCard>
+                  </SectionCard>
 
-            {/* Section 5: Validation */}
-            <SectionCard
-              id="validation"
-              title="Validation rules"
-            >
+                  {/* Section 5: Validation */}
+                  <SectionCard
+                    id="validation"
+                    title="Validation rules"
+                    nested
+                  >
               <div className="space-y-6">
                 {/* Section description */}
                 <p className="text-sm text-[#64748b]">
@@ -1638,13 +1658,14 @@ interface FormulaTransformConfig {
                   />
                 </div>
               </div>
-            </SectionCard>
+                  </SectionCard>
 
-            {/* Section 6: Test */}
-            <SectionCard
-              id="test"
-              title="Test"
-            >
+                  {/* Section 6: Test */}
+                  <SectionCard
+                    id="test"
+                    title="Test"
+                    nested
+                  >
               <FieldTestPanel 
                 fieldId={fieldId || ""} 
                 dataType={formData.dataType || "text"}
@@ -1655,7 +1676,10 @@ interface FormulaTransformConfig {
                   : undefined
                 }
               />
-            </SectionCard>
+                  </SectionCard>
+                </div>
+              </div>
+            </div>
 
             {/* Section 7: Activity - NOT tabbed, unified timeline */}
             <section
@@ -2034,10 +2058,18 @@ function FormScopeChipPicker({ selectedFormIds, onChange }: FormScopeChipPickerP
   return (
     <div ref={containerRef} className="relative">
       {/* Closed state - input row with chips */}
-      <button
-        type="button"
+      <div
+        role="combobox"
+        aria-expanded={isOpen}
+        tabIndex={0}
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex w-full min-h-[42px] items-center justify-between gap-2 rounded-lg border bg-white px-3 py-2 text-left transition-colors ${
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setIsOpen(!isOpen)
+          }
+        }}
+        className={`flex w-full min-h-[42px] cursor-pointer items-center justify-between gap-2 rounded-lg border bg-white px-3 py-2 text-left transition-colors ${
           isOpen 
             ? 'border-[#7c3aed] ring-1 ring-[#7c3aed]' 
             : 'border-[#e2e8f0] hover:border-[#cbd5e1]'
@@ -2065,7 +2097,7 @@ function FormScopeChipPicker({ selectedFormIds, onChange }: FormScopeChipPickerP
           )}
         </div>
         <ChevronDown className={`h-4 w-4 flex-shrink-0 text-[#64748b] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
+      </div>
 
       {/* Open state - dropdown panel */}
       {isOpen && (
@@ -2103,13 +2135,30 @@ interface SectionCardProps {
   id: string
   title: string
   children: React.ReactNode
+  nested?: boolean // When true, uses lighter styling for sections inside TabbedConfigContainer
 }
 
 function SectionCard({
   id,
   title,
   children,
+  nested = false,
 }: SectionCardProps) {
+  if (nested) {
+    // Nested style: lighter borders, tinted background, reduced padding
+    return (
+      <section
+        id={`section-${id}`}
+        className="rounded-lg border border-[#e2e8f0]/60 bg-[#fafbfc]"
+      >
+        <div className="flex items-center justify-between px-5 pt-4 pb-0">
+          <h3 className="text-sm font-semibold text-[#334155]">{title}</h3>
+        </div>
+        <div className="px-5 py-4">{children}</div>
+      </section>
+    )
+  }
+  
   return (
     <section
       id={`section-${id}`}
@@ -2126,6 +2175,7 @@ function SectionCard({
 }
 
 // Top-level form tab strip (shown when "Same logic for all" is OFF)
+// This is just the tab strip header - it will be rendered inside the TabbedConfigContainer
 interface TopLevelFormTabStripProps {
   forms: typeof targetForms
   activeFormId: string | null
@@ -2136,23 +2186,21 @@ function TopLevelFormTabStrip({ forms, activeFormId, onTabChange }: TopLevelForm
   if (forms.length === 0) return null
   
   return (
-    <div className="rounded-xl border border-[#e2e8f0] bg-white p-4">
-      <div className="flex items-center gap-1 overflow-x-auto">
-        {forms.map((form) => (
-          <button
-            key={form.id}
-            type="button"
-            onClick={() => onTabChange(form.id)}
-            className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              activeFormId === form.id
-                ? "bg-[#7c3aed] text-white"
-                : "text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155]"
-            }`}
-          >
-            {form.name}
-          </button>
-        ))}
-      </div>
+    <div className="flex items-center gap-1 overflow-x-auto">
+      {forms.map((form) => (
+        <button
+          key={form.id}
+          type="button"
+          onClick={() => onTabChange(form.id)}
+          className={`whitespace-nowrap rounded-t-lg px-5 py-3 text-sm font-medium transition-colors ${
+            activeFormId === form.id
+              ? "bg-[#7c3aed] text-white"
+              : "bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0] hover:text-[#334155]"
+          }`}
+        >
+          {form.name}
+        </button>
+      ))}
     </div>
   )
 }
