@@ -32,7 +32,8 @@ import { NavtorScreenshot } from "./navtor-screenshot"
 import { 
   UnsavedReportModal, 
   DiscardReportModal, 
-  FlagFieldModal 
+  FlagFieldModal,
+  ManualSubmissionModal 
 } from "./modals"
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from "lucide-react"
 
@@ -1192,72 +1193,6 @@ function FieldCardList({
   )
 }
 
-// Submit Confirmation Dialog
-function SubmitConfirmDialog({
-  reportId,
-  stats,
-  onCancel,
-  onConfirm,
-}: {
-  reportId: string
-  stats: { autoPopulated: number; criticalVerified: number; manuallyEdited: number; flagged: number }
-  onCancel: () => void
-  onConfirm: () => void
-}) {
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
-        <div className="p-6">
-          <h2 className="text-xl font-semibold text-[#0f172a] mb-2">Submit to VesLink?</h2>
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-medium text-[#0f172a]">Report #{reportId}</span>
-              <span className="text-[#64748b]">—</span>
-              <span className="text-[#64748b]">Noon Report (Sea)</span>
-            </div>
-            <span className="text-sm text-[#64748b]">Seaways Skopelos</span>
-          </div>
-
-          <div className="space-y-2 mb-6">
-            <div className="flex items-center justify-between py-2 px-3 bg-[#f8fafc] rounded-lg">
-              <span className="text-sm text-[#64748b]">Fields auto-populated</span>
-              <span className="text-sm font-medium text-[#0f172a]">{stats.autoPopulated}</span>
-            </div>
-            <div className="flex items-center justify-between py-2 px-3 bg-[#f8fafc] rounded-lg">
-              <span className="text-sm text-[#64748b]">Critical fields verified</span>
-              <span className="text-sm font-medium text-[#16a34a]">{stats.criticalVerified}</span>
-            </div>
-            <div className="flex items-center justify-between py-2 px-3 bg-[#f8fafc] rounded-lg">
-              <span className="text-sm text-[#64748b]">Fields manually edited</span>
-              <span className="text-sm font-medium text-[#2563eb]">{stats.manuallyEdited}</span>
-            </div>
-            <div className="flex items-center justify-between py-2 px-3 bg-[#f8fafc] rounded-lg">
-              <span className="text-sm text-[#64748b]">Fields flagged for review</span>
-              <span className="text-sm font-medium text-[#d97706]">{stats.flagged}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 px-6 py-4 bg-[#f8fafc] border-t border-[#e2e8f0]">
-          <button
-            onClick={onCancel}
-            className="flex-1 px-4 py-2.5 text-sm font-medium border border-[#e2e8f0] rounded-lg hover:bg-white transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 px-4 py-2.5 text-sm font-medium bg-[#7c3aed] text-white rounded-lg hover:bg-[#6d28d9] transition-colors flex items-center justify-center gap-2"
-          >
-            <Send className="w-4 h-4" />
-            Submit
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // Success State Component
 function SuccessState({ reportId, onViewHistory, onNewTransfer }: { reportId: string; onViewHistory: () => void; onNewTransfer: () => void }) {
   return (
@@ -2333,6 +2268,7 @@ export function TransferReview({
   const handleConfirmSubmit = () => {
     setShowSubmitDialog(false)
     setIsSubmitted(true)
+    setToast({ message: "Report marked as submitted.", type: "submit" })
   }
 
   // Keyboard shortcuts
@@ -2413,18 +2349,24 @@ export function TransferReview({
         />
       )}
       
-      {/* Submit Confirmation Dialog */}
+      {/* Manual Submission Modal */}
       {showSubmitDialog && (
-        <SubmitConfirmDialog
-          reportId={reportId}
-          stats={{
-            autoPopulated: totalFields - manuallyEditedCount,
-            criticalVerified: vesLinkCriticalVerified,
-            manuallyEdited: manuallyEditedCount,
-            flagged: flaggedCount,
-          }}
-          onCancel={() => setShowSubmitDialog(false)}
-          onConfirm={handleConfirmSubmit}
+        <ManualSubmissionModal
+          isOpen={showSubmitDialog}
+          onClose={() => setShowSubmitDialog(false)}
+          onMarkAsSent={handleConfirmSubmit}
+          formName="Noon Report Unav 4.0"
+          vesselName={vesselName || "SEAWAYS SKOPELOS"}
+          formSections={sections.map(section => ({
+            id: section.id,
+            name: section.name,
+            fields: section.fields.map(field => ({
+              id: field.id,
+              fieldName: field.label,
+              value: field.value,
+              unit: field.unit,
+            }))
+          }))}
         />
       )}
 
