@@ -117,6 +117,33 @@ export function AdminFieldDetail({ fieldId, onBack }: AdminFieldDetailProps) {
     setShowTransformChangeConfirm(null)
   }
 
+  // Multi-report behavior state - controls which NAVTOR report's data to read when multiple exist
+  type MultiReportBehavior = 'latest' | 'all'
+  const [sharedMultiReportBehavior, setSharedMultiReportBehavior] = useState<MultiReportBehavior>('latest')
+  const [perFormMultiReportBehavior, setPerFormMultiReportBehavior] = useState<Record<string, MultiReportBehavior>>({})
+
+  const getCurrentMultiReportBehavior = (): MultiReportBehavior => {
+    if (sameLogicForAllForms) {
+      return sharedMultiReportBehavior
+    }
+    return activeFormTab ? perFormMultiReportBehavior[activeFormTab] || 'latest' : 'latest'
+  }
+
+  const setCurrentMultiReportBehavior = (behavior: MultiReportBehavior) => {
+    if (sameLogicForAllForms) {
+      setSharedMultiReportBehavior(behavior)
+    } else if (activeFormTab) {
+      setPerFormMultiReportBehavior((prev) => ({ ...prev, [activeFormTab]: behavior }))
+    }
+    setHasUnsavedChanges(true)
+  }
+
+  // Check if current transform type should show multi-report behavior setting
+  const shouldShowMultiReportBehavior = (): boolean => {
+    const transformType = getCurrentTransformType()
+    return transformType === 'direct' || transformType === 'lookup' || transformType === 'aggregation' || transformType === 'formula'
+  }
+
   // Direct transform configuration state
   interface DirectTransformConfig {
     sourceForm: string
@@ -1381,6 +1408,55 @@ interface FormulaTransformConfig {
                     <span className="font-medium text-[#334155]">Exception:</span> the Aggregation &quot;first non-null&quot; operator walks the source list trying each in order until one is populated; only if all are null does it return null.
                   </p>
                 </div>
+
+                {/* Multi-report behavior setting - only for Direct, Lookup, Aggregation, Formula */}
+                {shouldShowMultiReportBehavior() && (
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-[#334155] mb-1">
+                      Multi-report behavior
+                    </label>
+                    <p className="text-xs text-[#64748b] mb-3">
+                      When the transfer contains more than one NAVTOR report of this source-form type, which should the mapping read from?
+                    </p>
+                    
+                    {/* Segmented toggle */}
+                    <div className="flex rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-1 w-fit">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentMultiReportBehavior('latest')}
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                          getCurrentMultiReportBehavior() === 'latest'
+                            ? 'bg-white text-[#0f172a] shadow-sm'
+                            : 'text-[#64748b] hover:text-[#334155]'
+                        }`}
+                      >
+                        Use latest report only
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentMultiReportBehavior('all')}
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                          getCurrentMultiReportBehavior() === 'all'
+                            ? 'bg-white text-[#0f172a] shadow-sm'
+                            : 'text-[#64748b] hover:text-[#334155]'
+                        }`}
+                      >
+                        Use all reports
+                      </button>
+                    </div>
+
+                    {/* Contextual helper text */}
+                    <p className="mt-2 text-xs text-[#64748b]">
+                      {getCurrentMultiReportBehavior() === 'latest' ? (
+                        <>Reads from the most recent NAVTOR report of this type. Earlier reports are ignored.</>
+                      ) : getCurrentTransformType() === 'aggregation' ? (
+                        <>The aggregation operator runs across every NAVTOR report of this type. e.g., &quot;sum&quot; totals the source fields across all reports; &quot;first non-null&quot; walks all reports in chronological order until one is populated.</>
+                      ) : (
+                        <>Reads the source value(s) from every NAVTOR report of this type and returns the resulting set. Use this only when the integration expects multiple values for the field.</>
+                      )}
+                    </p>
+                  </div>
+                )}
               </div>
                   </SectionCard>
 
