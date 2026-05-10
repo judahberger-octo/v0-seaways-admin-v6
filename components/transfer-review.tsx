@@ -32,7 +32,8 @@ import { NavtorScreenshot } from "./navtor-screenshot"
 import { 
   UnsavedReportModal, 
   DiscardReportModal, 
-  FlagFieldModal 
+  FlagFieldModal,
+  ManualSubmissionModal 
 } from "./modals"
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from "lucide-react"
 
@@ -581,10 +582,9 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
     }
     if (isVerified) return "bg-green-50 text-green-700 border-green-200"
     if (field.isCritical) return "bg-red-50 text-red-700 border-red-200" // Critical pending = red
-    return "bg-amber-50 text-amber-700 border-amber-200" // Standard = amber
+  return "bg-amber-50 text-amber-700 border-amber-200" // Standard = amber
   }
-
-  const confidencePercent = field.confidence || 98
+  
   const isVerified = field.status === "verified" || (isManualFill && manualFillStatus === "complete")
   const isFlagged = field.status === "flagged"
   const isCritical = field.isCritical === true
@@ -723,43 +723,7 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
               )}
             </div>
           </div>
-        ) : (
-          /* Confidence Bar (only for non-manual-fill fields) */
-          <div className="mb-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600">
-                Confidence{isReadOnly && <span className="text-gray-400 ml-1">(at submission)</span>}
-              </span>
-              <div className="flex items-center gap-3">
-                <span className={`text-sm font-semibold ${confidencePercent >= 90 ? "text-green-600" : confidencePercent >= 70 ? "text-amber-600" : "text-red-600"}`}>
-                  {confidencePercent}%
-                </span>
-                {/* In read-only mode, show terminal state */}
-                {isFlagged ? (
-                  <>
-                    <Flag className="w-4 h-4 text-red-500" />
-                    <span className="text-sm font-medium text-red-600">Flagged — under admin review</span>
-                  </>
-                ) : isVerified ? (
-                  <>
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span className="text-sm font-medium text-green-600">{isReadOnly ? "Verified" : "Complete"}</span>
-                  </>
-                ) : (
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-                    Pending
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div 
-                className={`h-full rounded-full transition-all ${confidencePercent >= 90 ? "bg-green-500" : confidencePercent >= 70 ? "bg-amber-500" : "bg-red-500"}`}
-                style={{ width: `${confidencePercent}%` }}
-              />
-            </div>
-          </div>
-        )}
+        ) : null}
 
         {/* Validation Checks Accordion - only for non-manual-fill fields */}
         {!isManualFill && (
@@ -1067,15 +1031,13 @@ function FieldCardList({
   onFieldSelect,
   onVerify,
   onFlag,
-  avgConfidence,
-}: {
+  }: {
   sections: FieldSection[]
   selectedFieldId: string | null
-  onFieldSelect: (field: FieldCardData) => void
+  onSelectField: (fieldId: string) => void
   onVerify: (fieldId: string) => void
   onFlag: (fieldId: string) => void
-  avgConfidence: number
-}) {
+  }) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(sections.map(s => s.id))
   )
@@ -1115,21 +1077,6 @@ function FieldCardList({
     <div className="h-full flex flex-col bg-gray-50">
       {/* Sticky Header */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
-        {/* Avg Confidence Bar */}
-        <div className="flex items-center gap-3 mb-3">
-          <span className="text-sm text-gray-600">Avg. Confidence</span>
-          <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full transition-all"
-              style={{ width: `${avgConfidence}%` }}
-            />
-          </div>
-          <span className="text-sm font-semibold text-green-600">{avgConfidence}%</span>
-          <button className="p-1 hover:bg-gray-100 rounded">
-            <Pencil className="w-3.5 h-3.5 text-gray-400" />
-          </button>
-        </div>
-
         {/* Search + Filter */}
         <div className="flex items-center gap-2">
           <div className="flex-1 relative">
@@ -1187,72 +1134,6 @@ function FieldCardList({
             )}
           </div>
         ))}
-      </div>
-    </div>
-  )
-}
-
-// Submit Confirmation Dialog
-function SubmitConfirmDialog({
-  reportId,
-  stats,
-  onCancel,
-  onConfirm,
-}: {
-  reportId: string
-  stats: { autoPopulated: number; criticalVerified: number; manuallyEdited: number; flagged: number }
-  onCancel: () => void
-  onConfirm: () => void
-}) {
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
-        <div className="p-6">
-          <h2 className="text-xl font-semibold text-[#0f172a] mb-2">Submit to VesLink?</h2>
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-medium text-[#0f172a]">Report #{reportId}</span>
-              <span className="text-[#64748b]">—</span>
-              <span className="text-[#64748b]">Noon Report (Sea)</span>
-            </div>
-            <span className="text-sm text-[#64748b]">Seaways Skopelos</span>
-          </div>
-
-          <div className="space-y-2 mb-6">
-            <div className="flex items-center justify-between py-2 px-3 bg-[#f8fafc] rounded-lg">
-              <span className="text-sm text-[#64748b]">Fields auto-populated</span>
-              <span className="text-sm font-medium text-[#0f172a]">{stats.autoPopulated}</span>
-            </div>
-            <div className="flex items-center justify-between py-2 px-3 bg-[#f8fafc] rounded-lg">
-              <span className="text-sm text-[#64748b]">Critical fields verified</span>
-              <span className="text-sm font-medium text-[#16a34a]">{stats.criticalVerified}</span>
-            </div>
-            <div className="flex items-center justify-between py-2 px-3 bg-[#f8fafc] rounded-lg">
-              <span className="text-sm text-[#64748b]">Fields manually edited</span>
-              <span className="text-sm font-medium text-[#2563eb]">{stats.manuallyEdited}</span>
-            </div>
-            <div className="flex items-center justify-between py-2 px-3 bg-[#f8fafc] rounded-lg">
-              <span className="text-sm text-[#64748b]">Fields flagged for review</span>
-              <span className="text-sm font-medium text-[#d97706]">{stats.flagged}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 px-6 py-4 bg-[#f8fafc] border-t border-[#e2e8f0]">
-          <button
-            onClick={onCancel}
-            className="flex-1 px-4 py-2.5 text-sm font-medium border border-[#e2e8f0] rounded-lg hover:bg-white transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 px-4 py-2.5 text-sm font-medium bg-[#7c3aed] text-white rounded-lg hover:bg-[#6d28d9] transition-colors flex items-center justify-center gap-2"
-          >
-            <Send className="w-4 h-4" />
-            Submit
-          </button>
-        </div>
       </div>
     </div>
   )
@@ -1386,12 +1267,6 @@ function FieldRow({
   isPulsing?: boolean
   onClick: () => void
 }) {
-  const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 90) return "text-[#16a34a]"
-    if (confidence >= 70) return "text-[#d97706]"
-    return "text-[#dc2626]"
-  }
-
   const getStatusBorder = (status: FieldStatus, confidence: number) => {
     if (status === "verified") return "border-l-[#16a34a]"
     if (status === "flagged") return "border-l-[#dc2626]"
@@ -1429,13 +1304,10 @@ function FieldRow({
         )}
         <span className="text-sm text-[#64748b] truncate">{field.label}:</span>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-[#0f172a]">
           {field.value}
           {field.unit && <span className="text-[#64748b] ml-1">{field.unit}</span>}
-        </span>
-        <span className={`text-xs font-medium ${getConfidenceColor(field.confidence)}`}>
-          {field.confidence}%
         </span>
         {field.status === "verified" && (
           <Check className="w-4 h-4 text-[#16a34a]" />
@@ -1530,15 +1402,6 @@ function FieldDefinitionPanel({
   const [flagReason, setFlagReason] = useState("")
   const [flagComment, setFlagComment] = useState("")
 
-  const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 90) return "#16a34a"
-    if (confidence >= 70) return "#d97706"
-    return "#dc2626"
-  }
-
-  const confidenceColor = getConfidenceColor(field.confidence)
-  const confidenceDots = Math.round(field.confidence / 20) // 0-5 dots
-
   const handleSubmitFlag = () => {
     onFlag(flagReason, flagComment)
     setIsFlagging(false)
@@ -1583,30 +1446,6 @@ function FieldDefinitionPanel({
           </div>
           <div className="text-[#94a3b8]">
             Mapped from: <span className="text-[#64748b]">{field.sourceField}</span>
-          </div>
-        </div>
-
-        {/* Confidence */}
-        <div className="mb-4">
-          <div className="flex items-center gap-3">
-            <span 
-              className="text-lg font-semibold"
-              style={{ color: confidenceColor }}
-            >
-              {field.confidence}%
-            </span>
-            <div className="flex items-center gap-1">
-              {[1, 2, 3, 4, 5].map((dot) => (
-                <div
-                  key={dot}
-                  className="w-2 h-2 rounded-full"
-                  style={{
-                    backgroundColor: dot <= confidenceDots ? confidenceColor : "#e2e8f0",
-                  }}
-                />
-              ))}
-            </div>
-            
           </div>
         </div>
 
@@ -2333,6 +2172,7 @@ export function TransferReview({
   const handleConfirmSubmit = () => {
     setShowSubmitDialog(false)
     setIsSubmitted(true)
+    setToast({ message: "Report marked as submitted.", type: "submit" })
   }
 
   // Keyboard shortcuts
@@ -2413,18 +2253,24 @@ export function TransferReview({
         />
       )}
       
-      {/* Submit Confirmation Dialog */}
+      {/* Manual Submission Modal */}
       {showSubmitDialog && (
-        <SubmitConfirmDialog
-          reportId={reportId}
-          stats={{
-            autoPopulated: totalFields - manuallyEditedCount,
-            criticalVerified: vesLinkCriticalVerified,
-            manuallyEdited: manuallyEditedCount,
-            flagged: flaggedCount,
-          }}
-          onCancel={() => setShowSubmitDialog(false)}
-          onConfirm={handleConfirmSubmit}
+        <ManualSubmissionModal
+          isOpen={showSubmitDialog}
+          onClose={() => setShowSubmitDialog(false)}
+          onMarkAsSent={handleConfirmSubmit}
+          formName="Noon Report Unav 4.0"
+          vesselName={vesselName || "SEAWAYS SKOPELOS"}
+          formSections={sections.map(section => ({
+            id: section.id,
+            name: section.name,
+            fields: section.fields.map(field => ({
+              id: field.id,
+              fieldName: field.label,
+              value: field.value,
+              unit: field.unit,
+            }))
+          }))}
         />
       )}
 
