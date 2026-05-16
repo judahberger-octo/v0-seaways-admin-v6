@@ -895,7 +895,7 @@ interface FormulaTransformConfig {
             </section>
 
             {/* Tabbed Configuration Container */}
-            <div className="overflow-hidden rounded-lg border border-[#e5e7eb] bg-white">
+            <div className="rounded-lg border border-[#e5e7eb] bg-white">
               {/* Tab strip header */}
               {!sameLogicForAllForms && selectedForms.length > 0 && (
                 <TopLevelFormTabStrip
