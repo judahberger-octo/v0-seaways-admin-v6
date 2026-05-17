@@ -382,12 +382,41 @@ export function AppShell({
               )}
             </div>
 
-            {/* Right - Vessel Name + Divider + Close Button */}
+            {/* Right - Voyage + Vessel Name + Source Info + Close Button */}
             <div className="flex items-center gap-3">
+              {/* Voyage Number */}
+              <span className="text-sm text-[#64748b]">
+                Voyage 124
+              </span>
+              <span className="text-[#94a3b8]">•</span>
               {/* Vessel Name - read-only context */}
               <span className="text-sm font-medium text-[#7c3aed]">
                 SEAWAYS SKOPELOS
               </span>
+              {/* Source Reports - hover tooltip */}
+              <div className="relative group">
+                <span className="text-xs text-[#94a3b8] cursor-help border-b border-dotted border-[#94a3b8]">
+                  3 sources
+                </span>
+                <div className="absolute right-0 top-full mt-2 px-3 py-2.5 bg-[#0f172a] text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 shadow-lg min-w-[180px]">
+                  <p className="text-[#94a3b8] mb-1.5">Source NAVTOR reports:</p>
+                  <ul className="space-y-1">
+                    <li className="flex justify-between">
+                      <span>Noon Report</span>
+                      <span className="text-[#94a3b8]">#NR-4527</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span>Position Report</span>
+                      <span className="text-[#94a3b8]">#PR-4528</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span>Bunker Report</span>
+                      <span className="text-[#94a3b8]">#BR-4529</span>
+                    </li>
+                  </ul>
+                  <div className="absolute -top-1 right-4 w-2 h-2 bg-[#0f172a] rotate-45" />
+                </div>
+              </div>
               {/* Vertical Divider */}
               <div className="w-px h-5 bg-[#e2e8f0]" />
               {/* Close Button */}
