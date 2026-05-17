@@ -403,15 +403,15 @@ export function AppShell({
                   <ul className="space-y-1">
                     <li className="flex justify-between">
                       <span>Noon Report</span>
-                      <span className="text-[#94a3b8]">#NR-4527</span>
+                      <span className="text-[#94a3b8]">#4527</span>
                     </li>
                     <li className="flex justify-between">
                       <span>Position Report</span>
-                      <span className="text-[#94a3b8]">#PR-4528</span>
+                      <span className="text-[#94a3b8]">#4528</span>
                     </li>
                     <li className="flex justify-between">
                       <span>Bunker Report</span>
-                      <span className="text-[#94a3b8]">#BR-4529</span>
+                      <span className="text-[#94a3b8]">#4529</span>
                     </li>
                   </ul>
                   <div className="absolute -top-1 right-4 w-2 h-2 bg-[#0f172a] rotate-45" />
