@@ -27,7 +27,8 @@ import {
   Calculator,
   Download,
   AlertTriangle,
-  ShieldAlert
+  ShieldAlert,
+  Database
 } from "lucide-react"
 import { AdminTestingSuite } from "./admin-testing-suite"
 import { VesLinkForm, CRITICAL_FIELDS_NOON_SEA, MANUAL_FILL_FIELDS } from "./veslink-form"
@@ -2626,6 +2627,52 @@ export function TransferReview({
                 Skip &amp; Download
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Header Bar (production-aligned) - hidden in admin read-only view */}
+      {!adminReadOnlyView && (
+        <div className="flex-shrink-0 border-b border-[#e2e8f0] bg-white">
+          <div className="flex items-center justify-between gap-4 px-6 py-3">
+            {/* Left: report type + title */}
+            <div className="flex items-center gap-4 min-w-0">
+              <h1 className="text-base font-semibold text-[#0f172a] truncate">
+                Form - Noon at sea
+              </h1>
+              {/* Status badge: Exported (downloaded) or Draft */}
+              {isSubmitted ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                  <Check className="w-3 h-3" />
+                  Exported
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  Draft
+                </span>
+              )}
+              {/* Voyage number */}
+              <span className="hidden sm:inline text-sm text-[#64748b]">Voyage 93</span>
+            </div>
+
+            {/* Right: vessel name + source count */}
+            <div className="flex items-center gap-4 flex-shrink-0">
+              <span className="text-sm font-semibold tracking-wide text-[#0d9488] uppercase">
+                {vesselName || "SEAWAYS ATHENS"}
+              </span>
+              <span className="h-4 w-px bg-[#e2e8f0]" />
+              <span className="inline-flex items-center gap-1.5 text-xs text-[#64748b]">
+                <Database className="w-3.5 h-3.5" />
+                3 sources
+              </span>
+            </div>
+          </div>
+          {/* Last saved line */}
+          <div className="px-6 pb-2 -mt-1">
+            <p className="text-xs text-[#94a3b8]">
+              Last saved: {submittedAt || "12:00 PM on April 14, 2026"}
+            </p>
           </div>
         </div>
       )}
