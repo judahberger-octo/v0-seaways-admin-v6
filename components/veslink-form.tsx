@@ -3,28 +3,23 @@
 import React, { useState, useCallback, useEffect } from "react"
 import { Check, Calculator } from "lucide-react"
 
-// EXACT Critical fields for Noon-Sea reports per Avinash's list (16 fields + 3 manual-fill)
-// Order matches the form flow for navigation: top to bottom
-// Manual-fill fields are marked with (Manual Fill) - these require user input, not AI pre-fill
+// Critical fields that MUST be verified before download (13 fields, per SOLD spec).
+// Order matches the form flow for navigation: top to bottom.
+// Non-critical fields still render in the form preview but are not part of the step-through flow.
 export const CRITICAL_FIELDS_NOON_SEA = [
   "date-time",           // 1. Date/Time (header section)
   "voyage-number",       // 2. Voyage Number (header section)
-  "vessel-condition",    // 3. Vessel Condition (header section)
-  "next-port",           // 4. Next Port (header section)
-  "eta",                 // 5. ETA (header section)
-  "distance-to-go",      // 6. Distance to Go (Distance and Vessel section)
-  "cp-ordered-speed",    // 7. CP Ordered Speed (Distance and Vessel section)
-  "reported-speed",      // 8. Reported Speed (Distance and Vessel section)
-  "observed-distance",   // 9. Observed Distance (Manual Fill - not in NAVTOR)
-  "engine-distance",     // 10. Engine Distance (Manual Fill - not in NAVTOR)
+  "vessel-condition",    // 3. Vessel Condition / Laden-Ballast (header section)
+  "location",            // 4. Location - At Sea / In Port (header section)
+  "next-port",           // 5. Next Port (header section)
+  "eta",                 // 6. ETA (header section)
+  "distance-to-go",      // 7. Distance to Go (Distance and Vessel section)
+  "cp-ordered-speed",    // 8. CP / Ordered Speed (Distance and Vessel section)
+  "reported-speed",      // 9. Reported Speed (Distance and Vessel section)
+  "observed-distance",   // 10. Observed Distance (Manual Fill - not in NAVTOR)
   "time-since-last",     // 11. Time Since Last Report (Distance and Vessel section)
-  "main-engine-rpm",     // 12. Main Engine RPM (Machinery section)
-  "beaufort",            // 13. Beaufort (Weather section)
-  "sea-state",           // 14. Sea State (Manual Fill - not in NAVTOR)
-  "bunkers-section",     // 15. ROB, Consumption & Used For (entire Bunkers section)
-  "fresh-water-rob",     // 16. Fresh Water ROB (Water section)
-  "distilled-water-rob", // 17. Distilled Water ROB (Water section)
-  "slops-rob"            // 18. Slops ROB (Water section)
+  "cargo-weight",        // 12. Cargo Weight - if laden (Distance and Vessel section)
+  "displacement"         // 13. Displacement (Distance and Vessel section)
 ]
 
 // Manual fill field IDs (fields that require user input, not AI pre-fill)
@@ -100,6 +95,7 @@ const initialFormData: Record<string, FieldData> = {
   "observed-distance": { id: "observed-distance", value: "", type: "text" }, // Manual Fill - empty by default
   "engine-distance": { id: "engine-distance", value: "", type: "text" }, // Manual Fill - empty by default
   "ballast": { id: "ballast", value: "1896", type: "text" },
+  "cargo-weight": { id: "cargo-weight", value: "147948.45", type: "text" },
   "displacement": { id: "displacement", value: "172000", type: "text" },
   "slip": { id: "slip", value: "0.35", type: "text" },
   "time-since-last": { id: "time-since-last", value: "24.0", type: "text" },
@@ -872,7 +868,7 @@ export function VesLinkForm({
             />
           </FormRow>
           
-          <FormRow label="Location:" labelWidth="100px">
+          <FormRow label="Location:" fieldId="location" labelWidth="100px" isVerified={isVerifiedField("location")}>
             <VLSelect 
               id="location" 
               value={formData["location"].value}
@@ -1032,11 +1028,17 @@ export function VesLinkForm({
                 isSelected={isSelected("time-since-last")} isEdited={isEdited("time-since-last")} isVerified={isVerifiedField("time-since-last")}
                 onSelect={() => onFieldSelect("time-since-last")} width="100px" isCritical={true} />
             </FormRow>
-            <FormRow label="Displacement (t):" labelWidth="150px">
+            <FormRow label="Cargo Weight (MT):" fieldId="cargo-weight" labelWidth="150px" isVerified={isVerifiedField("cargo-weight")}>
+              <VLInput id="cargo-weight" value={formData["cargo-weight"].value}
+                onChange={(v) => handleFieldChange("cargo-weight", v)}
+                isSelected={isSelected("cargo-weight")} isEdited={isEdited("cargo-weight")} isVerified={isVerifiedField("cargo-weight")}
+                onSelect={() => onFieldSelect("cargo-weight")} width="100px" isCritical={true} />
+            </FormRow>
+            <FormRow label="Displacement (t):" fieldId="displacement" labelWidth="150px" isVerified={isVerifiedField("displacement")}>
               <VLInput id="displacement" value={formData["displacement"].value}
                 onChange={(v) => handleFieldChange("displacement", v)}
                 isSelected={isSelected("displacement")} isEdited={isEdited("displacement")} isVerified={isVerifiedField("displacement")}
-                onSelect={() => onFieldSelect("displacement")} width="100px" />
+                onSelect={() => onFieldSelect("displacement")} width="100px" isCritical={true} />
             </FormRow>
             
 <FormRow label="Slip %:" labelWidth="150px">
@@ -1082,7 +1084,7 @@ export function VesLinkForm({
               <VLInput id="main-engine-rpm" value={formData["main-engine-rpm"].value}
                 onChange={(v) => handleFieldChange("main-engine-rpm", v)}
                 isSelected={isSelected("main-engine-rpm")} isEdited={isEdited("main-engine-rpm")} isVerified={isVerifiedField("main-engine-rpm")}
-                onSelect={() => onFieldSelect("main-engine-rpm")} width="100px" isCritical={true} />
+                onSelect={() => onFieldSelect("main-engine-rpm")} width="100px" isCritical={isCritical("main-engine-rpm")} />
             </FormRow>
             <div />
             
@@ -1144,7 +1146,7 @@ export function VesLinkForm({
                 options={formData["beaufort"].options || []}
                 onChange={(v) => handleFieldChange("beaufort", v)}
                 isSelected={isSelected("beaufort")} isEdited={isEdited("beaufort")} isVerified={isVerifiedField("beaufort")}
-                onSelect={() => onFieldSelect("beaufort")} width="100px" isCritical={true} />
+                onSelect={() => onFieldSelect("beaufort")} width="100px" isCritical={isCritical("beaufort")} />
             </FormRow>
             <FormRow label="Wind Direction (deg):" labelWidth="130px">
               <VLSelect id="wind-direction" value={formData["wind-direction"].value}
@@ -1222,20 +1224,20 @@ export function VesLinkForm({
               <VLInput id="fresh-water-rob" value={formData["fresh-water-rob"].value}
                 onChange={(v) => handleFieldChange("fresh-water-rob", v)}
                 isSelected={isSelected("fresh-water-rob")} isEdited={isEdited("fresh-water-rob")} isVerified={isVerifiedField("fresh-water-rob")}
-                onSelect={() => onFieldSelect("fresh-water-rob")} width="100px" isCritical={true} />
+                onSelect={() => onFieldSelect("fresh-water-rob")} width="100px" isCritical={isCritical("fresh-water-rob")} />
             </FormRow>
             <FormRow label="Slops ROB (MT):" fieldId="slops-rob" labelWidth="160px" isVerified={isVerifiedField("slops-rob")}>
               <VLInput id="slops-rob" value={formData["slops-rob"].value}
                 onChange={(v) => handleFieldChange("slops-rob", v)}
                 isSelected={isSelected("slops-rob")} isEdited={isEdited("slops-rob")} isVerified={isVerifiedField("slops-rob")}
-                onSelect={() => onFieldSelect("slops-rob")} width="100px" isCritical={true} />
+                onSelect={() => onFieldSelect("slops-rob")} width="100px" isCritical={isCritical("slops-rob")} />
             </FormRow>
             
             <FormRow label="Distilled Water ROB (MT):" fieldId="distilled-water-rob" labelWidth="160px" isVerified={isVerifiedField("distilled-water-rob")}>
               <VLInput id="distilled-water-rob" value={formData["distilled-water-rob"].value}
                 onChange={(v) => handleFieldChange("distilled-water-rob", v)}
                 isSelected={isSelected("distilled-water-rob")} isEdited={isEdited("distilled-water-rob")} isVerified={isVerifiedField("distilled-water-rob")}
-                onSelect={() => onFieldSelect("distilled-water-rob")} width="100px" isCritical={true} />
+                onSelect={() => onFieldSelect("distilled-water-rob")} width="100px" isCritical={isCritical("distilled-water-rob")} />
             </FormRow>
             <FormRow label="Tank Cleaning Chemical ROB (LTRS):" labelWidth="160px">
               <VLInput id="tank-clean-chem" value={formData["tank-clean-chem"].value}

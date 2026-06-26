@@ -1757,6 +1757,7 @@ export function TransferReview({
       "observed-distance": "Distance & Vessel",
       "time-since-last": "Distance & Vessel",
       "ballast": "Distance & Vessel",
+      "cargo-weight": "Distance & Vessel",
       "displacement": "Distance & Vessel",
       "slip": "Distance & Vessel",
       "fwd-draft": "Distance & Vessel",
@@ -1813,8 +1814,9 @@ export function TransferReview({
   const vesLinkCriticalTotal = CRITICAL_FIELDS_NOON_SEA.length
   const vesLinkCriticalVerified = verifiedVesLinkFields.size
   
-  // Manual fill fields - track separately
-  const manualFillFieldIds = MANUAL_FILL_FIELDS
+  // Manual fill fields - track separately. Only count manual-fill fields that are
+  // still part of the critical step-through flow.
+  const manualFillFieldIds = MANUAL_FILL_FIELDS.filter(id => CRITICAL_FIELDS_NOON_SEA.includes(id))
   const manualFillVerified = manualFillFieldIds.filter(id => verifiedVesLinkFields.has(id)).length
   const manualFillTotal = manualFillFieldIds.length
   
@@ -1870,12 +1872,15 @@ export function TransferReview({
       "date-time": { label: "Date/Time", sourceTab: "Operational", sourceField: "Report Date/Time", value: "14/04/2026 12:00" },
       "voyage-number": { label: "Voyage Number", sourceTab: "Operational", sourceField: "Voyage Number", value: "124" },
       "vessel-condition": { label: "Vessel Condition", sourceTab: "Operational", sourceField: "Vessel Condition", value: "Laden" },
+      "location": { label: "Location", sourceTab: "Operational", sourceField: "Location", value: "At Sea" },
       "next-port": { label: "Next Port", sourceTab: "Operational", sourceField: "Next Port", value: "Fujairah" },
       "eta": { label: "ETA", sourceTab: "Operational", sourceField: "ETA", value: "22/04/2026 14:00" },
       "distance-to-go": { label: "Distance to Go", sourceTab: "Operational", sourceField: "Distance to Go", value: "2847" },
       "cp-ordered-speed": { label: "CP / Ordered Speed", sourceTab: "Operational", sourceField: "Ordered Speed", value: "12.5" },
       "reported-speed": { label: "Reported Speed", sourceTab: "Operational", sourceField: "Reported Speed", value: "12.3" },
-      "time-since-last": { label: "Time Since Last Report", sourceTab: "Operational", sourceField: "Time Since Last Report", value: "24.0" },
+      "time-since-last": { label: "Time Since Last Report", sourceTab: "Operational", sourceField: "Time Since Last Report", value: "24.0", unit: "hrs" },
+      "cargo-weight": { label: "Cargo Weight", sourceTab: "Operational", sourceField: "Cargo Weight", value: "147948.45", unit: "MT" },
+      "displacement": { label: "Displacement", sourceTab: "Operational", sourceField: "Displacement", value: "172000", unit: "t" },
       "main-engine-rpm": { label: "Main Engine RPM", sourceTab: "Power", sourceField: "ME RPM", value: "85.2" },
       "beaufort": { label: "Beaufort", sourceTab: "Pos & Weather", sourceField: "Beaufort Scale", value: "4" },
       "bunkers-section": { label: "ROB, Consumption & Used For", sourceTab: "Bunker", sourceField: "Bunker ROB Table", value: "Complete" },
