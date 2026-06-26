@@ -731,6 +731,9 @@ function SingleFieldFocusPane({
   isReadOnly = false,
   adminReadOnlyView = false,
   validationLoading = false,
+  canSkipVerification = false,
+  masterOverrideUsed = false,
+  onSkipVerification,
   }: {
   field: FieldCardData | null
   currentIndex: number
@@ -745,6 +748,9 @@ function SingleFieldFocusPane({
   onScrollToField?: () => void
   isReadOnly?: boolean
   adminReadOnlyView?: boolean
+  canSkipVerification?: boolean
+  masterOverrideUsed?: boolean
+  onSkipVerification?: () => void
   }) {
 const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
   // Source preview carousel state - track current source tab
@@ -1153,6 +1159,19 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
                 >
                   <Flag className="w-4 h-4" />
                   Flag as Incorrect
+                </button>
+              </div>
+            )}
+
+            {/* Master override (SOLD-1500): subtle "Skip verification" text link below the stepper controls */}
+            {isCritical && !isManualFill && canSkipVerification && !masterOverrideUsed && (
+              <div className="mt-3 flex justify-center">
+                <button
+                  type="button"
+                  onClick={onSkipVerification}
+                  className="text-xs text-gray-400 hover:text-gray-600 hover:underline transition-colors"
+                >
+                  Skip verification
                 </button>
               </div>
             )}
@@ -2468,12 +2487,11 @@ export function TransferReview({
 
   // Master override (SOLD-1500): skip verification and download directly
   const handleSkipVerification = () => {
+    // Enable download immediately (canSubmit reads masterOverrideUsed) and show the
+    // "Master override" badge next to the counter. The user then clicks Download.
     setMasterOverrideUsed(true)
     setShowSkipDialog(false)
-    console.log("[v0] Master override used - verification skipped")
     setToast({ message: "Master override applied — verification skipped.", type: "submit" })
-    // Proceed straight to the download/submit confirmation
-    setShowSubmitDialog(true)
   }
 
   // Tracks whether the next download attempt should fail (toggled to simulate
@@ -2826,25 +2844,10 @@ export function TransferReview({
             sourceReports={["#4528", "#4529", "#4530"]}
             isReadOnly={isReadOnly}
             adminReadOnlyView={adminReadOnlyView}
+            canSkipVerification={!isReadOnly && !adminReadOnlyView && isMaster}
+            masterOverrideUsed={masterOverrideUsed}
+            onSkipVerification={() => setShowSkipDialog(true)}
           />
-
-          {/* Master override (SOLD-1500): subtle skip-verification link, admins only */}
-          {!isReadOnly && !adminReadOnlyView && isMaster && !masterOverrideUsed && (
-            <div className="flex-shrink-0 border-t border-gray-100 bg-white px-5 py-2.5 text-center">
-              <button
-                onClick={() => setShowSkipDialog(true)}
-                className="text-xs text-gray-400 hover:text-gray-600 hover:underline"
-              >
-                Skip verification
-              </button>
-            </div>
-          )}
-          {masterOverrideUsed && (
-            <div className="flex-shrink-0 border-t border-amber-100 bg-amber-50 px-5 py-2.5 flex items-center justify-center gap-1.5">
-              <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
-              <span className="text-xs font-medium text-amber-700">Master override active</span>
-            </div>
-          )}
         </div>
 
         {/* Right Panel - VesLink Form (authentic replica) */}
@@ -2906,6 +2909,13 @@ export function TransferReview({
                       <Check className="w-3 h-3 text-green-500" />
                       Complete ({displayCompleteCount})
                     </span>
+                    {/* Master override badge - shown when verification was skipped */}
+                    {masterOverrideUsed && (
+                      <span className="ml-3 inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                        <ShieldAlert className="w-3 h-3" />
+                        Master override
+                      </span>
+                    )}
                   </div>
                 )}
                 {/* Progress bar + label */}
