@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, SlidersHorizontal, Download, Filter, MoreHorizontal, Eye, Copy, ShieldAlert, Check } from "lucide-react"
+import { Search, SlidersHorizontal, Download, Filter, MoreHorizontal, Eye, Copy, ShieldAlert, Check, FileText } from "lucide-react"
 import { useUser } from "@/lib/user-context"
 
 interface HistoryEntry {
@@ -226,6 +226,24 @@ export function HistoryPage({ onViewReport }: HistoryPageProps) {
               })}
             </tbody>
           </table>
+
+          {/* Empty state - no reports for the current scope */}
+          {visibleHistory.length === 0 && (
+            <div className="flex flex-col items-center justify-center text-center py-16 px-6">
+              <div className="w-12 h-12 rounded-full bg-[#f1f5f9] flex items-center justify-center mb-4">
+                <FileText className="w-6 h-6 text-[#94a3b8]" />
+              </div>
+              <p className="text-sm font-medium text-[#0f172a]">
+                No reports found
+                {currentUser.role === 'crew' && currentUser.assignedVessel
+                  ? ` for ${currentUser.assignedVessel}`
+                  : ''}
+              </p>
+              <p className="mt-1 text-sm text-[#64748b] max-w-sm">
+                Reports will appear here once voyage data is extracted from Navtor.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

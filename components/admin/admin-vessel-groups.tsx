@@ -114,13 +114,33 @@ export function AdminVesselGroups() {
             </div>
           ))}
 
-          {filtered.length === 0 && (
-            <div className="flex h-48 items-center justify-center">
-              <div className="text-center">
-                <Ship className="mx-auto h-10 w-10 text-[#d1d5db]" />
-                <p className="mt-2 text-sm text-[#64748b]">No vessels match your search</p>
+          {/* No vessels connected at all (vs. no search match) */}
+          {vessels.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f1f5f9]">
+                <Ship className="h-6 w-6 text-[#94a3b8]" />
               </div>
+              <p className="mt-4 text-sm font-medium text-[#0f172a]">No vessels connected</p>
+              <p className="mt-1 max-w-sm text-sm text-[#64748b]">
+                Vessels are automatically pulled from the Navtor integration.
+              </p>
+              <a
+                href="#integrations"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-[#e2e8f0] px-3 py-1.5 text-xs font-medium text-[#7c3aed] transition-colors hover:bg-[#f5f3ff]"
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+                Go to Integrations settings
+              </a>
             </div>
+          ) : (
+            filtered.length === 0 && (
+              <div className="flex h-48 items-center justify-center">
+                <div className="text-center">
+                  <Ship className="mx-auto h-10 w-10 text-[#d1d5db]" />
+                  <p className="mt-2 text-sm text-[#64748b]">No vessels match your search</p>
+                </div>
+              </div>
+            )
           )}
         </div>
       </div>

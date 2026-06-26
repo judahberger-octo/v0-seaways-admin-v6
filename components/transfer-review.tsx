@@ -28,7 +28,9 @@ import {
   Download,
   AlertTriangle,
   ShieldAlert,
-  Database
+  Database,
+  CheckCircle2,
+  RotateCw
 } from "lucide-react"
 import { AdminTestingSuite } from "./admin-testing-suite"
 import { VesLinkForm, CRITICAL_FIELDS_NOON_SEA, MANUAL_FILL_FIELDS } from "./veslink-form"
@@ -298,11 +300,24 @@ interface TransferReviewProps {
 // Toast notification component - Dark style matching Figma
 type ToastType = "error" | "success" | "warning" | "delete" | "flag" | "save" | "submit"
 
-function Toast({ message, type, onClose }: { message: string; type: ToastType; onClose: () => void }) {
+function Toast({
+  message,
+  type,
+  onClose,
+  actionLabel,
+  onAction,
+}: {
+  message: string
+  type: ToastType
+  onClose: () => void
+  actionLabel?: string
+  onAction?: () => void
+}) {
   useEffect(() => {
-    const timer = setTimeout(onClose, 4000)
+    // Keep error toasts (with a retry action) on-screen longer
+    const timer = setTimeout(onClose, onAction ? 8000 : 4000)
     return () => clearTimeout(timer)
-  }, [onClose])
+  }, [onClose, onAction])
 
   // Get the appropriate icon based on toast type
   const getIcon = () => {
@@ -328,6 +343,15 @@ function Toast({ message, type, onClose }: { message: string; type: ToastType; o
     <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-[#1e293b] text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 animate-in slide-in-from-top-4 fade-in duration-200">
       {getIcon()}
       <span className="text-sm font-medium">{message}</span>
+      {actionLabel && onAction && (
+        <button
+          onClick={onAction}
+          className="ml-1 inline-flex items-center gap-1.5 rounded-md bg-white/10 px-2.5 py-1 text-xs font-semibold hover:bg-white/20 transition-colors"
+        >
+          <RotateCw className="w-3.5 h-3.5" />
+          {actionLabel}
+        </button>
+      )}
       <button onClick={onClose} className="ml-2 hover:opacity-70 transition-opacity">
         <X className="w-4 h-4" />
       </button>
@@ -569,15 +593,37 @@ function FieldCard({
 function ValidationChecksCard({
   result,
   onIssueClick,
+  loading = false,
 }: {
   result: ValidationResult
   onIssueClick?: (fieldId: string) => void
+  loading?: boolean
 }) {
   const errorCount = result.errors.length
   const warningCount = result.warnings.length
   const hasErrors = errorCount > 0
   const hasWarnings = warningCount > 0
   const allPassed = !hasErrors && !hasWarnings
+
+  // Loading -> skeleton/shimmer while validations are computed
+  if (loading) {
+    return (
+      <div className="rounded-lg border border-gray-200 bg-white p-4 mb-4">
+        <div className="flex items-center gap-2.5">
+          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-gray-200 animate-pulse" />
+          <div className="flex-1 space-y-2">
+            <div className="h-3.5 w-40 rounded bg-gray-200 animate-pulse" />
+            <div className="h-3 w-24 rounded bg-gray-100 animate-pulse" />
+          </div>
+        </div>
+        <div className="mt-3 space-y-2">
+          <div className="h-8 w-full rounded-md bg-gray-100 animate-pulse" />
+          <div className="h-8 w-full rounded-md bg-gray-100 animate-pulse" />
+        </div>
+        <span className="sr-only">Running validation checks…</span>
+      </div>
+    )
+  }
 
   // All checks passed -> green card
   if (allPassed) {
@@ -687,12 +733,14 @@ function SingleFieldFocusPane({
   adminReadOnlyView = false,
   validationResult,
   onValidationIssueClick,
+  validationLoading = false,
   }: {
   field: FieldCardData | null
   currentIndex: number
   totalCount: number
   validationResult?: ValidationResult
   onValidationIssueClick?: (fieldId: string) => void
+  validationLoading?: boolean
   onVerify: () => void
   onFlag: () => void
   onNavigate: (direction: "prev" | "next") => void
@@ -909,7 +957,7 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
 
         {/* Validation Checks Card - prominent, always-visible report-level summary (SOLD-1501) */}
         {!isManualFill && validationResult && (
-          <ValidationChecksCard result={validationResult} onIssueClick={onValidationIssueClick} />
+          <ValidationChecksCard result={validationResult} onIssueClick={onValidationIssueClick} loading={validationLoading} />
         )}
 
         {/* Source Preview Accordion - only for non-manual-fill fields */}
@@ -1895,7 +1943,11 @@ export function TransferReview({
   const [showSkipDialog, setShowSkipDialog] = useState(false)
   const [masterOverrideUsed, setMasterOverrideUsed] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
-  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
+  // Brief loading state while validation checks are "computed" (skeleton/shimmer)
+  const [validationLoading, setValidationLoading] = useState(!isReadOnly)
+  // Celebratory micro-state when all fields become verified
+  const [justCompletedAll, setJustCompletedAll] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: ToastType; actionLabel?: string; onAction?: () => void } | null>(null)
   const [pulsingFieldId, setPulsingFieldId] = useState<string | null>(null)
   const [showAdminSuite, setShowAdminSuite] = useState(false)
   const [editedFields, setEditedFields] = useState<Set<string>>(new Set())
@@ -1921,6 +1973,13 @@ export function TransferReview({
     if (isReadOnly) {
       setVerifiedVesLinkFields(new Set(CRITICAL_FIELDS_NOON_SEA))
     }
+  }, [isReadOnly])
+
+  // Simulate computing validation checks on mount (shows skeleton briefly)
+  useEffect(() => {
+    if (isReadOnly) return
+    const timer = setTimeout(() => setValidationLoading(false), 1200)
+    return () => clearTimeout(timer)
   }, [isReadOnly])
   
   // Modal states
@@ -2036,6 +2095,16 @@ export function TransferReview({
   const totalRequiredFields = criticalOnlyTotal + manualFillTotal
   const displayPendingCount = isReadOnly ? 0 : (criticalOnlyTotal - criticalOnlyVerified) + (manualFillTotal - manualFillVerified)
   const displayCompleteCount = isReadOnly ? totalRequiredFields : criticalOnlyVerified + manualFillVerified
+
+  // Celebratory micro-state: fire once when the last pending field is verified
+  const allFieldsComplete = !isReadOnly && totalRequiredFields > 0 && displayPendingCount === 0
+  useEffect(() => {
+    if (allFieldsComplete) {
+      setJustCompletedAll(true)
+      const timer = setTimeout(() => setJustCompletedAll(false), 2500)
+      return () => clearTimeout(timer)
+    }
+  }, [allFieldsComplete])
   
   // Submit gating: ALL critical fields verified/flagged AND ALL manualFill fields populated/flagged.
   // Tier 1 validation errors also block download (SOLD-1501). Tier 2 warnings do NOT block.
@@ -2409,10 +2478,30 @@ export function TransferReview({
     setShowSubmitDialog(true)
   }
 
+  // Tracks whether the next download attempt should fail (toggled to simulate
+  // a transient failure on the first attempt, success on retry).
+  const downloadShouldFailRef = useRef(true)
+
+  const performDownload = () => {
+    // Simulate a transient download failure on the first attempt
+    if (downloadShouldFailRef.current) {
+      downloadShouldFailRef.current = false
+      setToast({
+        message: "Download failed — please try again",
+        type: "error",
+        actionLabel: "Retry",
+        onAction: () => performDownload(),
+      })
+      return
+    }
+    downloadShouldFailRef.current = true
+    setIsSubmitted(true)
+    setToast({ message: "VesLink form downloaded.", type: "submit" })
+  }
+
   const handleConfirmSubmit = () => {
     setShowSubmitDialog(false)
-    setIsSubmitted(true)
-    setToast({ message: "Report marked as submitted.", type: "submit" })
+    performDownload()
   }
 
   // Keyboard shortcuts
@@ -2490,6 +2579,8 @@ export function TransferReview({
           message={toast.message} 
           type={toast.type} 
           onClose={() => setToast(null)} 
+          actionLabel={toast.actionLabel}
+          onAction={toast.onAction}
         />
       )}
       
@@ -2704,6 +2795,7 @@ export function TransferReview({
             currentIndex={currentCriticalIndex}
             totalCount={vesLinkCriticalTotal}
             validationResult={VALIDATION_RESULT}
+            validationLoading={validationLoading}
             onValidationIssueClick={(fieldId) => scrollToVesLinkField(fieldId)}
             onVerify={handleVerify}
             onFlag={() => {
@@ -2767,25 +2859,39 @@ export function TransferReview({
               <div
                 role="status"
                 aria-live="polite"
-                className="pointer-events-auto bg-white border border-gray-200 rounded-2xl px-4 py-2 shadow-sm hover:shadow-md transition-shadow min-w-[280px]"
+                className={`pointer-events-auto rounded-2xl px-4 py-2 shadow-sm hover:shadow-md transition-all duration-500 min-w-[280px] border ${
+                  allFieldsComplete
+                    ? "bg-green-50 border-green-300"
+                    : "bg-white border-gray-200"
+                } ${justCompletedAll ? "vl-celebrate-pop" : ""}`}
               >
                 <span className="sr-only">
-                  Review progress: {displayCompleteCount} of {totalRequiredFields} critical fields verified, {displayPendingCount} pending.
+                  {allFieldsComplete
+                    ? `All ${totalRequiredFields} fields verified.`
+                    : `Review progress: ${displayCompleteCount} of ${totalRequiredFields} critical fields verified, ${displayPendingCount} pending.`}
                 </span>
-                <div className="flex items-center justify-center">
-                  {/* Pending count */}
-                  <span className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                    Pending ({displayPendingCount})
-                  </span>
-                  {/* Divider */}
-                  <span className="w-px h-3 bg-gray-300 mx-3" />
-                  {/* Complete count */}
-                  <span className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
-                    <Check className="w-3 h-3 text-green-500" />
-                    Complete ({displayCompleteCount})
-                  </span>
-                </div>
+                {allFieldsComplete ? (
+                  // Celebratory all-verified state
+                  <div className="flex items-center justify-center gap-2 text-sm font-semibold text-green-700">
+                    <CheckCircle2 className="w-4 h-4 text-green-600" />
+                    All {totalRequiredFields} fields verified
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center">
+                    {/* Pending count */}
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      Pending ({displayPendingCount})
+                    </span>
+                    {/* Divider */}
+                    <span className="w-px h-3 bg-gray-300 mx-3" />
+                    {/* Complete count */}
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
+                      <Check className="w-3 h-3 text-green-500" />
+                      Complete ({displayCompleteCount})
+                    </span>
+                  </div>
+                )}
                 {/* Progress bar + label */}
                 <div className="mt-2">
                   <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden" aria-hidden="true">
@@ -2938,11 +3044,11 @@ export function TransferReview({
               <button
                 onClick={handleSubmitClick}
                 disabled={!canSubmit}
-                className={`rounded-lg px-6 py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-colors min-w-[200px] ${
-                  canSubmit
-                    ? "bg-purple-600 text-white hover:bg-purple-700"
-                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                }`}
+  className={`rounded-lg px-6 py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-colors min-w-[200px] ${
+  canSubmit
+  ? "bg-purple-600 text-white hover:bg-purple-700"
+  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+  } ${justCompletedAll && canSubmit ? "vl-download-pulse" : ""}`}
               >
                 <Download className="w-4 h-4" />
                 Download VesLink Form
