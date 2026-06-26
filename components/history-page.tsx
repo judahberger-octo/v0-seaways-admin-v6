@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, SlidersHorizontal, Download, Filter, MoreHorizontal, Eye, Copy } from "lucide-react"
+import { Search, SlidersHorizontal, Download, Filter, MoreHorizontal, Eye, Copy, ShieldAlert } from "lucide-react"
 
 interface HistoryEntry {
   id: string
@@ -9,6 +9,7 @@ interface HistoryEntry {
   status: "Submitted"
   updated: string
   criticalVerified: string
+  masterOverride?: boolean
 }
 
 const mockHistory: HistoryEntry[] = [
@@ -31,7 +32,8 @@ const mockHistory: HistoryEntry[] = [
     name: "Departure",
     status: "Submitted",
     updated: "January 23, 2026 9:30 AM",
-    criticalVerified: "8/8",
+    criticalVerified: "3/8",
+    masterOverride: true,
   },
   {
     id: "#4524",
@@ -143,6 +145,15 @@ export function HistoryPage({ onViewReport }: HistoryPageProps) {
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-[#16a34a]" />
                         <span className="text-sm text-[#0f172a]">{entry.status}</span>
+                        {entry.masterOverride && (
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700"
+                            title="Downloaded using master override — verification was skipped"
+                          >
+                            <ShieldAlert className="w-3 h-3" />
+                            Master override
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="py-3 px-4 text-sm text-[#0f172a]">{entry.updated}</td>

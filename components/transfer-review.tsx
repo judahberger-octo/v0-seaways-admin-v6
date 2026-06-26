@@ -26,7 +26,8 @@ import {
   Maximize2,
   Calculator,
   Download,
-  AlertTriangle
+  AlertTriangle,
+  ShieldAlert
 } from "lucide-react"
 import { AdminTestingSuite } from "./admin-testing-suite"
 import { VesLinkForm, CRITICAL_FIELDS_NOON_SEA, MANUAL_FILL_FIELDS } from "./veslink-form"
@@ -1890,6 +1891,8 @@ export function TransferReview({
   const [selectedReportId, setSelectedReportId] = useState("4528")
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
   const [showWarningsDialog, setShowWarningsDialog] = useState(false)
+  const [showSkipDialog, setShowSkipDialog] = useState(false)
+  const [masterOverrideUsed, setMasterOverrideUsed] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
   const [pulsingFieldId, setPulsingFieldId] = useState<string | null>(null)
@@ -2039,7 +2042,13 @@ export function TransferReview({
   const allCriticalDone = criticalOnlyVerified === criticalOnlyTotal
   const allManualFillDone = manualFillVerified === manualFillTotal
   const hasBlockingValidationErrors = VALIDATION_RESULT.errors.length > 0
-  const canSubmit = isReadOnly ? true : (allCriticalDone && allManualFillDone && !hasBlockingValidationErrors)
+  // Master override (SOLD-1500): an admin/master can bypass pending verifications.
+  const isMaster = currentUser.role === 'admin'
+  const canSubmit = isReadOnly
+    ? true
+    : masterOverrideUsed
+      ? true
+      : (allCriticalDone && allManualFillDone && !hasBlockingValidationErrors)
 
   const toggleSection = (sectionId: string) => {
     setSections((prev) =>
@@ -2389,6 +2398,16 @@ export function TransferReview({
     setShowSubmitDialog(true)
   }
 
+  // Master override (SOLD-1500): skip verification and download directly
+  const handleSkipVerification = () => {
+    setMasterOverrideUsed(true)
+    setShowSkipDialog(false)
+    console.log("[v0] Master override used - verification skipped")
+    setToast({ message: "Master override applied — verification skipped.", type: "submit" })
+    // Proceed straight to the download/submit confirmation
+    setShowSubmitDialog(true)
+  }
+
   const handleConfirmSubmit = () => {
     setShowSubmitDialog(false)
     setIsSubmitted(true)
@@ -2562,6 +2581,55 @@ export function TransferReview({
         </div>
       )}
 
+      {/* Master override skip-verification confirmation dialog (SOLD-1500) */}
+      {showSkipDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="skip-dialog-title"
+          onClick={() => setShowSkipDialog(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl bg-white shadow-xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start gap-3 px-5 pt-5 pb-3">
+              <span className="flex-shrink-0 w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center">
+                <ShieldAlert className="w-5 h-5 text-purple-600" />
+              </span>
+              <div>
+                <h2 id="skip-dialog-title" className="text-base font-semibold text-gray-900">
+                  Skip field verification?
+                </h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  As master, you can skip the verification step and download the form directly.
+                  The crew will still see any validation warnings.
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2 px-5 py-4">
+              <button
+                onClick={() => setShowSkipDialog(false)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSkipVerification}
+                className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 flex items-center gap-2"
+              >
+                <ShieldAlert className="w-4 h-4" />
+                Skip &amp; Download
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content - Two Column Layout (Field List + VesLink Form) */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Left Panel - Single Field Focus View */}
@@ -2624,6 +2692,24 @@ export function TransferReview({
             isReadOnly={isReadOnly}
             adminReadOnlyView={adminReadOnlyView}
           />
+
+          {/* Master override (SOLD-1500): subtle skip-verification link, admins only */}
+          {!isReadOnly && !adminReadOnlyView && isMaster && !masterOverrideUsed && (
+            <div className="flex-shrink-0 border-t border-gray-100 bg-white px-5 py-2.5 text-center">
+              <button
+                onClick={() => setShowSkipDialog(true)}
+                className="text-xs text-gray-400 hover:text-gray-600 hover:underline"
+              >
+                Skip verification
+              </button>
+            </div>
+          )}
+          {masterOverrideUsed && (
+            <div className="flex-shrink-0 border-t border-amber-100 bg-amber-50 px-5 py-2.5 flex items-center justify-center gap-1.5">
+              <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+              <span className="text-xs font-medium text-amber-700">Master override active</span>
+            </div>
+          )}
         </div>
 
         {/* Right Panel - VesLink Form (authentic replica) */}
