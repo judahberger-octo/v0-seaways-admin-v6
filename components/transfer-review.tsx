@@ -623,7 +623,7 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
             {currentUser.role === 'admin' && (
               <a
                 href={`/admin/field-definitions/${field.id}`}
-                className="text-xs text-purple-600 hover:text-purple-800 hover:underline"
+                className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
               >
                 View in admin panel
               </a>
@@ -650,15 +650,19 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
                   Complete
                 </span>
               ) : null // Standard fields: no pill
-            ) : (
-              // Edit mode: show field type pill
-              (isManualFill || field.isCritical) && (
-                <span className={`text-xs font-medium px-2.5 py-1 rounded-full border flex items-center gap-1 ${getFieldTypePillColor()}`}>
-                  <Star className="w-3 h-3" fill="currentColor" />
-                  {isManualFill ? "Manual fill" : "Critical field"}
-                </span>
-              )
-            )}
+            ) : isManualFill ? (
+              // Manual fill keeps its status pill
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full border flex items-center gap-1 ${getFieldTypePillColor()}`}>
+                <Star className="w-3 h-3" fill="currentColor" />
+                Manual fill
+              </span>
+            ) : field.isCritical ? (
+              // Critical field: small red star icon + red text, top-right
+              <span className="text-xs font-semibold text-red-600 flex items-center gap-1">
+                <Star className="w-3 h-3 text-red-600" fill="currentColor" />
+                Critical field
+              </span>
+            ) : null}
           </div>
         </div>
 
@@ -869,7 +873,7 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
                     className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
                       isVerified
                         ? "bg-green-50 text-green-700 border-green-200"
-                        : "bg-purple-600 text-white border-purple-600 hover:bg-purple-700"
+                        : "bg-green-600 text-white border-green-600 hover:bg-green-700"
                     }`}
                   >
                     <Check className="w-4 h-4" />
