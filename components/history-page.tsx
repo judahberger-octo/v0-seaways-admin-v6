@@ -1,14 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, SlidersHorizontal, Download, Filter, MoreHorizontal, Eye, Copy, ShieldAlert } from "lucide-react"
+import { Search, SlidersHorizontal, Download, Filter, MoreHorizontal, Eye, Copy, ShieldAlert, Check } from "lucide-react"
 
 interface HistoryEntry {
   id: string
   name: string
-  status: "Submitted"
+  status: "Exported" | "Draft"
   updated: string
   criticalVerified: string
+  lastExported?: string
   masterOverride?: boolean
 }
 
@@ -16,31 +17,34 @@ const mockHistory: HistoryEntry[] = [
   {
     id: "#4527",
     name: "Noon (Sea)",
-    status: "Submitted",
+    status: "Exported",
     updated: "January 25, 2026 2:03 AM",
     criticalVerified: "12/12",
+    lastExported: "January 25, 2026 2:05 AM",
   },
   {
     id: "#4526",
     name: "Noon (Sea)",
-    status: "Submitted",
+    status: "Draft",
     updated: "January 24, 2026 1:45 PM",
-    criticalVerified: "12/12",
+    criticalVerified: "8/12",
   },
   {
     id: "#4525",
     name: "Departure",
-    status: "Submitted",
+    status: "Exported",
     updated: "January 23, 2026 9:30 AM",
     criticalVerified: "3/8",
+    lastExported: "January 23, 2026 9:32 AM",
     masterOverride: true,
   },
   {
     id: "#4524",
     name: "Arrival",
-    status: "Submitted",
+    status: "Exported",
     updated: "January 22, 2026 5:15 PM",
     criticalVerified: "8/8",
+    lastExported: "January 22, 2026 5:18 PM",
   },
 ]
 
@@ -124,6 +128,7 @@ export function HistoryPage({ onViewReport }: HistoryPageProps) {
                 <th className="text-left py-3 px-4 text-sm font-medium text-[#64748b]">Name</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-[#64748b] w-32">Status</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-[#64748b] w-52">Updated</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-[#64748b] w-52">Last exported</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-[#64748b] w-36">Critical verified</th>
                 <th className="text-right py-3 px-4 text-sm font-medium text-[#64748b] w-20">Action</th>
               </tr>
@@ -143,20 +148,30 @@ export function HistoryPage({ onViewReport }: HistoryPageProps) {
                     <td className="py-3 px-4 text-sm text-[#0f172a]">{entry.name}</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[#16a34a]" />
-                        <span className="text-sm text-[#0f172a]">{entry.status}</span>
+                        {entry.status === "Exported" ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                            <Check className="w-3 h-3" />
+                            Exported
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            Draft
+                          </span>
+                        )}
                         {entry.masterOverride && (
                           <span
                             className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700"
                             title="Downloaded using master override — verification was skipped"
                           >
                             <ShieldAlert className="w-3 h-3" />
-                            Master override
+                            Override
                           </span>
                         )}
                       </div>
                     </td>
                     <td className="py-3 px-4 text-sm text-[#0f172a]">{entry.updated}</td>
+                    <td className="py-3 px-4 text-sm text-[#64748b]">{entry.lastExported || "—"}</td>
                     <td className="py-3 px-4 text-sm text-[#0f172a]">{entry.criticalVerified}</td>
                     <td className="py-3 px-4 text-right relative">
                       <button
