@@ -25,7 +25,8 @@ import {
   Image as ImageIcon,
   Maximize2,
   Calculator,
-  Download
+  Download,
+  AlertTriangle
 } from "lucide-react"
 import { AdminTestingSuite } from "./admin-testing-suite"
 import { VesLinkForm, CRITICAL_FIELDS_NOON_SEA, MANUAL_FILL_FIELDS } from "./veslink-form"
@@ -256,6 +257,30 @@ const SOURCE_PREVIEW_GROUPS: SourcePreviewGroup[] = [
 
 const getSourcePreviewGroup = (fieldId: string): SourcePreviewGroup | undefined =>
   SOURCE_PREVIEW_GROUPS.find((g) => g.rows.some((r) => r.id === fieldId))
+
+// Validation checks model (SOLD-1501).
+// Tier 1 = blocking errors (mirror VesLink's own validation messages, block download).
+// Tier 2 = warnings (do not block, but trigger a confirmation dialog on download).
+interface ValidationIssue {
+  fieldId: string
+  fieldName: string
+  message: string
+}
+interface ValidationResult {
+  totalChecks: number
+  errors: ValidationIssue[]   // Tier 1
+  warnings: ValidationIssue[] // Tier 2
+}
+// Mock validation result for the prototype. Defaults to a passing report with two
+// Tier 2 warnings so the warning + confirmation flow (Prompt 7) can be demonstrated.
+const VALIDATION_RESULT: ValidationResult = {
+  totalChecks: 30,
+  errors: [],
+  warnings: [
+    { fieldId: "reported-speed", fieldName: "Reported Speed", message: "Reported speed (12.3 kts) is below CP/ordered speed (12.5 kts)." },
+    { fieldId: "observed-distance", fieldName: "Observed Distance", message: "Observed distance differs from engine distance by more than 5%." },
+  ],
+}
 
 interface TransferReviewProps {
   reportId: string
@@ -538,6 +563,112 @@ function FieldCard({
   )
 }
 
+// Validation Checks Card - prominent, always-visible report-level validation summary (SOLD-1501)
+function ValidationChecksCard({
+  result,
+  onIssueClick,
+}: {
+  result: ValidationResult
+  onIssueClick?: (fieldId: string) => void
+}) {
+  const errorCount = result.errors.length
+  const warningCount = result.warnings.length
+  const hasErrors = errorCount > 0
+  const hasWarnings = warningCount > 0
+  const allPassed = !hasErrors && !hasWarnings
+
+  // All checks passed -> green card
+  if (allPassed) {
+    return (
+      <div className="rounded-lg border border-green-200 bg-green-50 p-4 mb-4">
+        <div className="flex items-center gap-2.5">
+          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-green-100 flex items-center justify-center">
+            <Check className="w-4 h-4 text-green-600" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-green-800">All validation checks passed</p>
+            <p className="text-xs text-green-700">{result.totalChecks}/{result.totalChecks} checks passed</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Header summary text for combined / single states
+  const headerParts: string[] = []
+  if (hasErrors) headerParts.push(`${errorCount} ${errorCount === 1 ? "error" : "errors"}`)
+  if (hasWarnings) headerParts.push(`${warningCount} ${warningCount === 1 ? "warning" : "warnings"}`)
+  const headerText = headerParts.join(" · ")
+
+  // Card border/background keyed off the most severe state present
+  const cardTone = hasErrors
+    ? "border-red-200 bg-red-50"
+    : "border-amber-200 bg-amber-50"
+
+  return (
+    <div className={`rounded-lg border ${cardTone} p-4 mb-4`}>
+      {/* Header with combined counts */}
+      <div className="flex items-center gap-2.5 mb-3">
+        <span className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${hasErrors ? "bg-red-100" : "bg-amber-100"}`}>
+          {hasErrors ? (
+            <AlertCircle className="w-4 h-4 text-red-600" />
+          ) : (
+            <AlertTriangle className="w-4 h-4 text-amber-600" />
+          )}
+        </span>
+        <div>
+          <p className={`text-sm font-semibold ${hasErrors ? "text-red-800" : "text-amber-800"}`}>
+            {hasErrors ? "Validation failed" : "Validation warnings"}
+          </p>
+          <p className={`text-xs ${hasErrors ? "text-red-700" : "text-amber-700"}`}>{headerText}</p>
+        </div>
+      </div>
+
+      {/* Errors first (Tier 1) */}
+      {hasErrors && (
+        <ul className="space-y-1.5 mb-2">
+          {result.errors.map((issue, i) => (
+            <li key={`err-${issue.fieldId}-${i}`}>
+              <button
+                type="button"
+                onClick={() => onIssueClick?.(issue.fieldId)}
+                className="w-full text-left flex items-start gap-2 rounded-md bg-white/70 border border-red-200 px-2.5 py-2 hover:bg-white transition-colors"
+              >
+                <AlertCircle className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
+                <span className="text-xs">
+                  <span className="font-semibold text-red-800">{issue.fieldName}: </span>
+                  <span className="text-red-700">{issue.message}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Warnings (Tier 2) */}
+      {hasWarnings && (
+        <ul className="space-y-1.5">
+          {result.warnings.map((issue, i) => (
+            <li key={`warn-${issue.fieldId}-${i}`}>
+              <button
+                type="button"
+                onClick={() => onIssueClick?.(issue.fieldId)}
+                className="w-full text-left flex items-start gap-2 rounded-md bg-white/70 border border-amber-200 px-2.5 py-2 hover:bg-white transition-colors"
+              >
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+                <span className="text-xs">
+                  <span className="font-semibold text-amber-800">{issue.fieldName}: </span>
+                  <span className="text-amber-700">{issue.message}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 // Single Field Focus Pane Component - shows ONE field at a time
 function SingleFieldFocusPane({
   field,
@@ -552,10 +683,14 @@ function SingleFieldFocusPane({
   onScrollToField,
   isReadOnly = false,
   adminReadOnlyView = false,
+  validationResult,
+  onValidationIssueClick,
   }: {
   field: FieldCardData | null
   currentIndex: number
   totalCount: number
+  validationResult?: ValidationResult
+  onValidationIssueClick?: (fieldId: string) => void
   onVerify: () => void
   onFlag: () => void
   onNavigate: (direction: "prev" | "next") => void
@@ -566,7 +701,6 @@ function SingleFieldFocusPane({
   isReadOnly?: boolean
   adminReadOnlyView?: boolean
   }) {
-  const [validationExpanded, setValidationExpanded] = useState(false)
 const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
   // Source preview carousel state - track current source tab
   const [sourcePreviewIndex, setSourcePreviewIndex] = useState(0)
@@ -771,39 +905,9 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
           </div>
         ) : null}
 
-        {/* Validation Checks Accordion - only for non-manual-fill fields */}
-        {!isManualFill && (
-          <div className="border border-gray-200 rounded-lg mb-4">
-            <button
-              onClick={() => setValidationExpanded(!validationExpanded)}
-              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <span>Validation checks</span>
-              {validationExpanded ? (
-                <ChevronUp className="w-4 h-4 text-gray-500" />
-              ) : (
-                <ChevronDown className="w-4 h-4 text-gray-500" />
-              )}
-            </button>
-            {validationExpanded && (
-              <div className="px-4 pb-3 border-t border-gray-100">
-                <div className="pt-3 space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span className="text-gray-600">Value within expected range</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span className="text-gray-600">Format validation passed</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span className="text-gray-600">Cross-reference check passed</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+        {/* Validation Checks Card - prominent, always-visible report-level summary (SOLD-1501) */}
+        {!isManualFill && validationResult && (
+          <ValidationChecksCard result={validationResult} onIssueClick={onValidationIssueClick} />
         )}
 
         {/* Source Preview Accordion - only for non-manual-fill fields */}
@@ -1928,11 +2032,13 @@ export function TransferReview({
   const displayPendingCount = isReadOnly ? 0 : (criticalOnlyTotal - criticalOnlyVerified) + (manualFillTotal - manualFillVerified)
   const displayCompleteCount = isReadOnly ? totalRequiredFields : criticalOnlyVerified + manualFillVerified
   
-  // Submit gating: ALL critical fields verified/flagged AND ALL manualFill fields populated/flagged
+  // Submit gating: ALL critical fields verified/flagged AND ALL manualFill fields populated/flagged.
+  // Tier 1 validation errors also block download (SOLD-1501). Tier 2 warnings do NOT block.
   // In read-only mode: already submitted, so canSubmit is always true
   const allCriticalDone = criticalOnlyVerified === criticalOnlyTotal
   const allManualFillDone = manualFillVerified === manualFillTotal
-  const canSubmit = isReadOnly ? true : (allCriticalDone && allManualFillDone)
+  const hasBlockingValidationErrors = VALIDATION_RESULT.errors.length > 0
+  const canSubmit = isReadOnly ? true : (allCriticalDone && allManualFillDone && !hasBlockingValidationErrors)
 
   const toggleSection = (sectionId: string) => {
     setSections((prev) =>
@@ -2400,6 +2506,8 @@ export function TransferReview({
             } : null}
             currentIndex={currentCriticalIndex}
             totalCount={vesLinkCriticalTotal}
+            validationResult={VALIDATION_RESULT}
+            onValidationIssueClick={(fieldId) => scrollToVesLinkField(fieldId)}
             onVerify={handleVerify}
             onFlag={() => {
               if (selectedField) {
