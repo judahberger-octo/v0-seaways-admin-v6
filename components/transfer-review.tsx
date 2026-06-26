@@ -262,29 +262,90 @@ const SOURCE_PREVIEW_GROUPS: SourcePreviewGroup[] = [
 const getSourcePreviewGroup = (fieldId: string): SourcePreviewGroup | undefined =>
   SOURCE_PREVIEW_GROUPS.find((g) => g.rows.some((r) => r.id === fieldId))
 
-// Validation checks model (SOLD-1501).
-// Tier 1 = blocking errors (mirror VesLink's own validation messages, block download).
-// Tier 2 = warnings (do not block, but trigger a confirmation dialog on download).
-interface ValidationIssue {
-  fieldId: string
+// Validation checks model (SOLD-1501) — per critical field.
+// "error" = Tier 1 (blocks download), "warning" = Tier 2 (allow with confirmation),
+// "pass" = field validated cleanly. Each field shows a compact inline status with a
+// short message; the full detail is revealed on hover/click.
+type FieldValidationStatus = "error" | "warning" | "pass"
+interface FieldValidation {
   fieldName: string
-  message: string
+  status: FieldValidationStatus
+  message: string // short, one-line
+  detail: string  // full explanation shown on hover/expand
 }
-interface ValidationResult {
-  totalChecks: number
-  errors: ValidationIssue[]   // Tier 1
-  warnings: ValidationIssue[] // Tier 2
+
+// Field-specific validation states across the 13 critical fields.
+const FIELD_VALIDATIONS: Record<string, FieldValidation> = {
+  // Tier 1 errors (red, block download)
+  "eta": {
+    fieldName: "ETA",
+    status: "error",
+    message: "ETA date is before report date/time",
+    detail:
+      "VesLink requires ETA to be after the current report's date/time. Current ETA: 14/04/2026 14:00, Report date: 22/04/2026 12:00.",
+  },
+  "observed-distance": {
+    fieldName: "Observed Distance",
+    status: "error",
+    message: "Required field is empty",
+    detail: "Observed Distance is required for sea reports but was left blank.",
+  },
+  // Tier 2 warnings (amber, allow download with confirmation)
+  "reported-speed": {
+    fieldName: "Reported Speed",
+    status: "warning",
+    message: "Reported speed (12.3 kts) is below CP/ordered speed (12.5 kts)",
+    detail:
+      "Speed deviation detected. This won't block submission but VesLink will prompt for confirmation.",
+  },
+  "cargo-weight": {
+    fieldName: "Cargo Weight",
+    status: "warning",
+    message: "Cargo weight changed by more than 10% from previous report",
+    detail:
+      "Previous report: 36,200 MT. Current: 40,004 MT. VesLink flags large cargo changes between consecutive reports.",
+  },
+  "displacement": {
+    fieldName: "Displacement",
+    status: "warning",
+    message: "Displacement value seems high for current draft readings",
+    detail:
+      "Calculated displacement from drafts doesn't match entered value. VesLink will show a warning on submit.",
+  },
+  // Passing fields (green)
+  "date-time": { fieldName: "Date/Time", status: "pass", message: "Valid", detail: "Date/Time validation passed." },
+  "vessel-condition": { fieldName: "Vessel Condition", status: "pass", message: "Valid", detail: "Vessel Condition validation passed." },
+  "voyage-number": { fieldName: "Voyage Number", status: "pass", message: "Valid", detail: "Voyage Number validation passed." },
+  "location": { fieldName: "Location", status: "pass", message: "Valid", detail: "Location validation passed." },
+  "next-port": { fieldName: "Next Port", status: "pass", message: "Valid", detail: "Next Port validation passed." },
+  "distance-to-go": { fieldName: "Distance to Go", status: "pass", message: "Valid", detail: "Distance to Go validation passed." },
+  "cp-ordered-speed": { fieldName: "CP/Ordered Speed", status: "pass", message: "Valid", detail: "CP/Ordered Speed validation passed." },
+  "time-since-last": { fieldName: "Time Since Last Report", status: "pass", message: "Valid", detail: "Time Since Last Report validation passed." },
 }
-// Mock validation result for the prototype. Defaults to a passing report with two
-// Tier 2 warnings so the warning + confirmation flow (Prompt 7) can be demonstrated.
-const VALIDATION_RESULT: ValidationResult = {
-  totalChecks: 30,
-  errors: [],
-  warnings: [
-    { fieldId: "reported-speed", fieldName: "Reported Speed", message: "Reported speed (12.3 kts) is below CP/ordered speed (12.5 kts)." },
-    { fieldId: "observed-distance", fieldName: "Observed Distance", message: "Observed distance differs from engine distance by more than 5%." },
-  ],
+
+const getFieldValidation = (fieldId: string): FieldValidation | undefined =>
+  FIELD_VALIDATIONS[fieldId]
+
+// Aggregate counts across all critical fields (for the top-right summary + gating)
+interface ValidationSummary {
+  errors: { fieldId: string; fieldName: string; message: string }[]
+  warnings: { fieldId: string; fieldName: string; message: string }[]
+  passed: number
 }
+const getValidationSummary = (): ValidationSummary => {
+  const errors: ValidationSummary["errors"] = []
+  const warnings: ValidationSummary["warnings"] = []
+  let passed = 0
+  for (const fieldId of CRITICAL_FIELDS_NOON_SEA) {
+    const v = FIELD_VALIDATIONS[fieldId]
+    if (!v) continue
+    if (v.status === "error") errors.push({ fieldId, fieldName: v.fieldName, message: v.message })
+    else if (v.status === "warning") warnings.push({ fieldId, fieldName: v.fieldName, message: v.message })
+    else passed++
+  }
+  return { errors, warnings, passed }
+}
+const VALIDATION_SUMMARY: ValidationSummary = getValidationSummary()
 
 interface TransferReviewProps {
   reportId: string
@@ -589,129 +650,67 @@ function FieldCard({
   )
 }
 
-// Validation Checks Card - prominent, always-visible report-level validation summary (SOLD-1501)
-function ValidationChecksCard({
-  result,
-  onIssueClick,
+// Compact, per-field validation status indicator (SOLD-1501).
+// Renders a single line below the field value: errors (red dot), warnings (amber dot),
+// or a small muted green check for passing fields. Full detail expands on hover/click.
+function FieldValidationStatusLine({
+  validation,
   loading = false,
 }: {
-  result: ValidationResult
-  onIssueClick?: (fieldId: string) => void
+  validation?: FieldValidation
   loading?: boolean
 }) {
-  const errorCount = result.errors.length
-  const warningCount = result.warnings.length
-  const hasErrors = errorCount > 0
-  const hasWarnings = warningCount > 0
-  const allPassed = !hasErrors && !hasWarnings
+  const [expanded, setExpanded] = useState(false)
 
-  // Loading -> skeleton/shimmer while validations are computed
   if (loading) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-4 mb-4">
-        <div className="flex items-center gap-2.5">
-          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-gray-200 animate-pulse" />
-          <div className="flex-1 space-y-2">
-            <div className="h-3.5 w-40 rounded bg-gray-200 animate-pulse" />
-            <div className="h-3 w-24 rounded bg-gray-100 animate-pulse" />
-          </div>
-        </div>
-        <div className="mt-3 space-y-2">
-          <div className="h-8 w-full rounded-md bg-gray-100 animate-pulse" />
-          <div className="h-8 w-full rounded-md bg-gray-100 animate-pulse" />
-        </div>
+      <div className="mb-4 flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-gray-200 animate-pulse" />
+        <span className="h-3 w-44 rounded bg-gray-100 animate-pulse" />
         <span className="sr-only">Running validation checks…</span>
       </div>
     )
   }
 
-  // All checks passed -> green card
-  if (allPassed) {
+  if (!validation) return null
+
+  // Passing -> small muted green check, no card
+  if (validation.status === "pass") {
     return (
-      <div className="rounded-lg border border-green-200 bg-green-50 p-4 mb-4">
-        <div className="flex items-center gap-2.5">
-          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-green-100 flex items-center justify-center">
-            <Check className="w-4 h-4 text-green-600" />
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-green-800">All validation checks passed</p>
-            <p className="text-xs text-green-700">{result.totalChecks}/{result.totalChecks} checks passed</p>
-          </div>
-        </div>
+      <div className="mb-4 flex items-center gap-1.5 text-xs text-gray-400">
+        <Check className="w-3.5 h-3.5 text-green-500" />
+        <span>Valid</span>
       </div>
     )
   }
 
-  // Header summary text for combined / single states
-  const headerParts: string[] = []
-  if (hasErrors) headerParts.push(`${errorCount} ${errorCount === 1 ? "error" : "errors"}`)
-  if (hasWarnings) headerParts.push(`${warningCount} ${warningCount === 1 ? "warning" : "warnings"}`)
-  const headerText = headerParts.join(" · ")
-
-  // Card border/background keyed off the most severe state present
-  const cardTone = hasErrors
-    ? "border-red-200 bg-red-50"
-    : "border-amber-200 bg-amber-50"
+  const isError = validation.status === "error"
+  const tone = isError
+    ? { dot: "bg-red-500", text: "text-red-700", label: "text-red-800", pill: "text-red-700 bg-red-50 border-red-200", box: "bg-red-50/70 border-red-200" }
+    : { dot: "bg-amber-500", text: "text-amber-700", label: "text-amber-800", pill: "text-amber-700 bg-amber-50 border-amber-200", box: "bg-amber-50/70 border-amber-200" }
 
   return (
-    <div className={`rounded-lg border ${cardTone} p-4 mb-4`}>
-      {/* Header with combined counts */}
-      <div className="flex items-center gap-2.5 mb-3">
-        <span className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${hasErrors ? "bg-red-100" : "bg-amber-100"}`}>
-          {hasErrors ? (
-            <AlertCircle className="w-4 h-4 text-red-600" />
-          ) : (
-            <AlertTriangle className="w-4 h-4 text-amber-600" />
-          )}
+    <div className="mb-4">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className={`group w-full text-left flex items-center gap-2 rounded-md border px-2.5 py-2 transition-colors ${tone.box}`}
+        title={validation.detail}
+        aria-expanded={expanded}
+      >
+        <span className={`flex-shrink-0 w-2 h-2 rounded-full ${tone.dot}`} />
+        <span className={`flex-shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full border ${tone.pill}`}>
+          {isError ? "Error" : "Warning"}
         </span>
-        <div>
-          <p className={`text-sm font-semibold ${hasErrors ? "text-red-800" : "text-amber-800"}`}>
-            {hasErrors ? "Validation failed" : "Validation warnings"}
-          </p>
-          <p className={`text-xs ${hasErrors ? "text-red-700" : "text-amber-700"}`}>{headerText}</p>
-        </div>
-      </div>
-
-      {/* Errors first (Tier 1) */}
-      {hasErrors && (
-        <ul className="space-y-1.5 mb-2">
-          {result.errors.map((issue, i) => (
-            <li key={`err-${issue.fieldId}-${i}`}>
-              <button
-                type="button"
-                onClick={() => onIssueClick?.(issue.fieldId)}
-                className="w-full text-left flex items-start gap-2 rounded-md bg-white/70 border border-red-200 px-2.5 py-2 hover:bg-white transition-colors"
-              >
-                <AlertCircle className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
-                <span className="text-xs">
-                  <span className="font-semibold text-red-800">{issue.fieldName}: </span>
-                  <span className="text-red-700">{issue.message}</span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {/* Warnings (Tier 2) */}
-      {hasWarnings && (
-        <ul className="space-y-1.5">
-          {result.warnings.map((issue, i) => (
-            <li key={`warn-${issue.fieldId}-${i}`}>
-              <button
-                type="button"
-                onClick={() => onIssueClick?.(issue.fieldId)}
-                className="w-full text-left flex items-start gap-2 rounded-md bg-white/70 border border-amber-200 px-2.5 py-2 hover:bg-white transition-colors"
-              >
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
-                <span className="text-xs">
-                  <span className="font-semibold text-amber-800">{issue.fieldName}: </span>
-                  <span className="text-amber-700">{issue.message}</span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <span className={`text-xs truncate ${tone.text}`}>{validation.message}</span>
+        {expanded ? (
+          <ChevronUp className={`w-3.5 h-3.5 ml-auto flex-shrink-0 ${tone.text}`} />
+        ) : (
+          <ChevronDown className={`w-3.5 h-3.5 ml-auto flex-shrink-0 ${tone.text}`} />
+        )}
+      </button>
+      {expanded && (
+        <p className={`mt-1.5 px-2.5 text-xs leading-relaxed ${tone.text}`}>{validation.detail}</p>
       )}
     </div>
   )
@@ -731,15 +730,11 @@ function SingleFieldFocusPane({
   onScrollToField,
   isReadOnly = false,
   adminReadOnlyView = false,
-  validationResult,
-  onValidationIssueClick,
   validationLoading = false,
   }: {
   field: FieldCardData | null
   currentIndex: number
   totalCount: number
-  validationResult?: ValidationResult
-  onValidationIssueClick?: (fieldId: string) => void
   validationLoading?: boolean
   onVerify: () => void
   onFlag: () => void
@@ -899,6 +894,14 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
           {field.unit && <span className="text-xl text-gray-500 ml-1">{field.unit}</span>}
         </h1>
 
+        {/* Per-field validation status - compact single line below the value (SOLD-1501) */}
+        {!isManualFill && field && (
+          <FieldValidationStatusLine
+            validation={getFieldValidation(field.id)}
+            loading={validationLoading}
+          />
+        )}
+
         {/* Calculated Field Formula Helper Line */}
         {field.isCalculated && field.formula && (
           <div className="flex items-center gap-2 mb-4">
@@ -954,11 +957,6 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
             </div>
           </div>
         ) : null}
-
-        {/* Validation Checks Card - prominent, always-visible report-level summary (SOLD-1501) */}
-        {!isManualFill && validationResult && (
-          <ValidationChecksCard result={validationResult} onIssueClick={onValidationIssueClick} loading={validationLoading} />
-        )}
 
         {/* Source Preview Accordion - only for non-manual-fill fields */}
         {!isManualFill && (
@@ -2111,7 +2109,7 @@ export function TransferReview({
   // In read-only mode: already submitted, so canSubmit is always true
   const allCriticalDone = criticalOnlyVerified === criticalOnlyTotal
   const allManualFillDone = manualFillVerified === manualFillTotal
-  const hasBlockingValidationErrors = VALIDATION_RESULT.errors.length > 0
+  const hasBlockingValidationErrors = VALIDATION_SUMMARY.errors.length > 0
   // Master override (SOLD-1500): an admin/master can bypass pending verifications.
   const isMaster = currentUser.role === 'admin'
   const canSubmit = isReadOnly
@@ -2454,7 +2452,7 @@ export function TransferReview({
 
     // Tier 2 warnings (no Tier 1 errors, since canSubmit already gates those):
     // confirm before downloading. Zero warnings -> download immediately.
-    if (VALIDATION_RESULT.warnings.length > 0) {
+    if (VALIDATION_SUMMARY.warnings.length > 0) {
       setShowWarningsDialog(true)
       return
     }
@@ -2628,8 +2626,8 @@ export function TransferReview({
                   Download with warnings?
                 </h2>
                 <p className="mt-0.5 text-sm text-gray-500">
-                  This report has {VALIDATION_RESULT.warnings.length}{" "}
-                  {VALIDATION_RESULT.warnings.length === 1 ? "validation warning" : "validation warnings"}.
+                  This report has {VALIDATION_SUMMARY.warnings.length}{" "}
+                  {VALIDATION_SUMMARY.warnings.length === 1 ? "validation warning" : "validation warnings"}.
                   You can still download the VesLink form.
                 </p>
               </div>
@@ -2638,7 +2636,7 @@ export function TransferReview({
             {/* Warning list */}
             <div className="px-5 pb-2 max-h-64 overflow-y-auto">
               <ul className="space-y-2">
-                {VALIDATION_RESULT.warnings.map((w, i) => (
+                {VALIDATION_SUMMARY.warnings.map((w, i) => (
                   <li
                     key={`dlg-warn-${w.fieldId}-${i}`}
                     className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2"
@@ -2794,9 +2792,7 @@ export function TransferReview({
             } : null}
             currentIndex={currentCriticalIndex}
             totalCount={vesLinkCriticalTotal}
-            validationResult={VALIDATION_RESULT}
             validationLoading={validationLoading}
-            onValidationIssueClick={(fieldId) => scrollToVesLinkField(fieldId)}
             onVerify={handleVerify}
             onFlag={() => {
               if (selectedField) {
@@ -2877,12 +2873,32 @@ export function TransferReview({
                     All {totalRequiredFields} fields verified
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center">
+                  <div className="flex items-center justify-center flex-wrap gap-y-1">
                     {/* Pending count */}
                     <span className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                       Pending ({displayPendingCount})
                     </span>
+                    {/* Validation error count */}
+                    {VALIDATION_SUMMARY.errors.length > 0 && (
+                      <>
+                        <span className="w-px h-3 bg-gray-300 mx-3" />
+                        <span className="flex items-center gap-1.5 text-xs font-medium text-red-600">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                          {VALIDATION_SUMMARY.errors.length} {VALIDATION_SUMMARY.errors.length === 1 ? "error" : "errors"}
+                        </span>
+                      </>
+                    )}
+                    {/* Validation warning count */}
+                    {VALIDATION_SUMMARY.warnings.length > 0 && (
+                      <>
+                        <span className="w-px h-3 bg-gray-300 mx-3" />
+                        <span className="flex items-center gap-1.5 text-xs font-medium text-amber-600">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          {VALIDATION_SUMMARY.warnings.length} {VALIDATION_SUMMARY.warnings.length === 1 ? "warning" : "warnings"}
+                        </span>
+                      </>
+                    )}
                     {/* Divider */}
                     <span className="w-px h-3 bg-gray-300 mx-3" />
                     {/* Complete count */}
