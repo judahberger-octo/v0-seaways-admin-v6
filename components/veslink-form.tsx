@@ -314,6 +314,7 @@ function VLInput({
           w-full h-6 px-1.5 text-[13px] transition-all duration-300
           focus:outline-none
           ${getBorderStyle()}
+          ${isSelected && !isReadOnly ? "vl-verify-pulse" : ""}
           ${isReadOnly ? "bg-gray-50 cursor-default" : "bg-white"}
           ${className}
         `}
@@ -461,9 +462,17 @@ function VLSelect({
 }
 
 // Section header badge (dark blue)
-function SectionHeader({ title }: { title: string }) {
+// Section header color tones to match VesLink's section coloring
+const SECTION_HEADER_TONES: Record<string, string> = {
+  blue: "bg-[#2b5797]",   // Distance and Vessel
+  orange: "bg-[#d9831f]", // Machinery
+  teal: "bg-[#138d90]",   // Weather
+  dark: "bg-[#2b3e50]",   // Bunkers / Water
+}
+
+function SectionHeader({ title, tone = "blue" }: { title: string; tone?: keyof typeof SECTION_HEADER_TONES }) {
   return (
-    <div className="bg-[#2b5797] text-white text-[13px] font-bold px-2.5 py-1 rounded-sm inline-block mb-2">
+    <div className={`${SECTION_HEADER_TONES[tone]} text-white text-[13px] font-bold px-2.5 py-1 rounded-sm inline-block mb-2`}>
       {title}
     </div>
   )
@@ -517,7 +526,7 @@ function BunkerSectionHeader({
 }) {
   return (
     <div 
-      className={`bg-[#2b5797] text-white text-[13px] font-bold px-2.5 py-1 rounded-sm inline-flex items-center gap-2 mb-2 cursor-pointer ${
+      className={`bg-[#2b3e50] text-white text-[13px] font-bold px-2.5 py-1 rounded-sm inline-flex items-center gap-2 mb-2 cursor-pointer ${
         isSelected ? "ring-2 ring-[#7c3aed]" : ""
       }`}
       onClick={onSelect}
@@ -782,7 +791,7 @@ export function VesLinkForm({
       {/* Form Content */}
       <div className="p-4">
         {/* Report Title */}
-        <h1 className="text-[#d9831f] text-xl font-normal mb-6">Noon Report Unav 4.0</h1>
+        <h1 className="text-[#d9831f] text-xl font-normal mb-6">Noon Report Unav 5.0</h1>
         
         {/* General Information - 2 column grid */}
         <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 mb-4">
@@ -1076,7 +1085,7 @@ export function VesLinkForm({
         </div>
         
         {/* Machinery Section - with NEW Main Engine RPM */}
-        <SectionHeader title="Machinery" />
+        <SectionHeader title="Machinery" tone="orange" />
         <div className="border border-[#ddd] p-3 mb-6">
           <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
             {/* NEW: Main Engine RPM */}
@@ -1138,7 +1147,7 @@ export function VesLinkForm({
         </div>
         
         {/* Weather Section */}
-        <SectionHeader title="Weather" />
+        <SectionHeader title="Weather" tone="teal" />
         <div className="border border-[#ddd] p-3 mb-6">
           <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
             <FormRow label="Beaufort:" fieldId="beaufort" labelWidth="130px" isVerified={isVerifiedField("beaufort")}>
@@ -1217,7 +1226,7 @@ export function VesLinkForm({
         </div>
         
         {/* Water Section */}
-        <SectionHeader title="Water" />
+        <SectionHeader title="Water" tone="dark" />
         <div className="border border-[#ddd] p-3 mb-6">
           <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
             <FormRow label="Fresh Water ROB (MT):" fieldId="fresh-water-rob" labelWidth="160px" isVerified={isVerifiedField("fresh-water-rob")}>
