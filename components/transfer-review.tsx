@@ -1889,6 +1889,7 @@ export function TransferReview({
   const [selectedField, setSelectedField] = useState<FormField | null>(null)
   const [selectedReportId, setSelectedReportId] = useState("4528")
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
+  const [showWarningsDialog, setShowWarningsDialog] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
   const [pulsingFieldId, setPulsingFieldId] = useState<string | null>(null)
@@ -2371,7 +2372,20 @@ export function TransferReview({
       })
       return
     }
-    
+
+    // Tier 2 warnings (no Tier 1 errors, since canSubmit already gates those):
+    // confirm before downloading. Zero warnings -> download immediately.
+    if (VALIDATION_RESULT.warnings.length > 0) {
+      setShowWarningsDialog(true)
+      return
+    }
+
+    setShowSubmitDialog(true)
+  }
+
+  // User chose "Download anyway" from the warnings confirmation dialog
+  const handleProceedDespiteWarnings = () => {
+    setShowWarningsDialog(false)
     setShowSubmitDialog(true)
   }
 
@@ -2478,6 +2492,74 @@ export function TransferReview({
             }))
           }))}
         />
+      )}
+
+      {/* Download-with-warnings confirmation dialog (Tier 2 warnings) */}
+      {showWarningsDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="warnings-dialog-title"
+          onClick={() => setShowWarningsDialog(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl bg-white shadow-xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start gap-3 px-5 pt-5 pb-3">
+              <span className="flex-shrink-0 w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+              </span>
+              <div>
+                <h2 id="warnings-dialog-title" className="text-base font-semibold text-gray-900">
+                  Download with warnings?
+                </h2>
+                <p className="mt-0.5 text-sm text-gray-500">
+                  This report has {VALIDATION_RESULT.warnings.length}{" "}
+                  {VALIDATION_RESULT.warnings.length === 1 ? "validation warning" : "validation warnings"}.
+                  You can still download the VesLink form.
+                </p>
+              </div>
+            </div>
+
+            {/* Warning list */}
+            <div className="px-5 pb-2 max-h-64 overflow-y-auto">
+              <ul className="space-y-2">
+                {VALIDATION_RESULT.warnings.map((w, i) => (
+                  <li
+                    key={`dlg-warn-${w.fieldId}-${i}`}
+                    className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2"
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+                    <span className="text-xs">
+                      <span className="font-semibold text-amber-800">{w.fieldName}: </span>
+                      <span className="text-amber-700">{w.message}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2 px-5 py-4">
+              <button
+                onClick={() => setShowWarningsDialog(false)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleProceedDespiteWarnings}
+                className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download anyway
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Main Content - Two Column Layout (Field List + VesLink Form) */}
