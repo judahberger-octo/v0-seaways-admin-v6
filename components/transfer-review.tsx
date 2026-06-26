@@ -216,6 +216,47 @@ const createMockFormSections = (): FormSection[] => [
   },
 ]
 
+// Source preview groups — maps each critical field to a NAVTOR source "system" page.
+// Used to render the dark Source preview card in the stepper (label + value rows,
+// with the currently-relevant field highlighted).
+interface SourcePreviewRow {
+  id: string
+  label: string
+  value: string
+}
+interface SourcePreviewGroup {
+  system: string
+  rows: SourcePreviewRow[]
+}
+const SOURCE_PREVIEW_GROUPS: SourcePreviewGroup[] = [
+  {
+    system: "VOYAGE REPORTING — GENERAL",
+    rows: [
+      { id: "date-time", label: "Report Date/Time", value: "14/04/2026 12:00" },
+      { id: "voyage-number", label: "Voyage Number", value: "124" },
+      { id: "vessel-condition", label: "Vessel Condition", value: "Laden" },
+      { id: "location", label: "Location", value: "At Sea" },
+      { id: "next-port", label: "Next Port", value: "Fujairah" },
+      { id: "eta", label: "ETA", value: "22/04/2026 14:00" },
+    ],
+  },
+  {
+    system: "VOYAGE REPORTING — DISTANCE & SPEED",
+    rows: [
+      { id: "distance-to-go", label: "Distance to Go", value: "2847 nm" },
+      { id: "cp-ordered-speed", label: "Ordered Speed", value: "12.5 kts" },
+      { id: "reported-speed", label: "Reported Speed", value: "12.3 kts" },
+      { id: "observed-distance", label: "Observed Distance", value: "142.3 nm" },
+      { id: "time-since-last", label: "Hours Since Last Report", value: "24.0 hrs" },
+      { id: "cargo-weight", label: "Cargo Weight", value: "147948.45 MT" },
+      { id: "displacement", label: "Displacement", value: "172000 t" },
+    ],
+  },
+]
+
+const getSourcePreviewGroup = (fieldId: string): SourcePreviewGroup | undefined =>
+  SOURCE_PREVIEW_GROUPS.find((g) => g.rows.some((r) => r.id === fieldId))
+
 interface TransferReviewProps {
   reportId: string
   onBack: () => void
@@ -779,51 +820,100 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
                 <ChevronDown className="w-4 h-4 text-gray-500" />
               )}
             </button>
-            {sourcePreviewExpanded && (
+            {sourcePreviewExpanded && (() => {
+              // Build the dark source card: find the group this field belongs to,
+              // falling back to a single-row group derived from the field itself.
+              const group = getSourcePreviewGroup(field.id) || {
+                system: `VOYAGE REPORTING — ${(field.sourceTab || "SOURCE").toUpperCase()}`,
+                rows: [{
+                  id: field.id,
+                  label: field.mappedSource || field.fieldName || field.id,
+                  value: `${field.value || "—"}${field.unit ? ` ${field.unit}` : ""}`,
+                }],
+              }
+              const reportLabel = sourceReports[sourcePreviewIndex] || sourceReports[0]
+              return (
               <div className="p-3 border-t border-gray-100">
-                {/* Dark NAVTOR Preview with navigation */}
-                <div className="relative">
-                  {/* Left Arrow */}
-                  <button
-                    onClick={() => setSourcePreviewIndex(Math.max(0, sourcePreviewIndex - 1))}
-                    disabled={sourcePreviewIndex === 0}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 w-7 h-7 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeftIcon className="w-4 h-4 text-gray-600" />
-                  </button>
-
-                  {/* NAVTOR Screenshot */}
-                  <div className="rounded-lg overflow-hidden">
-                    <NavtorScreenshot fieldId={field.id} className="w-full" />
+                {/* Dark source-system card */}
+                <div className="relative rounded-lg overflow-hidden bg-[#1e2535] border border-[#2c3447] shadow-sm">
+                  {/* Colored header bar with source system name */}
+                  <div className="flex items-center justify-between bg-[#283044] px-3 py-2 border-b border-[#2c3447]">
+                    <span className="text-[11px] font-semibold tracking-wide text-sky-300 uppercase truncate pr-2">
+                      {group.system}
+                    </span>
+                    {/* Expand Icon - Opens fullscreen source preview modal */}
+                    <button
+                      onClick={() => setShowSourceModal(true)}
+                      className="flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10"
+                      title="Open full source view"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
 
-                  {/* Right Arrow */}
-                  <button
-                    onClick={() => setSourcePreviewIndex(Math.min(sourcePreviewCount - 1, sourcePreviewIndex + 1))}
-                    disabled={sourcePreviewIndex === sourcePreviewCount - 1}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 w-7 h-7 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <ChevronRightIcon className="w-4 h-4 text-gray-600" />
-                  </button>
+                  {/* Source fields - label muted, value light, current field highlighted */}
+                  <div className="p-3 space-y-2">
+                    {group.rows.map((row) => {
+                      const isCurrent = row.id === field.id
+                      return (
+                        <div
+                          key={row.id}
+                          className={`rounded-md px-3 py-2 transition-colors ${
+                            isCurrent
+                              ? "bg-[#2a3142] border border-amber-500/70 ring-1 ring-amber-500/40"
+                              : "border border-transparent"
+                          }`}
+                        >
+                          {/* Orange label badge above the currently-relevant field */}
+                          {isCurrent && (
+                            <span className="inline-block mb-1 text-[10px] font-semibold uppercase tracking-wide text-amber-400 bg-amber-500/10 border border-amber-500/40 rounded px-1.5 py-0.5">
+                              {field.fieldName || row.label}
+                            </span>
+                          )}
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-xs text-gray-400 truncate">{row.label}</span>
+                            <span className={`text-sm font-medium tabular-nums ${isCurrent ? "text-amber-200" : "text-gray-100"}`}>
+                              {row.value}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
 
-                  {/* Expand Icon - Opens fullscreen source preview modal */}
-                  <button 
-                    onClick={() => setShowSourceModal(true)}
-                    className="absolute top-2 right-2 w-7 h-7 rounded bg-white/80 backdrop-blur-sm border border-gray-200 flex items-center justify-center hover:bg-white"
-                    title="Expand source preview"
-                  >
-                    <Maximize2 className="w-3.5 h-3.5 text-gray-600" />
-                  </button>
-                </div>
-
-                {/* Pagination indicator */}
-                <div className="flex items-center justify-center mt-3">
-                  <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-gray-200">
-                    {sourcePreviewIndex + 1}/{sourcePreviewCount}
-                  </span>
+                  {/* Pagination footer (across source reports) */}
+                  {sourcePreviewCount > 1 && (
+                    <div className="flex items-center justify-between bg-[#283044] px-3 py-2 border-t border-[#2c3447]">
+                      <span className="text-[11px] text-gray-400">
+                        {reportLabel ? `Report #${reportLabel}` : "Source"}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setSourcePreviewIndex(Math.max(0, sourcePreviewIndex - 1))}
+                          disabled={sourcePreviewIndex === 0}
+                          className="w-6 h-6 rounded flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                          aria-label="Previous source"
+                        >
+                          <ChevronLeftIcon className="w-4 h-4" />
+                        </button>
+                        <span className="text-[11px] text-gray-300 tabular-nums min-w-[32px] text-center">
+                          {sourcePreviewIndex + 1}/{sourcePreviewCount}
+                        </span>
+                        <button
+                          onClick={() => setSourcePreviewIndex(Math.min(sourcePreviewCount - 1, sourcePreviewIndex + 1))}
+                          disabled={sourcePreviewIndex === sourcePreviewCount - 1}
+                          className="w-6 h-6 rounded flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                          aria-label="Next source"
+                        >
+                          <ChevronRightIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
+              )
+            })()}
           </div>
         )}
       </div>
