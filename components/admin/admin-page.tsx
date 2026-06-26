@@ -9,6 +9,8 @@ import { AdminLookupTables } from "./admin-lookup-tables"
 import { AdminLookupTableDetail } from "./admin-lookup-table-detail"
 import { AdminReviewQueue } from "./admin-review-queue"
 import { AdminVessels } from "./admin-vessels"
+import { AdminUsers } from "./admin-users"
+import { AdminVesselGroups } from "./admin-vessel-groups"
 
 export function AdminPage() {
   const [activeTab, setActiveTab] = useState<AdminTabId>("overview")
@@ -67,6 +69,8 @@ export function AdminPage() {
       )}
       {activeTab === "review-queue" && <AdminReviewQueue />}
       {activeTab === "vessels" && <AdminVessels />}
+      {activeTab === "users" && <AdminUsers />}
+      {activeTab === "vessel-groups" && <AdminVesselGroups />}
     </AdminLayout>
   )
 }

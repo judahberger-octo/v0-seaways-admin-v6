@@ -7,6 +7,8 @@ export type AdminTabId =
   | "lookup-tables"
   | "review-queue" 
   | "vessels"
+  | "users"
+  | "vessel-groups"
 
 interface AdminTabItem {
   id: AdminTabId
@@ -20,6 +22,8 @@ const adminTabs: AdminTabItem[] = [
   { id: "lookup-tables", label: "Lookup Tables", slug: "lookup-tables" },
   { id: "review-queue", label: "Review Queue — TBD", slug: "review-queue" },
   { id: "vessels", label: "Vessels — WIP", slug: "vessels" },
+  { id: "users", label: "Users", slug: "users" },
+  { id: "vessel-groups", label: "Vessel Groups", slug: "vessel-groups" },
 ]
 
 interface AdminLayoutProps {
