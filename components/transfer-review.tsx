@@ -24,7 +24,8 @@ import {
   Filter,
   Image as ImageIcon,
   Maximize2,
-  Calculator
+  Calculator,
+  Download
 } from "lucide-react"
 import { AdminTestingSuite } from "./admin-testing-suite"
 import { VesLinkForm, CRITICAL_FIELDS_NOON_SEA, MANUAL_FILL_FIELDS } from "./veslink-form"
@@ -2473,7 +2474,7 @@ export function TransferReview({
               <div className="flex items-center justify-center gap-2 py-2.5 px-4 bg-gray-50 border-b border-gray-100">
                 <Info className="w-4 h-4 text-gray-500 flex-shrink-0" />
                 <span className="text-sm text-gray-600">
-                  All <span className="font-semibold text-amber-600">required fields</span> must be confirmed before submitting
+                  All <span className="font-semibold text-amber-600">required fields</span> must be confirmed before downloading
                 </span>
                 <button
                   onClick={() => setShowValidationMessage(false)}
@@ -2499,14 +2500,14 @@ export function TransferReview({
               <button
                 onClick={handleSubmitClick}
                 disabled={!canSubmit}
-                className={`rounded-lg px-6 py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-colors min-w-[180px] ${
+                className={`rounded-lg px-6 py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-colors min-w-[200px] ${
                   canSubmit
                     ? "bg-purple-600 text-white hover:bg-purple-700"
                     : "bg-gray-100 text-gray-400 cursor-not-allowed"
                 }`}
               >
-                <Send className="w-4 h-4" />
-                Submit to veslink
+                <Download className="w-4 h-4" />
+                Download VesLink Form
               </button>
             </div>
           </>
