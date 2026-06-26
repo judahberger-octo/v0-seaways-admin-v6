@@ -312,15 +312,15 @@ const FIELD_VALIDATIONS: Record<string, FieldValidation> = {
     detail:
       "Calculated displacement from drafts doesn't match entered value. VesLink will show a warning on submit.",
   },
-  // Passing fields (green)
-  "date-time": { fieldName: "Date/Time", status: "pass", message: "Valid", detail: "Date/Time validation passed." },
-  "vessel-condition": { fieldName: "Vessel Condition", status: "pass", message: "Valid", detail: "Vessel Condition validation passed." },
-  "voyage-number": { fieldName: "Voyage Number", status: "pass", message: "Valid", detail: "Voyage Number validation passed." },
-  "location": { fieldName: "Location", status: "pass", message: "Valid", detail: "Location validation passed." },
-  "next-port": { fieldName: "Next Port", status: "pass", message: "Valid", detail: "Next Port validation passed." },
-  "distance-to-go": { fieldName: "Distance to Go", status: "pass", message: "Valid", detail: "Distance to Go validation passed." },
-  "cp-ordered-speed": { fieldName: "CP/Ordered Speed", status: "pass", message: "Valid", detail: "CP/Ordered Speed validation passed." },
-  "time-since-last": { fieldName: "Time Since Last Report", status: "pass", message: "Valid", detail: "Time Since Last Report validation passed." },
+  // Passing fields (green) - message carries a short "what was checked" reason
+  "date-time": { fieldName: "Date/Time", status: "pass", message: "date format correct and within expected range", detail: "Date/Time validation passed." },
+  "vessel-condition": { fieldName: "Vessel Condition", status: "pass", message: "matches previous report condition", detail: "Vessel Condition validation passed." },
+  "voyage-number": { fieldName: "Voyage Number", status: "pass", message: "matches active voyage", detail: "Voyage Number validation passed." },
+  "location": { fieldName: "Location", status: "pass", message: "location type set", detail: "Location validation passed." },
+  "next-port": { fieldName: "Next Port", status: "pass", message: "port recognized", detail: "Next Port validation passed." },
+  "distance-to-go": { fieldName: "Distance to Go", status: "pass", message: "positive value, consistent with route", detail: "Distance to Go validation passed." },
+  "cp-ordered-speed": { fieldName: "CP/Ordered Speed", status: "pass", message: "within vessel's operational range", detail: "CP/Ordered Speed validation passed." },
+  "time-since-last": { fieldName: "Time Since Last Report", status: "pass", message: "24.0 hrs matches report interval", detail: "Time Since Last Report validation passed." },
 }
 
 const getFieldValidation = (fieldId: string): FieldValidation | undefined =>
@@ -674,12 +674,13 @@ function FieldValidationStatusLine({
 
   if (!validation) return null
 
-  // Passing -> small muted green check, no card
+  // Passing -> small muted green check + "Valid" + short reason, all on one line
   if (validation.status === "pass") {
     return (
-      <div className="mb-4 flex items-center gap-1.5 text-xs text-gray-400">
-        <Check className="w-3.5 h-3.5 text-green-500" />
-        <span>Valid</span>
+      <div className="mb-4 flex items-center gap-1.5 text-xs">
+        <Check className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+        <span className="font-medium text-green-600">Valid</span>
+        <span className="text-gray-400">— {validation.message}</span>
       </div>
     )
   }
