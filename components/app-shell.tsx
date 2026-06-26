@@ -435,8 +435,15 @@ export function AppShell({
           // Standard Page Header with Tabs
           <header className="border-b border-[#e2e8f0] bg-white flex-shrink-0">
             {/* Page Title */}
-            <div className="px-8 pt-6 pb-4">
+            <div className="px-8 pt-6 pb-4 flex items-center justify-between">
               <h1 className="text-xl font-semibold text-[#0f172a]">Report management</h1>
+              {/* Crew vessel indicator - crew are scoped to a single vessel */}
+              {currentUser.role === 'crew' && currentUser.assignedVessel && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#99f6e4] bg-[#f0fdfa] px-3 py-1 text-sm font-semibold uppercase tracking-wide text-[#0d9488]">
+                  <Waves className="w-3.5 h-3.5" />
+                  {currentUser.assignedVessel}
+                </span>
+              )}
             </div>
 
             {/* Tabs */}

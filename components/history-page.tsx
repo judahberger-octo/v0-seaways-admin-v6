@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Search, SlidersHorizontal, Download, Filter, MoreHorizontal, Eye, Copy, ShieldAlert, Check } from "lucide-react"
+import { useUser } from "@/lib/user-context"
 
 interface HistoryEntry {
   id: string
@@ -11,6 +12,7 @@ interface HistoryEntry {
   criticalVerified: string
   lastExported?: string
   masterOverride?: boolean
+  vessel: string
 }
 
 const mockHistory: HistoryEntry[] = [
@@ -21,6 +23,7 @@ const mockHistory: HistoryEntry[] = [
     updated: "January 25, 2026 2:03 AM",
     criticalVerified: "12/12",
     lastExported: "January 25, 2026 2:05 AM",
+    vessel: "Seaways Athens",
   },
   {
     id: "#4526",
@@ -28,6 +31,7 @@ const mockHistory: HistoryEntry[] = [
     status: "Draft",
     updated: "January 24, 2026 1:45 PM",
     criticalVerified: "8/12",
+    vessel: "Seaways Athens",
   },
   {
     id: "#4525",
@@ -37,6 +41,7 @@ const mockHistory: HistoryEntry[] = [
     criticalVerified: "3/8",
     lastExported: "January 23, 2026 9:32 AM",
     masterOverride: true,
+    vessel: "Seaways Skopelos",
   },
   {
     id: "#4524",
@@ -45,6 +50,7 @@ const mockHistory: HistoryEntry[] = [
     updated: "January 22, 2026 5:15 PM",
     criticalVerified: "8/8",
     lastExported: "January 22, 2026 5:18 PM",
+    vessel: "Seaways Milos",
   },
 ]
 
@@ -53,7 +59,14 @@ interface HistoryPageProps {
 }
 
 export function HistoryPage({ onViewReport }: HistoryPageProps) {
+  const { currentUser } = useUser()
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+
+  // Crew users only see reports for their assigned vessel; admins see all.
+  const visibleHistory =
+    currentUser.role === 'crew' && currentUser.assignedVessel
+      ? mockHistory.filter((entry) => entry.vessel === currentUser.assignedVessel)
+      : mockHistory
 
   // Close menu on outside click
   useEffect(() => {
@@ -134,7 +147,7 @@ export function HistoryPage({ onViewReport }: HistoryPageProps) {
               </tr>
             </thead>
             <tbody>
-              {mockHistory.map((entry, index) => {
+                {visibleHistory.map((entry, index) => {
                 const rowId = `${entry.id}-${index}`
                 const isMenuOpen = openMenuId === rowId
                 
