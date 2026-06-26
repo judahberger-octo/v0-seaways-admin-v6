@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { useUser } from "@/lib/user-context"
 import { UnsavedReportModal, DiscardReportModal } from "./modals"
+import { ProfileSettings } from "./profile-settings"
 
 interface AppShellProps {
   activeTab: "new-transfer" | "drafts" | "history"
@@ -85,6 +86,9 @@ export function AppShell({
   
   // User menu state
   const [showUserMenu, setShowUserMenu] = useState(false)
+
+  // Profile / settings overlay state
+  const [showSettings, setShowSettings] = useState(false)
   
   // Handle Layers click - navigate to Report management
   const handleLayersClick = () => {
@@ -236,8 +240,12 @@ export function AppShell({
 
         {/* Bottom Section - Settings gear + Avatar with User Menu */}
         <div className="pb-4 flex flex-col items-center gap-4">
-          {/* Settings - never selected, just hover state */}
-          <button className="w-10 h-10 flex items-center justify-center rounded-lg text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155] transition-colors">
+          {/* Settings - opens profile/settings overlay */}
+          <button
+            onClick={() => setShowSettings(true)}
+            className="w-10 h-10 flex items-center justify-center rounded-lg text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155] transition-colors"
+            aria-label="Open settings"
+          >
             <Settings className="w-5 h-5" />
           </button>
           {/* User Avatar - 32px purple circle with initials, opens menu */}
@@ -271,6 +279,20 @@ export function AppShell({
                     </div>
                   </div>
                   
+                  {/* Profile & Settings link */}
+                  <div className="px-2 py-2 border-b border-[#e2e8f0]">
+                    <button
+                      onClick={() => {
+                        setShowSettings(true)
+                        setShowUserMenu(false)
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#334155] hover:bg-[#f1f5f9] transition-colors"
+                    >
+                      <User className="w-4 h-4" />
+                      <span>Profile &amp; Settings</span>
+                    </button>
+                  </div>
+
                   {/* Role Switcher */}
                   <div className="px-4 py-3">
                     <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-2">
@@ -479,6 +501,9 @@ export function AppShell({
           {children}
         </main>
       </div>
+
+      {/* Profile / Settings overlay */}
+      <ProfileSettings open={showSettings} onClose={() => setShowSettings(false)} />
 
       {/* Modals */}
       <UnsavedReportModal
