@@ -512,19 +512,20 @@ export function AdminFieldDefinitions({ onSelectField, onCreateField }: AdminFie
                 className="grid w-full grid-cols-[2fr_1.2fr_110px_100px_100px_100px_100px_100px_80px] gap-4 px-4 py-3 text-left text-sm transition-colors hover:bg-[#f8fafc]"
               >
                 <span className="font-medium text-[#0f172a]">{field.logicalName}</span>
-                <div className="flex flex-wrap gap-1">
-                  {formNames.slice(0, 2).map((name) => (
-                    <span
-                      key={name}
-                      className="inline-flex items-center rounded-full bg-[#f1f5f9] px-2 py-0.5 text-xs text-[#64748b]"
-                    >
-                      {name}
-                    </span>
-                  ))}
-                  {formNames.length > 2 && (
-                    <span className="inline-flex items-center rounded-full bg-[#f1f5f9] px-2 py-0.5 text-xs text-[#64748b]">
-                      +{formNames.length - 2}
-                    </span>
+                {/* Forms count with hover popover */}
+                <div className="relative group">
+                  <span className="inline-flex items-center justify-center rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-xs font-medium text-[#64748b] cursor-default">
+                    {formNames.length}
+                  </span>
+                  {formNames.length > 0 && (
+                    <div className="absolute left-0 top-full z-20 mt-1.5 hidden min-w-[140px] rounded-lg border border-[#e2e8f0] bg-white p-2 shadow-lg group-hover:block">
+                      <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-[#94a3b8]">Forms</p>
+                      <ul className="space-y-1">
+                        {formNames.map((name) => (
+                          <li key={name} className="text-xs text-[#334155]">{name}</li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
                 {/* Transform type column */}

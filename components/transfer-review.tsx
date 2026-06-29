@@ -24,7 +24,13 @@ import {
   Filter,
   Image as ImageIcon,
   Maximize2,
-  Calculator
+  Calculator,
+  Download,
+  AlertTriangle,
+  ShieldAlert,
+  Database,
+  CheckCircle2,
+  RotateCw
 } from "lucide-react"
 import { AdminTestingSuite } from "./admin-testing-suite"
 import { VesLinkForm, CRITICAL_FIELDS_NOON_SEA, MANUAL_FILL_FIELDS } from "./veslink-form"
@@ -215,6 +221,132 @@ const createMockFormSections = (): FormSection[] => [
   },
 ]
 
+// Source preview groups — maps each critical field to a NAVTOR source "system" page.
+// Used to render the dark Source preview card in the stepper (label + value rows,
+// with the currently-relevant field highlighted).
+interface SourcePreviewRow {
+  id: string
+  label: string
+  value: string
+}
+interface SourcePreviewGroup {
+  system: string
+  rows: SourcePreviewRow[]
+}
+const SOURCE_PREVIEW_GROUPS: SourcePreviewGroup[] = [
+  {
+    system: "VOYAGE REPORTING — GENERAL",
+    rows: [
+      { id: "date-time", label: "Report Date/Time", value: "14/04/2026 12:00" },
+      { id: "voyage-number", label: "Voyage Number", value: "124" },
+      { id: "vessel-condition", label: "Vessel Condition", value: "Laden" },
+      { id: "location", label: "Location", value: "At Sea" },
+      { id: "next-port", label: "Next Port", value: "Fujairah" },
+      { id: "eta", label: "ETA", value: "22/04/2026 14:00" },
+    ],
+  },
+  {
+    system: "VOYAGE REPORTING — DISTANCE & SPEED",
+    rows: [
+      { id: "distance-to-go", label: "Distance to Go", value: "2847 nm" },
+      { id: "cp-ordered-speed", label: "Ordered Speed", value: "12.5 kts" },
+      { id: "reported-speed", label: "Reported Speed", value: "12.3 kts" },
+      { id: "observed-distance", label: "Observed Distance", value: "142.3 nm" },
+      { id: "time-since-last", label: "Hours Since Last Report", value: "24.0 hrs" },
+      { id: "cargo-weight", label: "Cargo Weight", value: "147948.45 MT" },
+      { id: "displacement", label: "Displacement", value: "172000 t" },
+    ],
+  },
+]
+
+const getSourcePreviewGroup = (fieldId: string): SourcePreviewGroup | undefined =>
+  SOURCE_PREVIEW_GROUPS.find((g) => g.rows.some((r) => r.id === fieldId))
+
+// Validation checks model (SOLD-1501) — per critical field.
+// "error" = Tier 1 (blocks download), "warning" = Tier 2 (allow with confirmation),
+// "pass" = field validated cleanly. Each field shows a compact inline status with a
+// short message; the full detail is revealed on hover/click.
+type FieldValidationStatus = "error" | "warning" | "pass"
+interface FieldValidation {
+  fieldName: string
+  status: FieldValidationStatus
+  message: string // short, one-line
+  detail: string  // full explanation shown on hover/expand
+}
+
+// Field-specific validation states across the 13 critical fields.
+const FIELD_VALIDATIONS: Record<string, FieldValidation> = {
+  // Tier 1 errors (red, block download)
+  "eta": {
+    fieldName: "ETA",
+    status: "error",
+    message: "ETA date is before report date/time",
+    detail:
+      "VesLink requires ETA to be after the current report's date/time. Current ETA: 14/04/2026 14:00, Report date: 22/04/2026 12:00.",
+  },
+  "observed-distance": {
+    fieldName: "Observed Distance",
+    status: "error",
+    message: "Required field is empty",
+    detail: "Observed Distance is required for sea reports but was left blank.",
+  },
+  // Tier 2 warnings (amber, allow download with confirmation)
+  "reported-speed": {
+    fieldName: "Reported Speed",
+    status: "warning",
+    message: "Reported speed (12.3 kts) is below CP/ordered speed (12.5 kts)",
+    detail:
+      "Speed deviation detected. This won't block submission but VesLink will prompt for confirmation.",
+  },
+  "cargo-weight": {
+    fieldName: "Cargo Weight",
+    status: "warning",
+    message: "Cargo weight changed by more than 10% from previous report",
+    detail:
+      "Previous report: 36,200 MT. Current: 40,004 MT. VesLink flags large cargo changes between consecutive reports.",
+  },
+  "displacement": {
+    fieldName: "Displacement",
+    status: "warning",
+    message: "Displacement value seems high for current draft readings",
+    detail:
+      "Calculated displacement from drafts doesn't match entered value. VesLink will show a warning on submit.",
+  },
+  // Passing fields (green) - message carries a short "what was checked" reason
+  "date-time": { fieldName: "Date/Time", status: "pass", message: "date format correct and within expected range", detail: "Date/Time validation passed." },
+  "vessel-condition": { fieldName: "Vessel Condition", status: "pass", message: "matches previous report condition", detail: "Vessel Condition validation passed." },
+  "voyage-number": { fieldName: "Voyage Number", status: "pass", message: "matches active voyage", detail: "Voyage Number validation passed." },
+  "location": { fieldName: "Location", status: "pass", message: "location type set", detail: "Location validation passed." },
+  "next-port": { fieldName: "Next Port", status: "pass", message: "port recognized", detail: "Next Port validation passed." },
+  "distance-to-go": { fieldName: "Distance to Go", status: "pass", message: "positive value, consistent with route", detail: "Distance to Go validation passed." },
+  "cp-ordered-speed": { fieldName: "CP/Ordered Speed", status: "pass", message: "within vessel's operational range", detail: "CP/Ordered Speed validation passed." },
+  "time-since-last": { fieldName: "Time Since Last Report", status: "pass", message: "24.0 hrs matches report interval", detail: "Time Since Last Report validation passed." },
+}
+
+const getFieldValidation = (fieldId: string): FieldValidation | undefined =>
+  FIELD_VALIDATIONS[fieldId]
+
+// Aggregate counts across all critical fields (for the top-right summary + gating)
+interface ValidationSummary {
+  errors: { fieldId: string; fieldName: string; message: string }[]
+  warnings: { fieldId: string; fieldName: string; message: string }[]
+  passed: number
+}
+const getValidationSummary = (): ValidationSummary => {
+  const errors: ValidationSummary["errors"] = []
+  const warnings: ValidationSummary["warnings"] = []
+  let passed = 0
+  for (const fieldId of CRITICAL_FIELDS_NOON_SEA) {
+    const v = FIELD_VALIDATIONS[fieldId]
+    if (!v) continue
+    if (v.status === "error") errors.push({ fieldId, fieldName: v.fieldName, message: v.message })
+    else if (v.status === "warning") warnings.push({ fieldId, fieldName: v.fieldName, message: v.message })
+    else passed++
+  }
+  return { errors, warnings, passed }
+}
+const VALIDATION_SUMMARY: ValidationSummary = getValidationSummary()
+
 interface TransferReviewProps {
   reportId: string
   onBack: () => void
@@ -229,11 +361,24 @@ interface TransferReviewProps {
 // Toast notification component - Dark style matching Figma
 type ToastType = "error" | "success" | "warning" | "delete" | "flag" | "save" | "submit"
 
-function Toast({ message, type, onClose }: { message: string; type: ToastType; onClose: () => void }) {
+function Toast({
+  message,
+  type,
+  onClose,
+  actionLabel,
+  onAction,
+}: {
+  message: string
+  type: ToastType
+  onClose: () => void
+  actionLabel?: string
+  onAction?: () => void
+}) {
   useEffect(() => {
-    const timer = setTimeout(onClose, 4000)
+    // Keep error toasts (with a retry action) on-screen longer
+    const timer = setTimeout(onClose, onAction ? 8000 : 4000)
     return () => clearTimeout(timer)
-  }, [onClose])
+  }, [onClose, onAction])
 
   // Get the appropriate icon based on toast type
   const getIcon = () => {
@@ -259,6 +404,15 @@ function Toast({ message, type, onClose }: { message: string; type: ToastType; o
     <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-[#1e293b] text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 animate-in slide-in-from-top-4 fade-in duration-200">
       {getIcon()}
       <span className="text-sm font-medium">{message}</span>
+      {actionLabel && onAction && (
+        <button
+          onClick={onAction}
+          className="ml-1 inline-flex items-center gap-1.5 rounded-md bg-white/10 px-2.5 py-1 text-xs font-semibold hover:bg-white/20 transition-colors"
+        >
+          <RotateCw className="w-3.5 h-3.5" />
+          {actionLabel}
+        </button>
+      )}
       <button onClick={onClose} className="ml-2 hover:opacity-70 transition-opacity">
         <X className="w-4 h-4" />
       </button>
@@ -496,6 +650,73 @@ function FieldCard({
   )
 }
 
+// Compact, per-field validation status indicator (SOLD-1501).
+// Renders a single line below the field value: errors (red dot), warnings (amber dot),
+// or a small muted green check for passing fields. Full detail expands on hover/click.
+function FieldValidationStatusLine({
+  validation,
+  loading = false,
+}: {
+  validation?: FieldValidation
+  loading?: boolean
+}) {
+  const [expanded, setExpanded] = useState(false)
+
+  if (loading) {
+    return (
+      <div className="mb-4 flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-gray-200 animate-pulse" />
+        <span className="h-3 w-44 rounded bg-gray-100 animate-pulse" />
+        <span className="sr-only">Running validation checks…</span>
+      </div>
+    )
+  }
+
+  if (!validation) return null
+
+  // Passing -> small muted green check + "Valid" + short reason, all on one line
+  if (validation.status === "pass") {
+    return (
+      <div className="mb-4 flex items-center gap-1.5 text-xs">
+        <Check className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+        <span className="font-medium text-green-600">Valid</span>
+        <span className="text-gray-400">— {validation.message}</span>
+      </div>
+    )
+  }
+
+  const isError = validation.status === "error"
+  const tone = isError
+    ? { dot: "bg-red-500", text: "text-red-700", label: "text-red-800", pill: "text-red-700 bg-red-50 border-red-200", box: "bg-red-50/70 border-red-200" }
+    : { dot: "bg-amber-500", text: "text-amber-700", label: "text-amber-800", pill: "text-amber-700 bg-amber-50 border-amber-200", box: "bg-amber-50/70 border-amber-200" }
+
+  return (
+    <div className="mb-4">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className={`group w-full text-left flex items-center gap-2 rounded-md border px-2.5 py-2 transition-colors ${tone.box}`}
+        title={validation.detail}
+        aria-expanded={expanded}
+      >
+        <span className={`flex-shrink-0 w-2 h-2 rounded-full ${tone.dot}`} />
+        <span className={`flex-shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full border ${tone.pill}`}>
+          {isError ? "Error" : "Warning"}
+        </span>
+        <span className={`text-xs truncate ${tone.text}`}>{validation.message}</span>
+        {expanded ? (
+          <ChevronUp className={`w-3.5 h-3.5 ml-auto flex-shrink-0 ${tone.text}`} />
+        ) : (
+          <ChevronDown className={`w-3.5 h-3.5 ml-auto flex-shrink-0 ${tone.text}`} />
+        )}
+      </button>
+      {expanded && (
+        <p className={`mt-1.5 px-2.5 text-xs leading-relaxed ${tone.text}`}>{validation.detail}</p>
+      )}
+    </div>
+  )
+}
+
 // Single Field Focus Pane Component - shows ONE field at a time
 function SingleFieldFocusPane({
   field,
@@ -510,10 +731,15 @@ function SingleFieldFocusPane({
   onScrollToField,
   isReadOnly = false,
   adminReadOnlyView = false,
+  validationLoading = false,
+  canSkipVerification = false,
+  masterOverrideUsed = false,
+  onSkipVerification,
   }: {
   field: FieldCardData | null
   currentIndex: number
   totalCount: number
+  validationLoading?: boolean
   onVerify: () => void
   onFlag: () => void
   onNavigate: (direction: "prev" | "next") => void
@@ -523,8 +749,10 @@ function SingleFieldFocusPane({
   onScrollToField?: () => void
   isReadOnly?: boolean
   adminReadOnlyView?: boolean
+  canSkipVerification?: boolean
+  masterOverrideUsed?: boolean
+  onSkipVerification?: () => void
   }) {
-  const [validationExpanded, setValidationExpanded] = useState(false)
 const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
   // Source preview carousel state - track current source tab
   const [sourcePreviewIndex, setSourcePreviewIndex] = useState(0)
@@ -622,7 +850,7 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
             {currentUser.role === 'admin' && (
               <a
                 href={`/admin/field-definitions/${field.id}`}
-                className="text-xs text-purple-600 hover:text-purple-800 hover:underline"
+                className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
               >
                 View in admin panel
               </a>
@@ -649,15 +877,19 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
                   Complete
                 </span>
               ) : null // Standard fields: no pill
-            ) : (
-              // Edit mode: show field type pill
-              (isManualFill || field.isCritical) && (
-                <span className={`text-xs font-medium px-2.5 py-1 rounded-full border flex items-center gap-1 ${getFieldTypePillColor()}`}>
-                  <Star className="w-3 h-3" fill="currentColor" />
-                  {isManualFill ? "Manual fill" : "Critical field"}
-                </span>
-              )
-            )}
+            ) : isManualFill ? (
+              // Manual fill keeps its status pill
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full border flex items-center gap-1 ${getFieldTypePillColor()}`}>
+                <Star className="w-3 h-3" fill="currentColor" />
+                Manual fill
+              </span>
+            ) : field.isCritical ? (
+              // Critical field: small red star icon + red text, top-right
+              <span className="text-xs font-semibold text-red-600 flex items-center gap-1">
+                <Star className="w-3 h-3 text-red-600" fill="currentColor" />
+                Critical field
+              </span>
+            ) : null}
           </div>
         </div>
 
@@ -668,6 +900,14 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
             : (field.value || "—")}
           {field.unit && <span className="text-xl text-gray-500 ml-1">{field.unit}</span>}
         </h1>
+
+        {/* Per-field validation status - compact single line below the value (SOLD-1501) */}
+        {!isManualFill && field && (
+          <FieldValidationStatusLine
+            validation={getFieldValidation(field.id)}
+            loading={validationLoading}
+          />
+        )}
 
         {/* Calculated Field Formula Helper Line */}
         {field.isCalculated && field.formula && (
@@ -725,41 +965,6 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
           </div>
         ) : null}
 
-        {/* Validation Checks Accordion - only for non-manual-fill fields */}
-        {!isManualFill && (
-          <div className="border border-gray-200 rounded-lg mb-4">
-            <button
-              onClick={() => setValidationExpanded(!validationExpanded)}
-              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <span>Validation checks</span>
-              {validationExpanded ? (
-                <ChevronUp className="w-4 h-4 text-gray-500" />
-              ) : (
-                <ChevronDown className="w-4 h-4 text-gray-500" />
-              )}
-            </button>
-            {validationExpanded && (
-              <div className="px-4 pb-3 border-t border-gray-100">
-                <div className="pt-3 space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span className="text-gray-600">Value within expected range</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span className="text-gray-600">Format validation passed</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span className="text-gray-600">Cross-reference check passed</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Source Preview Accordion - only for non-manual-fill fields */}
         {!isManualFill && (
           <div className="border border-gray-200 rounded-lg">
@@ -774,51 +979,100 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
                 <ChevronDown className="w-4 h-4 text-gray-500" />
               )}
             </button>
-            {sourcePreviewExpanded && (
+            {sourcePreviewExpanded && (() => {
+              // Build the dark source card: find the group this field belongs to,
+              // falling back to a single-row group derived from the field itself.
+              const group = getSourcePreviewGroup(field.id) || {
+                system: `VOYAGE REPORTING — ${(field.sourceTab || "SOURCE").toUpperCase()}`,
+                rows: [{
+                  id: field.id,
+                  label: field.mappedSource || field.fieldName || field.id,
+                  value: `${field.value || "—"}${field.unit ? ` ${field.unit}` : ""}`,
+                }],
+              }
+              const reportLabel = sourceReports[sourcePreviewIndex] || sourceReports[0]
+              return (
               <div className="p-3 border-t border-gray-100">
-                {/* Dark NAVTOR Preview with navigation */}
-                <div className="relative">
-                  {/* Left Arrow */}
-                  <button
-                    onClick={() => setSourcePreviewIndex(Math.max(0, sourcePreviewIndex - 1))}
-                    disabled={sourcePreviewIndex === 0}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 w-7 h-7 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeftIcon className="w-4 h-4 text-gray-600" />
-                  </button>
-
-                  {/* NAVTOR Screenshot */}
-                  <div className="rounded-lg overflow-hidden">
-                    <NavtorScreenshot fieldId={field.id} className="w-full" />
+                {/* Dark source-system card */}
+                <div className="relative rounded-lg overflow-hidden bg-[#1e2535] border border-[#2c3447] shadow-sm">
+                  {/* Colored header bar with source system name */}
+                  <div className="flex items-center justify-between bg-[#283044] px-3 py-2 border-b border-[#2c3447]">
+                    <span className="text-[11px] font-semibold tracking-wide text-sky-300 uppercase truncate pr-2">
+                      {group.system}
+                    </span>
+                    {/* Expand Icon - Opens fullscreen source preview modal */}
+                    <button
+                      onClick={() => setShowSourceModal(true)}
+                      className="flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10"
+                      title="Open full source view"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
 
-                  {/* Right Arrow */}
-                  <button
-                    onClick={() => setSourcePreviewIndex(Math.min(sourcePreviewCount - 1, sourcePreviewIndex + 1))}
-                    disabled={sourcePreviewIndex === sourcePreviewCount - 1}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 w-7 h-7 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <ChevronRightIcon className="w-4 h-4 text-gray-600" />
-                  </button>
+                  {/* Source fields - label muted, value light, current field highlighted */}
+                  <div className="p-3 space-y-2">
+                    {group.rows.map((row) => {
+                      const isCurrent = row.id === field.id
+                      return (
+                        <div
+                          key={row.id}
+                          className={`rounded-md px-3 py-2 transition-colors ${
+                            isCurrent
+                              ? "bg-[#2a3142] border border-amber-500/70 ring-1 ring-amber-500/40"
+                              : "border border-transparent"
+                          }`}
+                        >
+                          {/* Orange label badge above the currently-relevant field */}
+                          {isCurrent && (
+                            <span className="inline-block mb-1 text-[10px] font-semibold uppercase tracking-wide text-amber-400 bg-amber-500/10 border border-amber-500/40 rounded px-1.5 py-0.5">
+                              {field.fieldName || row.label}
+                            </span>
+                          )}
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-xs text-gray-400 truncate">{row.label}</span>
+                            <span className={`text-sm font-medium tabular-nums ${isCurrent ? "text-amber-200" : "text-gray-100"}`}>
+                              {row.value}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
 
-                  {/* Expand Icon - Opens fullscreen source preview modal */}
-                  <button 
-                    onClick={() => setShowSourceModal(true)}
-                    className="absolute top-2 right-2 w-7 h-7 rounded bg-white/80 backdrop-blur-sm border border-gray-200 flex items-center justify-center hover:bg-white"
-                    title="Expand source preview"
-                  >
-                    <Maximize2 className="w-3.5 h-3.5 text-gray-600" />
-                  </button>
-                </div>
-
-                {/* Pagination indicator */}
-                <div className="flex items-center justify-center mt-3">
-                  <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border border-gray-200">
-                    {sourcePreviewIndex + 1}/{sourcePreviewCount}
-                  </span>
+                  {/* Pagination footer (across source reports) */}
+                  {sourcePreviewCount > 1 && (
+                    <div className="flex items-center justify-between bg-[#283044] px-3 py-2 border-t border-[#2c3447]">
+                      <span className="text-[11px] text-gray-400">
+                        {reportLabel ? `Report #${reportLabel}` : "Source"}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setSourcePreviewIndex(Math.max(0, sourcePreviewIndex - 1))}
+                          disabled={sourcePreviewIndex === 0}
+                          className="w-6 h-6 rounded flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                          aria-label="Previous source"
+                        >
+                          <ChevronLeftIcon className="w-4 h-4" />
+                        </button>
+                        <span className="text-[11px] text-gray-300 tabular-nums min-w-[32px] text-center">
+                          {sourcePreviewIndex + 1}/{sourcePreviewCount}
+                        </span>
+                        <button
+                          onClick={() => setSourcePreviewIndex(Math.min(sourcePreviewCount - 1, sourcePreviewIndex + 1))}
+                          disabled={sourcePreviewIndex === sourcePreviewCount - 1}
+                          className="w-6 h-6 rounded flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                          aria-label="Next source"
+                        >
+                          <ChevronRightIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
+              )
+            })()}
           </div>
         )}
       </div>
@@ -868,7 +1122,7 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
                     className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium transition-colors border ${
                       isVerified
                         ? "bg-green-50 text-green-700 border-green-200"
-                        : "bg-purple-600 text-white border-purple-600 hover:bg-purple-700"
+                        : "bg-green-600 text-white border-green-600 hover:bg-green-700"
                     }`}
                   >
                     <Check className="w-4 h-4" />
@@ -906,6 +1160,19 @@ const [sourcePreviewExpanded, setSourcePreviewExpanded] = useState(true)
                 >
                   <Flag className="w-4 h-4" />
                   Flag as Incorrect
+                </button>
+              </div>
+            )}
+
+            {/* Master override (SOLD-1500): subtle "Skip verification" text link below the stepper controls */}
+            {isCritical && !isManualFill && canSkipVerification && !masterOverrideUsed && (
+              <div className="mt-3 flex justify-center">
+                <button
+                  type="button"
+                  onClick={onSkipVerification}
+                  className="text-xs text-gray-400 hover:text-gray-600 hover:underline transition-colors"
+                >
+                  Skip verification
                 </button>
               </div>
             )}
@@ -1690,8 +1957,15 @@ export function TransferReview({
   const [selectedField, setSelectedField] = useState<FormField | null>(null)
   const [selectedReportId, setSelectedReportId] = useState("4528")
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
+  const [showWarningsDialog, setShowWarningsDialog] = useState(false)
+  const [showSkipDialog, setShowSkipDialog] = useState(false)
+  const [masterOverrideUsed, setMasterOverrideUsed] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
-  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
+  // Brief loading state while validation checks are "computed" (skeleton/shimmer)
+  const [validationLoading, setValidationLoading] = useState(!isReadOnly)
+  // Celebratory micro-state when all fields become verified
+  const [justCompletedAll, setJustCompletedAll] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: ToastType; actionLabel?: string; onAction?: () => void } | null>(null)
   const [pulsingFieldId, setPulsingFieldId] = useState<string | null>(null)
   const [showAdminSuite, setShowAdminSuite] = useState(false)
   const [editedFields, setEditedFields] = useState<Set<string>>(new Set())
@@ -1717,6 +1991,13 @@ export function TransferReview({
     if (isReadOnly) {
       setVerifiedVesLinkFields(new Set(CRITICAL_FIELDS_NOON_SEA))
     }
+  }, [isReadOnly])
+
+  // Simulate computing validation checks on mount (shows skeleton briefly)
+  useEffect(() => {
+    if (isReadOnly) return
+    const timer = setTimeout(() => setValidationLoading(false), 1200)
+    return () => clearTimeout(timer)
   }, [isReadOnly])
   
   // Modal states
@@ -1756,6 +2037,7 @@ export function TransferReview({
       "observed-distance": "Distance & Vessel",
       "time-since-last": "Distance & Vessel",
       "ballast": "Distance & Vessel",
+      "cargo-weight": "Distance & Vessel",
       "displacement": "Distance & Vessel",
       "slip": "Distance & Vessel",
       "fwd-draft": "Distance & Vessel",
@@ -1812,8 +2094,9 @@ export function TransferReview({
   const vesLinkCriticalTotal = CRITICAL_FIELDS_NOON_SEA.length
   const vesLinkCriticalVerified = verifiedVesLinkFields.size
   
-  // Manual fill fields - track separately
-  const manualFillFieldIds = MANUAL_FILL_FIELDS
+  // Manual fill fields - track separately. Only count manual-fill fields that are
+  // still part of the critical step-through flow.
+  const manualFillFieldIds = MANUAL_FILL_FIELDS.filter(id => CRITICAL_FIELDS_NOON_SEA.includes(id))
   const manualFillVerified = manualFillFieldIds.filter(id => verifiedVesLinkFields.has(id)).length
   const manualFillTotal = manualFillFieldIds.length
   
@@ -1830,12 +2113,30 @@ export function TransferReview({
   const totalRequiredFields = criticalOnlyTotal + manualFillTotal
   const displayPendingCount = isReadOnly ? 0 : (criticalOnlyTotal - criticalOnlyVerified) + (manualFillTotal - manualFillVerified)
   const displayCompleteCount = isReadOnly ? totalRequiredFields : criticalOnlyVerified + manualFillVerified
+
+  // Celebratory micro-state: fire once when the last pending field is verified
+  const allFieldsComplete = !isReadOnly && totalRequiredFields > 0 && displayPendingCount === 0
+  useEffect(() => {
+    if (allFieldsComplete) {
+      setJustCompletedAll(true)
+      const timer = setTimeout(() => setJustCompletedAll(false), 2500)
+      return () => clearTimeout(timer)
+    }
+  }, [allFieldsComplete])
   
-  // Submit gating: ALL critical fields verified/flagged AND ALL manualFill fields populated/flagged
+  // Submit gating: ALL critical fields verified/flagged AND ALL manualFill fields populated/flagged.
+  // Tier 1 validation errors also block download (SOLD-1501). Tier 2 warnings do NOT block.
   // In read-only mode: already submitted, so canSubmit is always true
   const allCriticalDone = criticalOnlyVerified === criticalOnlyTotal
   const allManualFillDone = manualFillVerified === manualFillTotal
-  const canSubmit = isReadOnly ? true : (allCriticalDone && allManualFillDone)
+  const hasBlockingValidationErrors = VALIDATION_SUMMARY.errors.length > 0
+  // Master override (SOLD-1500): an admin/master can bypass pending verifications.
+  const isMaster = currentUser.role === 'admin'
+  const canSubmit = isReadOnly
+    ? true
+    : masterOverrideUsed
+      ? true
+      : (allCriticalDone && allManualFillDone && !hasBlockingValidationErrors)
 
   const toggleSection = (sectionId: string) => {
     setSections((prev) =>
@@ -1869,12 +2170,15 @@ export function TransferReview({
       "date-time": { label: "Date/Time", sourceTab: "Operational", sourceField: "Report Date/Time", value: "14/04/2026 12:00" },
       "voyage-number": { label: "Voyage Number", sourceTab: "Operational", sourceField: "Voyage Number", value: "124" },
       "vessel-condition": { label: "Vessel Condition", sourceTab: "Operational", sourceField: "Vessel Condition", value: "Laden" },
+      "location": { label: "Location", sourceTab: "Operational", sourceField: "Location", value: "At Sea" },
       "next-port": { label: "Next Port", sourceTab: "Operational", sourceField: "Next Port", value: "Fujairah" },
       "eta": { label: "ETA", sourceTab: "Operational", sourceField: "ETA", value: "22/04/2026 14:00" },
       "distance-to-go": { label: "Distance to Go", sourceTab: "Operational", sourceField: "Distance to Go", value: "2847" },
       "cp-ordered-speed": { label: "CP / Ordered Speed", sourceTab: "Operational", sourceField: "Ordered Speed", value: "12.5" },
       "reported-speed": { label: "Reported Speed", sourceTab: "Operational", sourceField: "Reported Speed", value: "12.3" },
-      "time-since-last": { label: "Time Since Last Report", sourceTab: "Operational", sourceField: "Time Since Last Report", value: "24.0" },
+      "time-since-last": { label: "Time Since Last Report", sourceTab: "Operational", sourceField: "Time Since Last Report", value: "24.0", unit: "hrs" },
+      "cargo-weight": { label: "Cargo Weight", sourceTab: "Operational", sourceField: "Cargo Weight", value: "147948.45", unit: "MT" },
+      "displacement": { label: "Displacement", sourceTab: "Operational", sourceField: "Displacement", value: "172000", unit: "t" },
       "main-engine-rpm": { label: "Main Engine RPM", sourceTab: "Power", sourceField: "ME RPM", value: "85.2" },
       "beaufort": { label: "Beaufort", sourceTab: "Pos & Weather", sourceField: "Beaufort Scale", value: "4" },
       "bunkers-section": { label: "ROB, Consumption & Used For", sourceTab: "Bunker", sourceField: "Bunker ROB Table", value: "Complete" },
@@ -2165,14 +2469,56 @@ export function TransferReview({
       })
       return
     }
-    
+
+    // Tier 2 warnings (no Tier 1 errors, since canSubmit already gates those):
+    // confirm before downloading. Zero warnings -> download immediately.
+    if (VALIDATION_SUMMARY.warnings.length > 0) {
+      setShowWarningsDialog(true)
+      return
+    }
+
     setShowSubmitDialog(true)
+  }
+
+  // User chose "Download anyway" from the warnings confirmation dialog
+  const handleProceedDespiteWarnings = () => {
+    setShowWarningsDialog(false)
+    setShowSubmitDialog(true)
+  }
+
+  // Master override (SOLD-1500): skip verification and download directly
+  const handleSkipVerification = () => {
+    // Enable download immediately (canSubmit reads masterOverrideUsed) and show the
+    // "Master override" badge next to the counter. The user then clicks Download.
+    setMasterOverrideUsed(true)
+    setShowSkipDialog(false)
+    setToast({ message: "Master override applied — verification skipped.", type: "submit" })
+  }
+
+  // Tracks whether the next download attempt should fail (toggled to simulate
+  // a transient failure on the first attempt, success on retry).
+  const downloadShouldFailRef = useRef(true)
+
+  const performDownload = () => {
+    // Simulate a transient download failure on the first attempt
+    if (downloadShouldFailRef.current) {
+      downloadShouldFailRef.current = false
+      setToast({
+        message: "Download failed — please try again",
+        type: "error",
+        actionLabel: "Retry",
+        onAction: () => performDownload(),
+      })
+      return
+    }
+    downloadShouldFailRef.current = true
+    setIsSubmitted(true)
+    setToast({ message: "VesLink form downloaded.", type: "submit" })
   }
 
   const handleConfirmSubmit = () => {
     setShowSubmitDialog(false)
-    setIsSubmitted(true)
-    setToast({ message: "Report marked as submitted.", type: "submit" })
+    performDownload()
   }
 
   // Keyboard shortcuts
@@ -2250,6 +2596,8 @@ export function TransferReview({
           message={toast.message} 
           type={toast.type} 
           onClose={() => setToast(null)} 
+          actionLabel={toast.actionLabel}
+          onAction={toast.onAction}
         />
       )}
       
@@ -2272,6 +2620,169 @@ export function TransferReview({
             }))
           }))}
         />
+      )}
+
+      {/* Download-with-warnings confirmation dialog (Tier 2 warnings) */}
+      {showWarningsDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="warnings-dialog-title"
+          onClick={() => setShowWarningsDialog(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl bg-white shadow-xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start gap-3 px-5 pt-5 pb-3">
+              <span className="flex-shrink-0 w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+              </span>
+              <div>
+                <h2 id="warnings-dialog-title" className="text-base font-semibold text-gray-900">
+                  Download with warnings?
+                </h2>
+                <p className="mt-0.5 text-sm text-gray-500">
+                  This report has {VALIDATION_SUMMARY.warnings.length}{" "}
+                  {VALIDATION_SUMMARY.warnings.length === 1 ? "validation warning" : "validation warnings"}.
+                  You can still download the VesLink form.
+                </p>
+              </div>
+            </div>
+
+            {/* Warning list */}
+            <div className="px-5 pb-2 max-h-64 overflow-y-auto">
+              <ul className="space-y-2">
+                {VALIDATION_SUMMARY.warnings.map((w, i) => (
+                  <li
+                    key={`dlg-warn-${w.fieldId}-${i}`}
+                    className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2"
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+                    <span className="text-xs">
+                      <span className="font-semibold text-amber-800">{w.fieldName}: </span>
+                      <span className="text-amber-700">{w.message}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2 px-5 py-4">
+              <button
+                onClick={() => setShowWarningsDialog(false)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleProceedDespiteWarnings}
+                className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Master override skip-verification confirmation dialog (SOLD-1500) */}
+      {showSkipDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="skip-dialog-title"
+          onClick={() => setShowSkipDialog(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl bg-white shadow-xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start gap-3 px-5 pt-5 pb-3">
+              <span className="flex-shrink-0 w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center">
+                <ShieldAlert className="w-5 h-5 text-purple-600" />
+              </span>
+              <div>
+                <h2 id="skip-dialog-title" className="text-base font-semibold text-gray-900">
+                  Skip field verification?
+                </h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  As master, you can skip the verification step and download the form directly.
+                  The crew will still see any validation warnings.
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2 px-5 py-4">
+              <button
+                onClick={() => setShowSkipDialog(false)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSkipVerification}
+                className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 flex items-center gap-2"
+              >
+                <ShieldAlert className="w-4 h-4" />
+                Skip &amp; Download
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Header Bar (production-aligned) - hidden in admin read-only view */}
+      {!adminReadOnlyView && (
+        <div className="flex-shrink-0 border-b border-[#e2e8f0] bg-white">
+          <div className="flex items-center justify-between gap-4 px-6 py-3">
+            {/* Left: report type + title */}
+            <div className="flex items-center gap-4 min-w-0">
+              <h1 className="text-base font-semibold text-[#0f172a] truncate">
+                Form - Noon at sea
+              </h1>
+              {/* Status badge: Exported (downloaded) or Draft */}
+              {isSubmitted ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                  <Check className="w-3 h-3" />
+                  Exported
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  Draft
+                </span>
+              )}
+              {/* Voyage number */}
+              <span className="hidden sm:inline text-sm text-[#64748b]">Voyage 93</span>
+            </div>
+
+            {/* Right: vessel name + source count */}
+            <div className="flex items-center gap-4 flex-shrink-0">
+              <span className="text-sm font-semibold tracking-wide text-[#0d9488] uppercase">
+                {vesselName || "SEAWAYS ATHENS"}
+              </span>
+              <span className="h-4 w-px bg-[#e2e8f0]" />
+              <span className="inline-flex items-center gap-1.5 text-xs text-[#64748b]">
+                <Database className="w-3.5 h-3.5" />
+                3 sources
+              </span>
+            </div>
+          </div>
+          {/* Last saved line */}
+          <div className="px-6 pb-2 -mt-1">
+            <p className="text-xs text-[#94a3b8]">
+              Last saved: {submittedAt || "12:00 PM on April 14, 2026"}
+            </p>
+          </div>
+        </div>
       )}
 
       {/* Main Content - Two Column Layout (Field List + VesLink Form) */}
@@ -2300,6 +2811,7 @@ export function TransferReview({
             } : null}
             currentIndex={currentCriticalIndex}
             totalCount={vesLinkCriticalTotal}
+            validationLoading={validationLoading}
             onVerify={handleVerify}
             onFlag={() => {
               if (selectedField) {
@@ -2333,32 +2845,92 @@ export function TransferReview({
             sourceReports={["#4528", "#4529", "#4530"]}
             isReadOnly={isReadOnly}
             adminReadOnlyView={adminReadOnlyView}
+            canSkipVerification={!isReadOnly && !adminReadOnlyView && isMaster}
+            masterOverrideUsed={masterOverrideUsed}
+            onSkipVerification={() => setShowSkipDialog(true)}
           />
         </div>
 
         {/* Right Panel - VesLink Form (authentic replica) */}
         <div className="flex-1 flex flex-col overflow-hidden bg-white">
           <div className="flex-1 overflow-y-auto relative">
-            {/* Floating Pending/Complete Counter - sticky at top of VesLink panel */}
+            {/* Floating Pending/Complete Counter + progress - sticky at top of VesLink panel */}
             <div className="sticky top-0 z-20 flex justify-center py-2 pointer-events-none">
-              <div 
-                role="status" 
+              <div
+                role="status"
                 aria-live="polite"
-                className="pointer-events-auto inline-flex items-center bg-white border border-gray-200 rounded-full px-4 py-1.5 shadow-sm hover:shadow-md transition-shadow"
+                className={`pointer-events-auto rounded-2xl px-4 py-2 shadow-sm hover:shadow-md transition-all duration-500 min-w-[280px] border ${
+                  allFieldsComplete
+                    ? "bg-green-50 border-green-300"
+                    : "bg-white border-gray-200"
+                } ${justCompletedAll ? "vl-celebrate-pop" : ""}`}
               >
-                <span className="sr-only">Review progress:</span>
-                {/* Pending count */}
-                <span className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                  Pending ({displayPendingCount})
+                <span className="sr-only">
+                  {allFieldsComplete
+                    ? `All ${totalRequiredFields} fields verified.`
+                    : `Review progress: ${displayCompleteCount} of ${totalRequiredFields} critical fields verified, ${displayPendingCount} pending.`}
                 </span>
-                {/* Divider */}
-                <span className="w-px h-3 bg-gray-300 mx-3" />
-                {/* Complete count */}
-                <span className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
-                  <Check className="w-3 h-3 text-green-500" />
-                  Complete ({displayCompleteCount})
-                </span>
+                {allFieldsComplete ? (
+                  // Celebratory all-verified state
+                  <div className="flex items-center justify-center gap-2 text-sm font-semibold text-green-700">
+                    <CheckCircle2 className="w-4 h-4 text-green-600" />
+                    All {totalRequiredFields} fields verified
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center flex-wrap gap-y-1">
+                    {/* Pending count */}
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      Pending ({displayPendingCount})
+                    </span>
+                    {/* Validation error count */}
+                    {VALIDATION_SUMMARY.errors.length > 0 && (
+                      <>
+                        <span className="w-px h-3 bg-gray-300 mx-3" />
+                        <span className="flex items-center gap-1.5 text-xs font-medium text-red-600">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                          {VALIDATION_SUMMARY.errors.length} {VALIDATION_SUMMARY.errors.length === 1 ? "error" : "errors"}
+                        </span>
+                      </>
+                    )}
+                    {/* Validation warning count */}
+                    {VALIDATION_SUMMARY.warnings.length > 0 && (
+                      <>
+                        <span className="w-px h-3 bg-gray-300 mx-3" />
+                        <span className="flex items-center gap-1.5 text-xs font-medium text-amber-600">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          {VALIDATION_SUMMARY.warnings.length} {VALIDATION_SUMMARY.warnings.length === 1 ? "warning" : "warnings"}
+                        </span>
+                      </>
+                    )}
+                    {/* Divider */}
+                    <span className="w-px h-3 bg-gray-300 mx-3" />
+                    {/* Complete count */}
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
+                      <Check className="w-3 h-3 text-green-500" />
+                      Complete ({displayCompleteCount})
+                    </span>
+                    {/* Master override badge - shown when verification was skipped */}
+                    {masterOverrideUsed && (
+                      <span className="ml-3 inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                        <ShieldAlert className="w-3 h-3" />
+                        Master override
+                      </span>
+                    )}
+                  </div>
+                )}
+                {/* Progress bar + label */}
+                <div className="mt-2">
+                  <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden" aria-hidden="true">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${displayPendingCount === 0 ? "bg-green-500" : "bg-purple-600"}`}
+                      style={{ width: `${totalRequiredFields > 0 ? (displayCompleteCount / totalRequiredFields) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <p className="mt-1 text-center text-[11px] text-gray-500">
+                    {displayCompleteCount} of {totalRequiredFields} fields verified
+                  </p>
+                </div>
               </div>
             </div>
             <VesLinkForm
@@ -2473,7 +3045,7 @@ export function TransferReview({
               <div className="flex items-center justify-center gap-2 py-2.5 px-4 bg-gray-50 border-b border-gray-100">
                 <Info className="w-4 h-4 text-gray-500 flex-shrink-0" />
                 <span className="text-sm text-gray-600">
-                  All <span className="font-semibold text-amber-600">required fields</span> must be confirmed before submitting
+                  All <span className="font-semibold text-amber-600">required fields</span> must be confirmed before downloading
                 </span>
                 <button
                   onClick={() => setShowValidationMessage(false)}
@@ -2499,14 +3071,14 @@ export function TransferReview({
               <button
                 onClick={handleSubmitClick}
                 disabled={!canSubmit}
-                className={`rounded-lg px-6 py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-colors min-w-[180px] ${
-                  canSubmit
-                    ? "bg-purple-600 text-white hover:bg-purple-700"
-                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                }`}
+  className={`rounded-lg px-6 py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-colors min-w-[200px] ${
+  canSubmit
+  ? "bg-purple-600 text-white hover:bg-purple-700"
+  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+  } ${justCompletedAll && canSubmit ? "vl-download-pulse" : ""}`}
               >
-                <Send className="w-4 h-4" />
-                Submit to veslink
+                <Download className="w-4 h-4" />
+                Download VesLink Form
               </button>
             </div>
           </>

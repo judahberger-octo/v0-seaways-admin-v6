@@ -1,44 +1,56 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, SlidersHorizontal, Download, Filter, MoreHorizontal, Eye, Copy } from "lucide-react"
+import { Search, SlidersHorizontal, Download, Filter, MoreHorizontal, Eye, Copy, ShieldAlert, Check, FileText } from "lucide-react"
+import { useUser } from "@/lib/user-context"
 
 interface HistoryEntry {
   id: string
   name: string
-  status: "Submitted"
+  status: "Exported" | "Draft"
   updated: string
   criticalVerified: string
+  lastExported?: string
+  masterOverride?: boolean
+  vessel: string
 }
 
 const mockHistory: HistoryEntry[] = [
   {
     id: "#4527",
     name: "Noon (Sea)",
-    status: "Submitted",
+    status: "Exported",
     updated: "January 25, 2026 2:03 AM",
     criticalVerified: "12/12",
+    lastExported: "January 25, 2026 2:05 AM",
+    vessel: "Seaways Athens",
   },
   {
     id: "#4526",
     name: "Noon (Sea)",
-    status: "Submitted",
+    status: "Draft",
     updated: "January 24, 2026 1:45 PM",
-    criticalVerified: "12/12",
+    criticalVerified: "8/12",
+    vessel: "Seaways Athens",
   },
   {
     id: "#4525",
     name: "Departure",
-    status: "Submitted",
+    status: "Exported",
     updated: "January 23, 2026 9:30 AM",
-    criticalVerified: "8/8",
+    criticalVerified: "3/8",
+    lastExported: "January 23, 2026 9:32 AM",
+    masterOverride: true,
+    vessel: "Seaways Skopelos",
   },
   {
     id: "#4524",
     name: "Arrival",
-    status: "Submitted",
+    status: "Exported",
     updated: "January 22, 2026 5:15 PM",
     criticalVerified: "8/8",
+    lastExported: "January 22, 2026 5:18 PM",
+    vessel: "Seaways Milos",
   },
 ]
 
@@ -47,7 +59,14 @@ interface HistoryPageProps {
 }
 
 export function HistoryPage({ onViewReport }: HistoryPageProps) {
+  const { currentUser } = useUser()
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+
+  // Crew users only see reports for their assigned vessel; admins see all.
+  const visibleHistory =
+    currentUser.role === 'crew' && currentUser.assignedVessel
+      ? mockHistory.filter((entry) => entry.vessel === currentUser.assignedVessel)
+      : mockHistory
 
   // Close menu on outside click
   useEffect(() => {
@@ -122,12 +141,13 @@ export function HistoryPage({ onViewReport }: HistoryPageProps) {
                 <th className="text-left py-3 px-4 text-sm font-medium text-[#64748b]">Name</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-[#64748b] w-32">Status</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-[#64748b] w-52">Updated</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-[#64748b] w-52">Last exported</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-[#64748b] w-36">Critical verified</th>
                 <th className="text-right py-3 px-4 text-sm font-medium text-[#64748b] w-20">Action</th>
               </tr>
             </thead>
             <tbody>
-              {mockHistory.map((entry, index) => {
+                {visibleHistory.map((entry, index) => {
                 const rowId = `${entry.id}-${index}`
                 const isMenuOpen = openMenuId === rowId
                 
@@ -141,11 +161,30 @@ export function HistoryPage({ onViewReport }: HistoryPageProps) {
                     <td className="py-3 px-4 text-sm text-[#0f172a]">{entry.name}</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[#16a34a]" />
-                        <span className="text-sm text-[#0f172a]">{entry.status}</span>
+                        {entry.status === "Exported" ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                            <Check className="w-3 h-3" />
+                            Exported
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            Draft
+                          </span>
+                        )}
+                        {entry.masterOverride && (
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700"
+                            title="Downloaded using master override — verification was skipped"
+                          >
+                            <ShieldAlert className="w-3 h-3" />
+                            Override
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="py-3 px-4 text-sm text-[#0f172a]">{entry.updated}</td>
+                    <td className="py-3 px-4 text-sm text-[#64748b]">{entry.lastExported || "—"}</td>
                     <td className="py-3 px-4 text-sm text-[#0f172a]">{entry.criticalVerified}</td>
                     <td className="py-3 px-4 text-right relative">
                       <button
@@ -187,6 +226,24 @@ export function HistoryPage({ onViewReport }: HistoryPageProps) {
               })}
             </tbody>
           </table>
+
+          {/* Empty state - no reports for the current scope */}
+          {visibleHistory.length === 0 && (
+            <div className="flex flex-col items-center justify-center text-center py-16 px-6">
+              <div className="w-12 h-12 rounded-full bg-[#f1f5f9] flex items-center justify-center mb-4">
+                <FileText className="w-6 h-6 text-[#94a3b8]" />
+              </div>
+              <p className="text-sm font-medium text-[#0f172a]">
+                No reports found
+                {currentUser.role === 'crew' && currentUser.assignedVessel
+                  ? ` for ${currentUser.assignedVessel}`
+                  : ''}
+              </p>
+              <p className="mt-1 text-sm text-[#64748b] max-w-sm">
+                Reports will appear here once voyage data is extracted from Navtor.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
